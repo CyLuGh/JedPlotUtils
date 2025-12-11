@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="JedPlotUtils.ScottPlot.Avalonia/JedPlotUtils.ScottPlot.Avalonia.csproj" Id="7a4dd988-0fad-4002-9f4a-38ed53785bf3" />
+  <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
+  <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
+</Solution>
