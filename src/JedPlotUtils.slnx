@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/Demos/">
+    <Project Path="Demos/AvaloniaApplication/AvaloniaApplication.csproj" Id="2fb75dd1-a45b-42a9-a48f-91fb3c3f9dfc" />
+    <Project Path="Demos/DemoData/DemoData.csproj" Id="c11035ef-c55a-4f62-8bfe-1544a20791f6" />
+    <Project Path="Demos/WpfApplication/WpfApplication.csproj" Id="d8b032a3-dde3-4a64-be85-c4ed1eb48855" />
+  </Folder>
   <Project Path="JedPlotUtils.ScottPlot.Avalonia/JedPlotUtils.ScottPlot.Avalonia.csproj" Id="7a4dd988-0fad-4002-9f4a-38ed53785bf3" />
   <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
   <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
