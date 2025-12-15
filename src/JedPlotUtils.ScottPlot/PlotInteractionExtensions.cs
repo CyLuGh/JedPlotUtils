@@ -14,28 +14,41 @@ public static class PlotInteractionExtensions
         Seq<Scatter> series
     )
     {
-        var points = series
-            .Select(s => (Scatter: s, Point: s.Data.GetNearestX(mouseLocation, plot.LastRender)))
-            .Where(t => !double.IsNaN(t.Point.Y));
+        /*
+         * Using only nearest x series may miss some data, that's why the process will do in two steps: first detect any close
+         * element then look through all series for items with the same X
+         */
+        var candidates = series
+            .Select(s => s.Data.GetNearestX(mouseLocation, plot.LastRender))
+            .Where(t => !double.IsNaN(t.Y));
 
-        if (points.IsEmpty)
+        if (candidates.IsEmpty)
         {
             plotInteractivity.Decorations.Hide();
             return;
         }
 
+        // Find all series with data for the same X
+        var points = series
+            .Select(s =>
+                from npt in s.Data.GetScatterPoints().Find(c => c.X.Equals(candidates.Head.X))
+                select (Scatter: s, Coordinates: npt)
+            )
+            .Somes()
+            .Strict();
+
         ShowCrosshair(
             plotInteractivity.Decorations.Crosshair,
-            points.Head.Point.Coordinates,
+            points.Head.Coordinates,
             showHorizontalLine: false
         );
 
         var text = new StringBuilder()
-            .AppendLine(plotInteractivity.PlotRender.XFormatter(points.Head.Point.X))
+            .AppendLine(plotInteractivity.PlotRender.XFormatter(points.Head.Coordinates.X))
             .AppendJoin(
                 Environment.NewLine,
                 points.Select(t =>
-                    $"{t.Scatter.LegendText}: {plotInteractivity.PlotRender.YFormatter(t.Point.Y)}"
+                    $"{t.Scatter.LegendText}: {plotInteractivity.PlotRender.YFormatter(t.Coordinates.Y)}"
                 )
             )
             .ToString();
@@ -47,8 +60,6 @@ public static class PlotInteractionExtensions
             text,
             backgroundColor: points.Map(x => x.Scatter.Color).MixColors()
         );
-
-        // TODO in imp: call refresh
     }
 
     public static SeriesIndex SingleSeriesMouseOver(

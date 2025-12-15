@@ -10,6 +10,14 @@ public static class PlotConfigurationExtensions
         ConfigureLegend(plot, plotConfiguration.LegendLayout);
         ConfigureXAxis(plot, plotConfiguration.PlotRender.UseDateTimeAxis);
         ConfigurePalette(plot, plotConfiguration.Palette);
+        ConfigurePlot(plot, plotConfiguration.PlotLayout);
+    }
+
+    private static void ConfigurePlot(Plot plot, PlotLayout plotLayout)
+    {
+        plot.FigureBackground.Color = plotLayout.FigureBackground;
+        plot.Axes.Color(plotLayout.AxesColor);
+        plot.Grid.MajorLineColor = plotLayout.GridMajorLineColor;
     }
 
     private static void ConfigureXAxis(Plot plot, bool useDateTimeAxis)
@@ -38,7 +46,7 @@ public static class PlotConfigurationExtensions
             legend.BackgroundHatchColor = layout.BackgroundHatchColor ?? Colors.Transparent;
             legend.ShadowColor = layout.ShadowColor ?? Colors.Transparent;
             legend.OutlineColor = layout.OutlineColor ?? Colors.Transparent;
-            legend.FontColor = layout.FontColor ?? Colors.Transparent;
+            legend.FontColor = layout.FontColor ?? Colors.Gray;
             legend.OutlineStyle = layout.OutlineStyle ?? LineStyle.None;
 
             plot.ShowLegend(layout.Edge);

@@ -4,14 +4,13 @@ using System.Linq;
 using System.Reactive;
 using System.Text;
 using System.Threading.Tasks;
-using DemoData;
 using JedPlotUtils.ScottPlot;
 using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
 using RxUnit = System.Reactive.Unit;
 
-namespace WpfApplication;
+namespace DemoData;
 
 public partial class TimeSeriesSampleViewModel : ReactiveObject
 {

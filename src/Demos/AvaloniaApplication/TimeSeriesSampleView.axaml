@@ -1,0 +1,16 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			 xmlns:avalonia="using:ScottPlot.Avalonia"
+			 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			 xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			 xmlns:demodata="using:DemoData"
+			 xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			 mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+			 x:Class="AvaloniaApplication.TimeSeriesSampleView"
+			 x:DataType="demodata:TimeSeriesSampleViewModel">
+	<DockPanel>
+		<Button Command="{Binding BuildSampleCommand}"
+				Content="Display sample"
+				DockPanel.Dock="Bottom" />
+		<avalonia:AvaPlot x:Name="SPlot"/>
+	</DockPanel>
+</UserControl>

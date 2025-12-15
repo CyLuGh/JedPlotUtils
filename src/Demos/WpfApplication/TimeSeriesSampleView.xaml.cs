@@ -1,6 +1,7 @@
 ﻿using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
+using DemoData;
 using JedPlotUtils.ScottPlot;
 using JedPlotUtils.ScottPlot.WPF;
 using ReactiveMarbles.ObservableEvents;

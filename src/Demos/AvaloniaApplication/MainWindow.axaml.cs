@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using DemoData;
 
 namespace AvaloniaApplication
 {
@@ -7,6 +8,8 @@ namespace AvaloniaApplication
         public MainWindow()
         {
             InitializeComponent();
+
+            Content = new TimeSeriesSampleView { ViewModel = new TimeSeriesSampleViewModel() };
         }
     }
 }
