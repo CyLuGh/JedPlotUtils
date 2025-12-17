@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -7,11 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ScottPlot.Avalonia" Version="5.1.57" />
+    <PackageReference Include="ScottPlot.Avalonia" />
+    <PackageReference Include="ReactiveUI.Avalonia" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\JedPlotUtils.ScottPlot\JedPlotUtils.ScottPlot.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="TimeSeriesView.axaml.cs">
+      <DependentUpon>TimeSeriesView.axaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 
 </Project>

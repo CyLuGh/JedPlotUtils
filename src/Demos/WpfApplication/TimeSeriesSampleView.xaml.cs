@@ -19,7 +19,10 @@ namespace WpfApplication
         {
             InitializeComponent();
 
-            _splotConfig = new();
+            _splotConfig = new()
+            {
+                PlotRender = new() { InteractivityMode = InteractivityMode.SingleSeries }
+            };
             SPlot.Plot.ConfigurePlot(_splotConfig);
 
             this.WhenActivated(disposables =>
@@ -44,7 +47,10 @@ namespace WpfApplication
                     view._splotInteractivity = view.SPlot.DrawScatterLines(
                         view._splotConfig.PlotRender,
                         ctx.Input
-                    );
+                    ) with
+                    {
+                        PlotSelection = new() { SelectionMode = SelectionMode.Single }
+                    };
                     ctx.SetOutput(RxUnit.Default);
                 })
                 .DisposeWith(disposables);
@@ -65,6 +71,17 @@ namespace WpfApplication
                 {
                     if (view._splotInteractivity is not null)
                         view.SPlot.HandleMouseLeft(evt, view._splotInteractivity.Value);
+                })
+                .DisposeWith(disposables);
+
+            view.SPlot.Events()
+                .MouseLeftButtonDown.Subscribe(evt =>
+                {
+                    if (view._splotInteractivity is not null)
+                        view._splotInteractivity = view.SPlot.SeriesSelection(
+                            evt,
+                            view._splotInteractivity.Value
+                        );
                 })
                 .DisposeWith(disposables);
         }

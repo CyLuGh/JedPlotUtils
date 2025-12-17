@@ -38,8 +38,11 @@ public readonly record struct PlotRender
             YFormatter = d => $"{d:N}"
         };
 
-    public bool UseDateTimeAxis { get; init; }
-    public InteractivityMode InteractivityMode { get; init; }
-    public required Func<double, string> XFormatter { get; init; }
-    public required Func<double, string> YFormatter { get; init; }
+    public PlotRender() { }
+
+    public bool UseDateTimeAxis { get; init; } = true;
+    public InteractivityMode InteractivityMode { get; init; } = InteractivityMode.AllSeries;
+    public Func<double, string> XFormatter { get; init; } =
+        d => $"{DateTime.FromOADate(d):yyyy-MM-dd}";
+    public Func<double, string> YFormatter { get; init; } = d => $"{d:N}";
 }

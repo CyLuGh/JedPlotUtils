@@ -10,10 +10,10 @@ public static class PlotInteractionExtensions
     public static void AllSeriesMouseOver(
         this Plot plot,
         PlotInteractivity plotInteractivity,
-        Coordinates mouseLocation,
-        Seq<Scatter> series
+        Coordinates mouseLocation
     )
     {
+        var series = plotInteractivity.Series;
         /*
          * Using only nearest x series may miss some data, that's why the process will do in two steps: first detect any close
          * element then look through all series for items with the same X
@@ -65,14 +65,14 @@ public static class PlotInteractionExtensions
     public static SeriesIndex SingleSeriesMouseOver(
         this Plot plot,
         PlotInteractivity plotInteractivity,
-        Coordinates mouseLocation,
-        Seq<Scatter> series
+        Coordinates mouseLocation
     )
     {
-        var hovered = GetHoveredSeriesIndex(plot, mouseLocation, series);
+        var series = plotInteractivity.Series;
+        var hovered = GetSeriesIndexForLocation(plot, mouseLocation, series);
 
         // Hide the crosshair, marker and text when no point is found
-        if (hovered.Index == -1 || hovered.NearestPoint.IsNone)
+        if (hovered.IsEmpty)
         {
             plotInteractivity.Decorations.Hide();
             return SeriesIndex.None;
@@ -99,6 +99,62 @@ public static class PlotInteractionExtensions
         );
 
         return hovered;
+    }
+
+    public static PlotInteractivity SeriesSelection(
+        this Plot plot,
+        PlotInteractivity plotInteractivity,
+        Coordinates mouseLocation
+    )
+    {
+        var series = plotInteractivity.Series;
+        var currentSelection = plotInteractivity.PlotSelection;
+
+        if (currentSelection.SelectionMode == SelectionMode.None)
+            return plotInteractivity;
+
+        var clicked = GetSeriesIndexForLocation(plot, mouseLocation, series);
+
+        if (clicked.IsEmpty)
+        {
+            currentSelection = currentSelection with { Selection = Seq<Scatter>.Empty };
+            foreach (var scatter in series)
+            {
+                scatter.LineWidth = 3;
+                scatter.LinePattern = LinePattern.Solid;
+            }
+        }
+        else
+        {
+            var added = series[clicked.Index];
+            currentSelection =
+                currentSelection.SelectionMode == SelectionMode.Single
+                    ? currentSelection with
+                    {
+                        Selection = Seq.create(added)
+                    }
+                    : currentSelection with
+                    {
+                        Selection = currentSelection.Selection.Add(added)
+                    };
+
+            foreach (var scatter in series)
+            {
+                scatter.LineWidth = 2;
+                scatter.LinePattern = LinePattern.Dotted;
+            }
+
+            foreach (var scatter in currentSelection.Selection)
+            {
+                scatter.LineWidth = 5;
+                scatter.LinePattern = LinePattern.Solid;
+            }
+        }
+
+        return plotInteractivity with
+        {
+            PlotSelection = currentSelection
+        };
     }
 
     public static void ShowText(
@@ -229,7 +285,7 @@ public static class PlotInteractionExtensions
             : (foregroundColor.Value, backgroundColor.Value.WithOpacity(opacity));
     }
 
-    private static SeriesIndex GetHoveredSeriesIndex(
+    private static SeriesIndex GetSeriesIndexForLocation(
         Plot plot,
         Coordinates mouseLocation,
         Seq<Scatter> series

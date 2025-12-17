@@ -6,6 +6,20 @@ namespace JedPlotUtils.ScottPlot.Avalonia;
 
 public static class AvaPlotExtensions
 {
+    public static PlotInteractivity SeriesSelection(
+        this AvaPlot avaPlot,
+        PointerPressedEventArgs evt,
+        PlotInteractivity interactivity
+    )
+    {
+        var plot = avaPlot.Plot;
+        var position = evt.GetPosition(avaPlot);
+        Pixel mousePixel = new(position.X, position.Y);
+        Coordinates mouseLocation = plot.GetCoordinates(mousePixel);
+
+        return plot.SeriesSelection(interactivity, mouseLocation);
+    }
+
     public static void HandleMouseLeft(
         this AvaPlot avaPlot,
         PointerEventArgs evt,
@@ -30,17 +44,16 @@ public static class AvaPlotExtensions
         var position = evt.GetPosition(avaPlot);
         Pixel mousePixel = new(position.X, position.Y);
         Coordinates mouseLocation = plot.GetCoordinates(mousePixel);
-        var series = interactivity.Series;
 
         var hoveredInfo = SeriesIndex.None;
 
         switch (interactivity.PlotRender.InteractivityMode)
         {
             case InteractivityMode.SingleSeries:
-                hoveredInfo = plot.SingleSeriesMouseOver(interactivity, mouseLocation, series);
+                hoveredInfo = plot.SingleSeriesMouseOver(interactivity, mouseLocation);
                 break;
             case InteractivityMode.AllSeries:
-                plot.AllSeriesMouseOver(interactivity, mouseLocation, series);
+                plot.AllSeriesMouseOver(interactivity, mouseLocation);
                 break;
         }
 
@@ -61,7 +74,7 @@ public static class AvaPlotExtensions
             avaPlot.UserInputProcessor.UserActionResponses.Clear();
 
         avaPlot.Refresh();
-        return new PlotInteractivity(scatters, deco, plotRender, true);
+        return new PlotInteractivity(scatters, deco, plotRender, PlotSelection.Default, true);
     }
 
     public static PlotInteractivity DrawScatterPoints(
@@ -76,7 +89,7 @@ public static class AvaPlotExtensions
             avaPlot.UserInputProcessor.UserActionResponses.Clear();
 
         avaPlot.Refresh();
-        return new PlotInteractivity(scatters, deco, plotRender, false);
+        return new PlotInteractivity(scatters, deco, plotRender, PlotSelection.Default, false);
     }
 
     public static PlotInteractivity DrawScatterStepLines(
@@ -91,6 +104,6 @@ public static class AvaPlotExtensions
             avaPlot.UserInputProcessor.UserActionResponses.Clear();
 
         avaPlot.Refresh();
-        return new PlotInteractivity(scatters, deco, plotRender, true);
+        return new PlotInteractivity(scatters, deco, plotRender, PlotSelection.Default, true);
     }
 }

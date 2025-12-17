@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
@@ -9,6 +10,7 @@ using JedPlotUtils.ScottPlot;
 using JedPlotUtils.ScottPlot.Avalonia;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
+using ScottPlot.Plottables;
 using RxUnit = System.Reactive.Unit;
 
 namespace AvaloniaApplication;
@@ -62,7 +64,13 @@ public partial class TimeSeriesSampleView : ReactiveUserControl<TimeSeriesSample
                 view._splotInteractivity = view.SPlot.DrawScatterLines(
                     view._splotConfig.PlotRender,
                     ctx.Input
-                );
+                ) with
+                {
+                    PlotSelection = new PlotSelection()
+                    {
+                        SelectionMode = JedPlotUtils.ScottPlot.SelectionMode.Single
+                    }
+                };
                 ctx.SetOutput(RxUnit.Default);
             })
             .DisposeWith(disposables);
@@ -94,6 +102,25 @@ public partial class TimeSeriesSampleView : ReactiveUserControl<TimeSeriesSample
                 handler => view.SPlot.PointerExited -= handler
             )
             .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe()
+            .DisposeWith(disposables);
+
+        Observable
+            .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
+                o =>
+                    (o, args) =>
+                    {
+                        if (view._splotInteractivity is not null)
+                        {
+                            view._splotInteractivity = view.SPlot.SeriesSelection(
+                                args,
+                                view._splotInteractivity.Value
+                            );
+                        }
+                    },
+                handler => view.SPlot.PointerPressed += handler,
+                handler => view.SPlot.PointerPressed -= handler
+            )
             .Subscribe()
             .DisposeWith(disposables);
     }
