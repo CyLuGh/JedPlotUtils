@@ -4,11 +4,13 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="Avalonia" Version="11.3.9" />
-    <PackageVersion Include="Avalonia.Desktop" Version="11.3.9" />
-    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.9" />
-    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.9" />
-    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.9" />
+    <PackageVersion Include="Avalonia" Version="11.3.10" />
+    <PackageVersion Include="Avalonia.Desktop" Version="11.3.10" />
+    <PackageVersion Include="Avalonia.Diagnostics" Version="11.3.10" />
+    <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.3.10" />
+    <PackageVersion Include="Avalonia.Themes.Fluent" Version="11.3.10" />
+    <PackageVersion Include="HierarchyGrid.Avalonia" Version="3.6.0" />
+    <PackageVersion Include="HierarchyGrid.Definitions" Version="3.6.0" />
     <PackageVersion Include="LanguageExt.Core" Version="4.4.9" />
     <PackageVersion Include="ReactiveMarbles.ObservableEvents.SourceGenerator" Version="1.3.1" />
     <PackageVersion Include="ReactiveUI" Version="22.3.1" />

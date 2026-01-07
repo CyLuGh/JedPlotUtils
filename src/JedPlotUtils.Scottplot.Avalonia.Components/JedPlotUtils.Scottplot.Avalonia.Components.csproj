@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="HierarchyGrid.Avalonia" />
+    <PackageReference Include="ReactiveUI.Avalonia" />
+    
+    <PackageReference Include="ReactiveUI.SourceGenerators">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JedPlotUtils.ScottPlot.Avalonia\JedPlotUtils.ScottPlot.Avalonia.csproj" />
+    <ProjectReference Include="..\JedPlotUtils.ScottPlot.Common.Components\JedPlotUtils.ScottPlot.Common.Components.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Views\TimeSeriesViewerView.axaml.cs">
+      <DependentUpon>TimeSeriesViewerView.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+</Project>

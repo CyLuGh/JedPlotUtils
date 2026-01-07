@@ -1,0 +1,35 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+			       xmlns:scottPlot="using:ScottPlot.Avalonia"
+             xmlns:hgrid="using:HierarchyGrid.Avalonia"
+			       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+			       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+			       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+			       xmlns:rxui="http://reactiveui.net"
+             xmlns:viewmodels="using:JedPlotUtils.Scottplot.Common.Components.ViewModels"
+             xmlns:converters="using:JedPlotUtils.Scottplot.Avalonia.Components.Converters"
+             mc:Ignorable="d"
+             d:DesignWidth="800"
+             d:DesignHeight="450"
+             x:DataType="viewmodels:TimeSeriesViewerViewModel"
+			       x:Class="JedPlotUtils.ScottPlot.Avalonia.Components.Views.TimeSeriesViewerView">
+  <UserControl.Resources>
+    <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
+  </UserControl.Resources>
+  <DockPanel>
+    <DockPanel DockPanel.Dock="Top">
+      <ComboBox x:Name="ComboBoxDisplayMode"
+                SelectedItem="{Binding Path=DisplayMode}"/>
+    </DockPanel>
+    <Grid x:Name="GridMainDisplay"
+          ColumnSpacing="5" 
+          RowSpacing="5">
+      <scottPlot:AvaPlot x:Name="Chart" 
+                         IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"/>
+      <hgrid:Grid x:Name="HierarchyGrid" 
+                  ViewModel="{Binding HierarchyGridViewModel}"
+                  IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
+      <GridSplitter x:Name="Splitter" 
+                    IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"/>
+    </Grid>
+  </DockPanel>
+</UserControl>

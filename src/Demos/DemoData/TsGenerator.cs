@@ -1,3 +1,5 @@
+using HierarchyGrid.Definitions;
+using JedPlotUtils.ScottPlot.Common.Components;
 using LanguageExt;
 
 namespace DemoData;
@@ -40,6 +42,27 @@ public class TsGenerator
         }
 
         return new() { Name = name, Items = items.OrderBy(x => x.Date).ToSeq().Strict() };
+    }
+
+    public TimeSeriesInfo GenerateTimeSeriesInfo(
+        string label,
+        DateOnly start,
+        int count,
+        Func<DateOnly, DateOnly> increment
+    )
+    {
+        var current = start;
+        var dates = new List<DateOnly>();
+        var values = new List<double>();
+
+        while (dates.Count < count)
+        {
+            dates.Add(current);
+            values.Add(_random.NextDouble() * 1_000_000);
+            current = increment(current);
+        }
+
+        return new(label, [.. dates], [.. values]);
     }
 
     private IEnumerable<ChartTs> GenerateSample()
