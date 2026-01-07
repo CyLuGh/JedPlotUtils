@@ -81,7 +81,12 @@ public partial class TimeSeriesSampleView : ReactiveUserControl<TimeSeriesSample
                     (_, args) =>
                     {
                         if (view._splotInteractivity is not null)
-                            view.SPlot.HandleMouseOver(args, view._splotInteractivity.Value);
+                        {
+                            var sIndex = view.SPlot.HandleMouseOver(
+                                args,
+                                view._splotInteractivity.Value
+                            );
+                        }
                     },
                 handler => view.SPlot.PointerMoved += handler,
                 handler => view.SPlot.PointerMoved -= handler

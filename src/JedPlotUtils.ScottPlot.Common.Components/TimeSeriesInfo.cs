@@ -71,6 +71,7 @@ public readonly record struct TimeSeriesInfo
     public PlotSeries PlotSeries =>
         new()
         {
+            Identifier = Identifier,
             Name = Label,
             Points = Data.Map(p => new Coordinates(
                     p.Key.ToDateTime(TimeOnly.MinValue).ToOADate(),

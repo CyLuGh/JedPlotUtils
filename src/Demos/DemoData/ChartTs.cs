@@ -12,6 +12,7 @@ public readonly record struct ChartTs
     public PlotSeries ToPlotSeries() =>
         new PlotSeries()
         {
+            Identifier = Name,
             Name = Name,
             Points = Items.Map(x => new Coordinates(x.Date.ToOADate(), x.Value))
         };

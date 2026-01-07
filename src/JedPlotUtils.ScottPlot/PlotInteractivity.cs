@@ -4,7 +4,7 @@ using ScottPlot.Plottables;
 namespace JedPlotUtils.ScottPlot;
 
 public readonly record struct PlotInteractivity(
-    Seq<Scatter> Series,
+    HashMap<Scatter, string> Series,
     PlotDecorations Decorations,
     PlotRender PlotRender,
     PlotSelection PlotSelection,

@@ -13,7 +13,8 @@ public static class PlotInteractionExtensions
         Coordinates mouseLocation
     )
     {
-        var series = plotInteractivity.Series;
+        var map = plotInteractivity.Series;
+        var series = map.Keys.ToSeq();
         /*
          * Using only nearest x series may miss some data, that's why the process will do in two steps: first detect any close
          * element then look through all series for items with the same X
@@ -68,8 +69,9 @@ public static class PlotInteractionExtensions
         Coordinates mouseLocation
     )
     {
-        var series = plotInteractivity.Series;
-        var hovered = GetSeriesIndexForLocation(plot, mouseLocation, series);
+        var map = plotInteractivity.Series;
+        var series = map.Keys.ToSeq();
+        var hovered = GetSeriesIndexForLocation(plot, mouseLocation, map);
 
         // Hide the crosshair, marker and text when no point is found
         if (hovered.IsEmpty)
@@ -82,13 +84,26 @@ public static class PlotInteractionExtensions
         var scatter = series[hovered.Index];
         DataPoint point = hovered.NearestPoint.Match(p => p, () => default);
 
+        HighlightPoint(plot, plotInteractivity, mouseLocation, scatter, point);
+
+        return hovered;
+    }
+
+    public static void HighlightPoint(
+        this Plot plot,
+        PlotInteractivity plotInteractivity,
+        Coordinates mouseLocation,
+        Scatter scatter,
+        DataPoint point
+    )
+    {
         plotInteractivity.Decorations.HighlightMarker.HighlightPoint(
             point.Coordinates,
             fillColor: scatter.MarkerFillColor
         );
 
         var text =
-            $"{scatter.LegendText} - {plotInteractivity.PlotRender.XFormatter(point.X)}: {plotInteractivity.PlotRender.XFormatter(point.Y)}";
+            $"{scatter.LegendText} - {plotInteractivity.PlotRender.XFormatter(point.X)}: {plotInteractivity.PlotRender.YFormatter(point.Y)}";
 
         plot.ShowText(
             plotInteractivity,
@@ -97,8 +112,6 @@ public static class PlotInteractionExtensions
             text,
             backgroundColor: scatter.MarkerFillColor
         );
-
-        return hovered;
     }
 
     public static PlotInteractivity SeriesSelection(
@@ -107,13 +120,14 @@ public static class PlotInteractionExtensions
         Coordinates mouseLocation
     )
     {
-        var series = plotInteractivity.Series;
+        var map = plotInteractivity.Series;
+        var series = map.Keys.ToSeq();
         var currentSelection = plotInteractivity.PlotSelection;
 
         if (currentSelection.SelectionMode == SelectionMode.None)
             return plotInteractivity;
 
-        var clicked = GetSeriesIndexForLocation(plot, mouseLocation, series);
+        var clicked = GetSeriesIndexForLocation(plot, mouseLocation, map);
 
         if (clicked.IsEmpty)
         {
@@ -288,9 +302,11 @@ public static class PlotInteractionExtensions
     private static SeriesIndex GetSeriesIndexForLocation(
         Plot plot,
         Coordinates mouseLocation,
-        Seq<Scatter> series
+        HashMap<Scatter, string> map
     )
     {
+        var series = map.Keys.ToSeq();
+
         // get the nearest point of each scatter
         var nearestPoints = series
             .Select((s, i) => (i, s.Data.GetNearest(mouseLocation, plot.LastRender)))
@@ -314,16 +330,20 @@ public static class PlotInteractionExtensions
             }
         }
 
-        return new(scatterIndex, nearestPoints.Find(scatterIndex));
+        return new(
+            scatterIndex,
+            scatterIndex != -1 ? map[series[scatterIndex]] : Option<string>.None,
+            nearestPoints.Find(scatterIndex)
+        );
     }
 
-    public static (Seq<Scatter>, PlotDecorations) DrawScatterLines(
+    public static (HashMap<Scatter, string>, PlotDecorations) DrawScatterLines(
         this Plot plot,
         params IEnumerable<PlotSeries> series
     )
     {
         plot.Clear();
-        List<Scatter> scatters = [];
+        var map = new HashMap<Scatter, string>();
 
         foreach (var cs in series)
         {
@@ -332,22 +352,23 @@ public static class PlotInteractionExtensions
             scatterLine.MarkerStyle.Shape = MarkerShape.None;
             scatterLine.MarkerStyle.Size = 10;
             scatterLine.LineWidth = 3;
-            scatters.Add(scatterLine);
+
+            map = map.Add(scatterLine, cs.Identifier);
         }
 
         var deco = new PlotDecorations(plot);
         plot.Axes.AutoScale();
 
-        return (scatters.ToSeq().Strict(), deco);
+        return (map, deco);
     }
 
-    public static (Seq<Scatter>, PlotDecorations) DrawScatterPoints(
+    public static (HashMap<Scatter, string>, PlotDecorations) DrawScatterPoints(
         this Plot plot,
         params IEnumerable<PlotSeries> series
     )
     {
         plot.Clear();
-        List<Scatter> scatters = [];
+        var map = new HashMap<Scatter, string>();
 
         foreach (var cs in series)
         {
@@ -355,22 +376,22 @@ public static class PlotInteractionExtensions
             scatterPoints.LegendText = cs.Name;
             scatterPoints.MarkerStyle.Shape = MarkerShape.FilledCircle;
             scatterPoints.MarkerStyle.Size = 10;
-            scatters.Add(scatterPoints);
+            map = map.Add(scatterPoints, cs.Identifier);
         }
 
         var deco = new PlotDecorations(plot);
         plot.Axes.AutoScale();
 
-        return (scatters.ToSeq().Strict(), deco);
+        return (map, deco);
     }
 
-    public static (Seq<Scatter>, PlotDecorations) DrawScatterStepLines(
+    public static (HashMap<Scatter, string>, PlotDecorations) DrawScatterStepLines(
         this Plot plot,
         params IEnumerable<PlotSeries> series
     )
     {
         plot.Clear();
-        List<Scatter> scatters = [];
+        var map = new HashMap<Scatter, string>();
 
         foreach (var cs in series)
         {
@@ -380,12 +401,12 @@ public static class PlotInteractionExtensions
             scatterLine.MarkerStyle.Size = 8;
             scatterLine.LineWidth = 3;
             scatterLine.ConnectStyle = ConnectStyle.StepHorizontal;
-            scatters.Add(scatterLine);
+            map = map.Add(scatterLine, cs.Identifier);
         }
 
         var deco = new PlotDecorations(plot);
         plot.Axes.AutoScale();
 
-        return (scatters.ToSeq().Strict(), deco);
+        return (map, deco);
     }
 }
