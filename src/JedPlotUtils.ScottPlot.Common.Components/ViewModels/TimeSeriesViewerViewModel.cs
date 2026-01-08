@@ -8,6 +8,7 @@ using DynamicData;
 using HierarchyGrid.Definitions;
 using JedPlotUtils.ScottPlot;
 using JedPlotUtils.ScottPlot.Common.Components;
+using JedPlotUtils.ScottPlot.Common.Components.ViewModels;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using ReactiveUI;
@@ -17,7 +18,7 @@ using ScottPlot.Plottables;
 using ScottPlot.Statistics;
 using RxUnit = System.Reactive.Unit;
 
-namespace JedPlotUtils.Scottplot.Common.Components.ViewModels;
+namespace JedPlotUtils.ScottPlot.Common.Components.ViewModels;
 
 public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableViewModel
 {
@@ -32,6 +33,12 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
 
     [ObservableAsProperty(ReadOnly = false)]
     private HashMap<Scatter, string> _series;
+
+    [ObservableAsProperty(ReadOnly = false)]
+    private Seq<AvailableSeriesViewModel> _availableSeries;
+
+    [Reactive]
+    public partial Seq<Scatter> SelectedSeries { get; set; }
 
     private readonly SourceCache<TimeSeriesInfo, string> _infoCache = new(i => i.Identifier);
 
@@ -53,6 +60,10 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
     public Interaction<Option<(Scatter, DateOnly)>, RxUnit> HighlightChartInteraction { get; } =
         new(RxApp.MainThreadScheduler);
 
+    public ReactiveCommand<Seq<Scatter>, RxUnit> DisplaySelectionOnChartCommand { get; }
+    public Interaction<Seq<Scatter>, RxUnit> DisplaySelectionOnChartInteraction { get; } =
+        new(RxApp.MainThreadScheduler);
+
     public TimeSeriesViewerViewModel()
     {
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
@@ -60,6 +71,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
         DrawChartCommand = CreateDrawChartCommand();
         HighlightGridCommand = CreateCommandHighlightGridCommand();
         HighlightChartCommand = CreateCommandHighlightChartCommand();
+        DisplaySelectionOnChartCommand = CreateCommandDisplaySelectionOnChartCommand();
 
         HierarchyGridViewModel
             .WhenAnyValue(x => x.HoveredCell)
@@ -80,6 +92,80 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
                     () => Option<(Scatter, DateOnly)>.None
                 );
             });
+
+        _availableSeriesHelper = this.WhenAnyValue(x => x.Series)
+            .DistinctUntilChanged()
+            .CombineLatest(this.WhenAnyValue(x => x.SelectedSeries).DistinctUntilChanged())
+            .Select(t =>
+            {
+                var (map, selections) = t;
+                return map.OrderBy(x => x.Key.LegendText)
+                    .Select(x => new AvailableSeriesViewModel()
+                    {
+                        Scatter = x.Key,
+                        Identifier = x.Value,
+                        IsSelected = selections.Contains(x.Key),
+                    })
+                    .ToSeq()
+                    .Strict();
+            })
+            .ToProperty(this, x => x.AvailableSeries, scheduler: RxApp.MainThreadScheduler);
+
+        this.WhenAnyValue(x => x.AvailableSeries)
+            .DistinctUntilChanged()
+            .Select(seq => seq.Select(x => x.WhenAnyValue(o => o.IsSelected)).Merge())
+            .Switch()
+            .Throttle(TimeSpan.FromMilliseconds(50))
+            .Select(_ => AvailableSeries.Where(x => x.IsSelected))
+            .ObserveOn(RxApp.MainThreadScheduler)
+            .Subscribe(sel =>
+            {
+                SelectedSeries = sel.Map(s => s.Scatter);
+            });
+
+        HierarchyGridViewModel
+            .WhenAnyValue(x => x.Producers)
+            .Select(seq => seq.Select(p => p.WhenAnyValue(x => x.IsHighlighted)).Merge())
+            .Throttle(TimeSpan.FromMilliseconds(50))
+            .Switch()
+            .Subscribe(_ =>
+            {
+                var identifiers = HierarchyGridViewModel
+                    .Producers.Where(p => p.IsHighlighted)
+                    .Select(p => (string)p.Tag)
+                    .ToFrozenSet();
+
+                SelectedSeries = Series
+                    .Where(x => identifiers.Contains(x.Value))
+                    .Select(x => x.Key)
+                    .ToSeq();
+            });
+
+        SelectedSeries = Seq<Scatter>.Empty;
+    }
+
+    private ReactiveCommand<Seq<Scatter>, RxUnit> CreateCommandDisplaySelectionOnChartCommand()
+    {
+        DisplaySelectionOnChartInteraction.RegisterHandler(ctx => ctx.SetOutput(RxUnit.Default));
+        var cmd = ReactiveCommand.CreateFromObservable(
+            (Seq<Scatter> seq) => DisplaySelectionOnChartInteraction.Handle(seq)
+        );
+
+        this.WhenAnyValue(x => x.SelectedSeries)
+            .Do(seq =>
+            {
+                var identifiers = seq.Map(s => Series.Find(s)).Somes().ToHashSet();
+                foreach (var p in HierarchyGridViewModel.Producers)
+                {
+                    p.IsHighlighted = identifiers.Contains((string)p.Tag);
+                }
+                Observable
+                    .Return(false)
+                    .InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
+            })
+            .InvokeCommand(cmd);
+
+        return cmd;
     }
 
     private ReactiveCommand<

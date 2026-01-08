@@ -6,7 +6,7 @@ using Avalonia.Data;
 using Avalonia.Data.Converters;
 using JedPlotUtils.ScottPlot.Common.Components;
 
-namespace JedPlotUtils.Scottplot.Avalonia.Components.Converters;
+namespace JedPlotUtils.ScottPlot.Avalonia.Components.Converters;
 
 public class DisplayModeVisibilityConverter : IValueConverter
 {

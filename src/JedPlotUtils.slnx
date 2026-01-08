@@ -4,7 +4,7 @@
     <Project Path="Demos/DemoData/DemoData.csproj" Id="c11035ef-c55a-4f62-8bfe-1544a20791f6" />
     <Project Path="Demos/WpfApplication/WpfApplication.csproj" Id="d8b032a3-dde3-4a64-be85-c4ed1eb48855" />
   </Folder>
-  <Project Path="JedPlotUtils.Scottplot.Avalonia.Components/JedPlotUtils.Scottplot.Avalonia.Components.csproj" Id="2213ec66-f6c7-4902-b492-f7d7c67c7c10" />
+  <Project Path="JedPlotUtils.Scottplot.Avalonia.Components/JedPlotUtils.Scottplot.Avalonia.Components.csproj" Id="2213ec66-f6c7-4902-b492-f7d7c67c7c10" DisplayName="JedPlotUtils.ScottPlot.Avalonia.Components" />
   <Project Path="JedPlotUtils.ScottPlot.Avalonia/JedPlotUtils.ScottPlot.Avalonia.csproj" Id="7a4dd988-0fad-4002-9f4a-38ed53785bf3" />
   <Project Path="JedPlotUtils.ScottPlot.Common.Components/JedPlotUtils.ScottPlot.Common.Components.csproj" Id="9ef207ee-c124-494d-ae4f-4300596bdfdf" />
   <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />

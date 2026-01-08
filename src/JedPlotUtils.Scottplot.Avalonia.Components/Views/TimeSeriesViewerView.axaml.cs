@@ -6,7 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using JedPlotUtils.ScottPlot.Avalonia;
 using JedPlotUtils.ScottPlot.Common.Components;
-using JedPlotUtils.Scottplot.Common.Components.ViewModels;
+using JedPlotUtils.ScottPlot.Common.Components.ViewModels;
 using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
@@ -66,7 +66,10 @@ public partial class TimeSeriesViewerView : ReactiveUserControl<TimeSeriesViewer
         viewModel
             .DrawChartInteraction.RegisterHandler(ctx =>
             {
-                var res = view.Chart.DrawScatterLines(view._splotConfig.PlotRender, ctx.Input);
+                var res = view.Chart.DrawScatterLines(view._splotConfig.PlotRender, ctx.Input) with
+                {
+                    PlotSelection = new PlotSelection() { SelectionMode = SelectionMode.Multiple }
+                };
                 view._splotInteractivity = res;
 
                 ctx.SetOutput(res.Series);
@@ -106,39 +109,54 @@ public partial class TimeSeriesViewerView : ReactiveUserControl<TimeSeriesViewer
                             view._splotInteractivity?.Decorations.Hide();
                             view.Chart.Refresh();
                         });
-
-                    //var point = series
-                    //    .Data.GetScatterPoints()
-                    //    .Find(c => c.X.Equals(period.ToOADate()));
-                    //point
-                    //    .Some(coord =>
-                    //    {
-                    //        view._linkedInteractivity.HighlightPoint(series, coord);
-
-                    //        view._linkedInteractivity.ShowText(
-                    //            view.LinkedAvaPlot,
-                    //            coord,
-                    //            coord,
-                    //            view._linkedInteractivity.IsTimeSeries
-                    //                ? $"{series.LegendText} - {DateTime.FromOADate(coord.X):yyyy-MM-dd}: {coord.Y:N}"
-                    //                : $"{series.LegendText} - {coord.X:0}: {coord.Y:N}",
-                    //            series.MarkerStyle.FillColor
-                    //        );
-
-                    //        view.LinkedAvaPlot.Refresh();
-                    //    })
-                    //    .None(() =>
-                    //    {
-                    //        view.LinkedAvaPlot.HideDecorations(view._linkedInteractivity);
-                    //        view.LinkedAvaPlot.Refresh();
-                    //    });
                 });
 
                 ctx.SetOutput(RxUnit.Default);
             })
             .DisposeWith(disposables);
 
+        HandleSeriesSelection(view, viewModel, disposables);
         HandleMouseEvents(view, viewModel, disposables);
+    }
+
+    private static void HandleSeriesSelection(
+        TimeSeriesViewerView view,
+        TimeSeriesViewerViewModel viewModel,
+        CompositeDisposable disposables
+    )
+    {
+        Observable
+            .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
+                o =>
+                    (o, args) =>
+                    {
+                        if (view._splotInteractivity is not null)
+                        {
+                            view._splotInteractivity = view.Chart.SeriesSelection(
+                                args,
+                                view._splotInteractivity.Value
+                            );
+
+                            viewModel.SelectedSeries =
+                                view._splotInteractivity?.PlotSelection.Selection
+                                ?? Seq<Scatter>.Empty;
+                        }
+                    },
+                handler => view.Chart.PointerPressed += handler,
+                handler => view.Chart.PointerPressed -= handler
+            )
+            .Subscribe()
+            .DisposeWith(disposables);
+
+        viewModel
+            .DisplaySelectionOnChartInteraction.RegisterHandler(ctx =>
+            {
+                view._splotInteractivity = view._splotInteractivity?.SeriesSelection(ctx.Input);
+                view.Chart.Refresh();
+
+                ctx.SetOutput(RxUnit.Default);
+            })
+            .DisposeWith(disposables);
     }
 
     private static void HandleMouseEvents(

@@ -21,7 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\JedPlotUtils.Scottplot.Avalonia.Components\JedPlotUtils.Scottplot.Avalonia.Components.csproj" />
+    <ProjectReference Include="..\..\JedPlotUtils.Scottplot.Avalonia.Components\JedPlotUtils.ScottPlot.Avalonia.Components.csproj" />
     <ProjectReference Include="..\..\JedPlotUtils.ScottPlot.Avalonia\JedPlotUtils.ScottPlot.Avalonia.csproj" />
     <ProjectReference Include="..\DemoData\DemoData.csproj" />
   </ItemGroup>

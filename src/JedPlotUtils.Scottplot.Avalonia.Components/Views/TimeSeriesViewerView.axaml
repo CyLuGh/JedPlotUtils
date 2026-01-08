@@ -5,8 +5,8 @@
 			       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 			       xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
 			       xmlns:rxui="http://reactiveui.net"
-             xmlns:viewmodels="using:JedPlotUtils.Scottplot.Common.Components.ViewModels"
-             xmlns:converters="using:JedPlotUtils.Scottplot.Avalonia.Components.Converters"
+             xmlns:viewmodels="using:JedPlotUtils.ScottPlot.Common.Components.ViewModels"
+             xmlns:converters="using:JedPlotUtils.ScottPlot.Avalonia.Components.Converters"
              mc:Ignorable="d"
              d:DesignWidth="800"
              d:DesignHeight="450"
@@ -16,19 +16,36 @@
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
   </UserControl.Resources>
   <DockPanel>
+    <Expander Header="Series"
+              ExpandDirection="Right"
+              VerticalAlignment="Stretch"
+              VerticalContentAlignment="Stretch"
+              DockPanel.Dock="Left">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding AvailableSeries}">
+          <ItemsControl.DataTemplates>
+            <DataTemplate DataType="viewmodels:AvailableSeriesViewModel">
+              <CheckBox IsChecked="{Binding IsSelected}">
+                <TextBlock Text="{Binding Scatter.LegendText}"/>
+              </CheckBox>
+            </DataTemplate>
+          </ItemsControl.DataTemplates>
+        </ItemsControl>
+      </ScrollViewer>
+    </Expander>
     <DockPanel DockPanel.Dock="Top">
       <ComboBox x:Name="ComboBoxDisplayMode"
                 SelectedItem="{Binding Path=DisplayMode}"/>
     </DockPanel>
     <Grid x:Name="GridMainDisplay"
-          ColumnSpacing="5" 
+          ColumnSpacing="5"
           RowSpacing="5">
-      <scottPlot:AvaPlot x:Name="Chart" 
+      <scottPlot:AvaPlot x:Name="Chart"
                          IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"/>
-      <hgrid:Grid x:Name="HierarchyGrid" 
+      <hgrid:Grid x:Name="HierarchyGrid"
                   ViewModel="{Binding HierarchyGridViewModel}"
                   IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
-      <GridSplitter x:Name="Splitter" 
+      <GridSplitter x:Name="Splitter"
                     IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"/>
     </Grid>
   </DockPanel>

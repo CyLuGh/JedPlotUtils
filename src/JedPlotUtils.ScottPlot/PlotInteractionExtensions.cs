@@ -2,6 +2,7 @@ using System.Text;
 using LanguageExt;
 using ScottPlot;
 using ScottPlot.Plottables;
+using ScottPlot.Statistics;
 
 namespace JedPlotUtils.ScottPlot;
 
@@ -112,6 +113,50 @@ public static class PlotInteractionExtensions
             text,
             backgroundColor: scatter.MarkerFillColor
         );
+    }
+
+    public static PlotInteractivity SeriesSelection(
+        this PlotInteractivity plotInteractivity,
+        Seq<Scatter> selections
+    )
+    {
+        var map = plotInteractivity.Series;
+        var series = map.Keys.ToSeq();
+        var currentSelection = plotInteractivity.PlotSelection;
+
+        if (currentSelection.SelectionMode == SelectionMode.None)
+            return plotInteractivity;
+
+        if (selections.IsEmpty)
+        {
+            currentSelection = currentSelection with { Selection = Seq<Scatter>.Empty };
+            foreach (var scatter in series)
+            {
+                scatter.LineWidth = 3;
+                scatter.LinePattern = LinePattern.Solid;
+            }
+        }
+        else
+        {
+            currentSelection = currentSelection with { Selection = selections };
+
+            foreach (var scatter in series)
+            {
+                scatter.LineWidth = 2;
+                scatter.LinePattern = LinePattern.Dotted;
+            }
+
+            foreach (var scatter in currentSelection.Selection)
+            {
+                scatter.LineWidth = 5;
+                scatter.LinePattern = LinePattern.Solid;
+            }
+        }
+
+        return plotInteractivity with
+        {
+            PlotSelection = currentSelection
+        };
     }
 
     public static PlotInteractivity SeriesSelection(
