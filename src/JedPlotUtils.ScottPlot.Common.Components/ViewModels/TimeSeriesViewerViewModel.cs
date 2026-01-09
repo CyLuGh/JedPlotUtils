@@ -1,21 +1,12 @@
-﻿using System;
-using System.Collections.Frozen;
-using System.Reactive;
-using System.Reactive.Disposables;
+﻿using System.Collections.Frozen;
 using System.Reactive.Linq;
-using System.Text;
 using DynamicData;
 using HierarchyGrid.Definitions;
-using JedPlotUtils.ScottPlot;
-using JedPlotUtils.ScottPlot.Common.Components;
-using JedPlotUtils.ScottPlot.Common.Components.ViewModels;
 using LanguageExt;
 using LanguageExt.UnsafeValueAccess;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
-using ScottPlot;
 using ScottPlot.Plottables;
-using ScottPlot.Statistics;
 using RxUnit = System.Reactive.Unit;
 
 namespace JedPlotUtils.ScottPlot.Common.Components.ViewModels;
@@ -40,6 +31,9 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
     [Reactive]
     public partial Seq<Scatter> SelectedSeries { get; set; }
 
+    [Reactive]
+    public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
+
     private readonly SourceCache<TimeSeriesInfo, string> _infoCache = new(i => i.Identifier);
 
     public ReactiveCommand<DisplayMode, RxUnit> AdaptDisplayModeCommand { get; }
@@ -47,7 +41,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
         new(RxApp.MainThreadScheduler);
 
     public ReactiveCommand<
-        Seq<TimeSeriesInfo>,
+        (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
         HierarchyDefinitions
     > BuildHierarchyGridDefinitionsCommand { get; }
 
@@ -64,6 +58,10 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
     public Interaction<Seq<Scatter>, RxUnit> DisplaySelectionOnChartInteraction { get; } =
         new(RxApp.MainThreadScheduler);
 
+    public ReactiveCommand<Func<DateOnly, string>, RxUnit> ChangeDateFormatterCommand { get; }
+    public Interaction<Func<DateOnly, string>, RxUnit> ChangeDateFormatterInteraction { get; } =
+        new(RxApp.MainThreadScheduler);
+
     public TimeSeriesViewerViewModel()
     {
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
@@ -72,6 +70,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
         HighlightGridCommand = CreateCommandHighlightGridCommand();
         HighlightChartCommand = CreateCommandHighlightChartCommand();
         DisplaySelectionOnChartCommand = CreateCommandDisplaySelectionOnChartCommand();
+        ChangeDateFormatterCommand = CreateCommandChangeDateFormatterCommand();
 
         HierarchyGridViewModel
             .WhenAnyValue(x => x.HoveredCell)
@@ -142,6 +141,24 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
             });
 
         SelectedSeries = Seq<Scatter>.Empty;
+    }
+
+    private ReactiveCommand<
+        Func<DateOnly, string>,
+        RxUnit
+    > CreateCommandChangeDateFormatterCommand()
+    {
+        ChangeDateFormatterInteraction.RegisterHandler(ctx => ctx.SetOutput(RxUnit.Default));
+
+        var cmd = ReactiveCommand.CreateFromObservable<Func<DateOnly, string>, RxUnit>(f =>
+            ChangeDateFormatterInteraction.Handle(f)
+        );
+
+        this.WhenAnyValue(x => x.DateFormatter)
+            .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM")))
+            .InvokeCommand(cmd);
+
+        return cmd;
     }
 
     private ReactiveCommand<Seq<Scatter>, RxUnit> CreateCommandDisplaySelectionOnChartCommand()
@@ -296,21 +313,37 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
     }
 
     private ReactiveCommand<
-        Seq<TimeSeriesInfo>,
+        (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
         HierarchyDefinitions
     > CreateCommandBuildHierarchyGridDefinitions()
     {
         var cmd = ReactiveCommand.CreateRunInBackground(
-            (Seq<TimeSeriesInfo> infos) => DoBuildHierarchyGridDefinitions(infos)
+            ((Seq<TimeSeriesInfo>, Func<DateOnly, string>) t) =>
+            {
+                var (infos, formatter) = t;
+                return DoBuildHierarchyGridDefinitions(infos, formatter);
+            }
         );
 
-        _infoCache.Connect().DisposeMany().Select(_ => _infoCache.Items.ToSeq()).InvokeCommand(cmd);
+        _infoCache
+            .Connect()
+            .DisposeMany()
+            .Select(_ => _infoCache.Items.ToSeq())
+            .CombineLatest(
+                this.WhenAnyValue(x => x.DateFormatter)
+                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM")))
+            )
+            .InvokeCommand(cmd);
+
         cmd.Subscribe(defs => HierarchyGridViewModel.Set(defs));
 
         return cmd;
     }
 
-    private static HierarchyDefinitions DoBuildHierarchyGridDefinitions(Seq<TimeSeriesInfo> infos)
+    private static HierarchyDefinitions DoBuildHierarchyGridDefinitions(
+        Seq<TimeSeriesInfo> infos,
+        Func<DateOnly, string> formatter
+    )
     {
         var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
 
@@ -326,7 +359,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
             .Order()
             .Map(d => new ConsumerDefinition
             {
-                Content = d,
+                Content = formatter(d),
                 Tag = d,
                 Consumer = o =>
                     o switch

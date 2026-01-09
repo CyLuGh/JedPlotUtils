@@ -13,29 +13,40 @@
              x:DataType="viewmodels:TimeSeriesViewerViewModel"
 			       x:Class="JedPlotUtils.ScottPlot.Avalonia.Components.Views.TimeSeriesViewerView">
   <UserControl.Resources>
+    <converters:DisplayModeDescriptionConverter x:Key="DisplayModeDescriptionConverter"/>
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
   </UserControl.Resources>
   <DockPanel>
-    <Expander Header="Series"
-              ExpandDirection="Right"
-              VerticalAlignment="Stretch"
-              VerticalContentAlignment="Stretch"
-              DockPanel.Dock="Left">
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <ItemsControl ItemsSource="{Binding AvailableSeries}">
-          <ItemsControl.DataTemplates>
-            <DataTemplate DataType="viewmodels:AvailableSeriesViewModel">
-              <CheckBox IsChecked="{Binding IsSelected}">
-                <TextBlock Text="{Binding Scatter.LegendText}"/>
-              </CheckBox>
-            </DataTemplate>
-          </ItemsControl.DataTemplates>
-        </ItemsControl>
-      </ScrollViewer>
-    </Expander>
     <DockPanel DockPanel.Dock="Top">
-      <ComboBox x:Name="ComboBoxDisplayMode"
-                SelectedItem="{Binding Path=DisplayMode}"/>
+      <StackPanel Orientation="Horizontal"
+                  Spacing="5"
+                  Margin="5"
+                  DockPanel.Dock="Right">
+        <TextBlock Text="Layout:"
+                   VerticalAlignment="Center"/>
+        <ComboBox x:Name="ComboBoxDisplayMode"
+                  DisplayMemberBinding="{Binding .,Converter={StaticResource DisplayModeDescriptionConverter}}"
+                  SelectedItem="{Binding Path=DisplayMode}"/>
+      </StackPanel>
+      <Button Content="Series" Margin="5">
+        <Button.Flyout>
+          <Flyout>
+            <Panel>
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding AvailableSeries}">
+                  <ItemsControl.DataTemplates>
+                    <DataTemplate DataType="viewmodels:AvailableSeriesViewModel">
+                      <CheckBox IsChecked="{Binding IsSelected}">
+                        <TextBlock Text="{Binding Scatter.LegendText}"/>
+                      </CheckBox>
+                    </DataTemplate>
+                  </ItemsControl.DataTemplates>
+                </ItemsControl>
+              </ScrollViewer>
+            </Panel>
+          </Flyout>
+        </Button.Flyout>
+      </Button>
     </DockPanel>
     <Grid x:Name="GridMainDisplay"
           ColumnSpacing="5"

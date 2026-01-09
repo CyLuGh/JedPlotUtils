@@ -12,9 +12,12 @@
     </TabItem>
     <TabItem Header="Components">
       <DockPanel>
-        <Button Content="Add some data"
-                Click="AddSomeData_Click"
-                DockPanel.Dock="Bottom"/>
+        <StackPanel Orientation="Horizontal" Spacing="5" DockPanel.Dock="Bottom">
+          <Button Content="Add some data"
+                  Click="AddSomeData_Click" />
+          <Button Content="Change formatter"
+                  Click="ChangeFormatter_Click" />
+        </StackPanel>
         <views:TimeSeriesViewerView x:Name="TimeSeriesView" />
       </DockPanel>
     </TabItem>

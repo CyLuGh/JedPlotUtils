@@ -49,6 +49,15 @@ public partial class TimeSeriesViewerView : ReactiveUserControl<TimeSeriesViewer
         CompositeDisposable disposables
     )
     {
+        var dateFormatter = viewModel.DateFormatter.Match(f => f, () => d => d.ToString("yyyy-MM"));
+        view._splotConfig = view._splotConfig with
+        {
+            PlotRender = view._splotConfig.PlotRender with
+            {
+                XFormatter = d => dateFormatter(DateOnly.FromDateTime(DateTime.FromOADate(d)))
+            }
+        };
+
         viewModel
             .AdaptDisplayModeInteraction.RegisterHandler(ctx =>
             {
@@ -73,6 +82,25 @@ public partial class TimeSeriesViewerView : ReactiveUserControl<TimeSeriesViewer
                 view._splotInteractivity = res;
 
                 ctx.SetOutput(res.Series);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .ChangeDateFormatterInteraction.RegisterHandler(ctx =>
+            {
+                view._splotConfig = view._splotConfig with
+                {
+                    PlotRender = view._splotConfig.PlotRender with
+                    {
+                        XFormatter = d => ctx.Input(DateOnly.FromDateTime(DateTime.FromOADate(d)))
+                    }
+                };
+                view._splotInteractivity = view._splotInteractivity.Value with
+                {
+                    PlotRender = view._splotConfig.PlotRender
+                };
+                //view.Chart.Refresh();
+                ctx.SetOutput(RxUnit.Default);
             })
             .DisposeWith(disposables);
 
