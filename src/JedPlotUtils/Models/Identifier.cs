@@ -20,6 +20,8 @@ public readonly record struct Identifier
         guid = _guid;
     }
 
+    public override string ToString() => $"{_id} ({_guid})";
+
     public static implicit operator Identifier(string id) => new(id);
 
     public static explicit operator string(Identifier identifier) => identifier._id;

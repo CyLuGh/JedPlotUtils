@@ -9,11 +9,11 @@
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
+    <PackageReference Include="HierarchyGrid.Avalonia" />
     <PackageReference Include="ReactiveUI.Avalonia" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\JedPlotUtils.LiveCharts.Common.Components\JedPlotUtils.LiveCharts.Common.Components.csproj" />
     <ProjectReference Include="..\JedPlotUtils\JedPlotUtils.csproj" />
   </ItemGroup>
 

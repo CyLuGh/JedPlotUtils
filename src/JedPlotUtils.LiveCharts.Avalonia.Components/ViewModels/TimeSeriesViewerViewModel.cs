@@ -1,19 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Reactive.Linq;
-using System.Text;
 using DynamicData;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Avalonia;
 using ReactiveUI;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 
 public class TimeSeriesViewerViewModel : JedPlotUtils.ViewModels.TimeSeriesViewerViewModelBase
 {
-    private ReadOnlyObservableCollection<LineSeries<ObservablePoint>> _lineSeries;
+    private readonly ReadOnlyObservableCollection<LineSeries<ObservablePoint>> _lineSeries;
     public ReadOnlyObservableCollection<LineSeries<ObservablePoint>> LineSeries => _lineSeries;
 
     public TimeSeriesViewerViewModel()
@@ -28,10 +24,10 @@ public class TimeSeriesViewerViewModel : JedPlotUtils.ViewModels.TimeSeriesViewe
                     Name = tsi.Label,
                     Values = new ObservableCollection<ObservablePoint>(
                         tsi.Data.OrderBy(x => x.Key)
-                            .Select(x => new ObservablePoint(x.Key.DayNumber, x.Value))
+                            .Select(x => new ObservablePoint(x.Key.ToOADate(), x.Value))
                     ),
                     LineSmoothness = 0d,
-                    Tag = tsi.Identifier
+                    Tag = tsi.Identifier,
                 };
                 return xls;
             })

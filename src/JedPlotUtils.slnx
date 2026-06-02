@@ -7,7 +7,6 @@
   </Folder>
   <Folder Name="/LiveCharts/">
     <Project Path="JedPlotUtils.LiveCharts.Avalonia.Components/JedPlotUtils.LiveCharts.Avalonia.Components.csproj" Id="5c7195d6-3462-4a2a-826d-d67a769f0c8a" />
-    <Project Path="JedPlotUtils.LiveCharts.Common.Components/JedPlotUtils.LiveCharts.Common.Components.csproj" Id="3930d48a-4232-40ea-9e08-f51d720d4b8d" />
   </Folder>
   <Folder Name="/ScottPlot/">
     <Project Path="JedPlotUtils.Scottplot.Avalonia.Components/JedPlotUtils.Scottplot.Avalonia.Components.csproj" Id="2213ec66-f6c7-4902-b492-f7d7c67c7c10" />
@@ -16,5 +15,6 @@
     <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
     <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
   </Folder>
+  <Project Path="JedPlotUtils.Tests/JedPlotUtils.Tests.csproj" />
   <Project Path="JedPlotUtils/JedPlotUtils.csproj" Id="e5cf6873-b2ce-467e-b05e-b1a57b911c82" />
 </Solution>
