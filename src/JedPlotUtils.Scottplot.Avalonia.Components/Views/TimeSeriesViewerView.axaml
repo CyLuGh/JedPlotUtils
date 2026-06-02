@@ -7,6 +7,7 @@
 			       xmlns:rxui="http://reactiveui.net"
              xmlns:viewmodels="using:JedPlotUtils.ScottPlot.Common.Components.ViewModels"
              xmlns:converters="using:JedPlotUtils.ScottPlot.Avalonia.Components.Converters"
+             xmlns:local="using:JedPlotUtils.Scottplot.Avalonia.Components"
              mc:Ignorable="d"
              d:DesignWidth="800"
              d:DesignHeight="450"
@@ -15,49 +16,71 @@
   <UserControl.Resources>
     <converters:DisplayModeDescriptionConverter x:Key="DisplayModeDescriptionConverter"/>
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
+    <local:SeriesDropHandler x:Key="SeriesDropHandler"/>
   </UserControl.Resources>
-  <DockPanel>
-    <DockPanel DockPanel.Dock="Top">
-      <StackPanel Orientation="Horizontal"
-                  Spacing="5"
-                  Margin="5"
-                  DockPanel.Dock="Right">
-        <TextBlock Text="Layout:"
-                   VerticalAlignment="Center"/>
-        <ComboBox x:Name="ComboBoxDisplayMode"
-                  DisplayMemberBinding="{Binding .,Converter={StaticResource DisplayModeDescriptionConverter}}"
-                  SelectedItem="{Binding Path=DisplayMode}"/>
-      </StackPanel>
-      <Button Content="Series" Margin="5">
-        <Button.Flyout>
-          <Flyout>
-            <Panel>
-              <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding AvailableSeries}">
-                  <ItemsControl.DataTemplates>
-                    <DataTemplate DataType="viewmodels:AvailableSeriesViewModel">
-                      <CheckBox IsChecked="{Binding IsSelected}">
-                        <TextBlock Text="{Binding Scatter.LegendText}"/>
-                      </CheckBox>
-                    </DataTemplate>
-                  </ItemsControl.DataTemplates>
-                </ItemsControl>
-              </ScrollViewer>
-            </Panel>
-          </Flyout>
-        </Button.Flyout>
-      </Button>
-    </DockPanel>
-    <Grid x:Name="GridMainDisplay"
-          ColumnSpacing="5"
-          RowSpacing="5">
-      <scottPlot:AvaPlot x:Name="Chart"
-                         IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"/>
-      <hgrid:Grid x:Name="HierarchyGrid"
-                  ViewModel="{Binding HierarchyGridViewModel}"
-                  IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
-      <GridSplitter x:Name="Splitter"
-                    IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"/>
-    </Grid>
-  </DockPanel>
+
+  <Grid>
+    <Border Background="Transparent">
+      <Interaction.Behaviors>
+        <ContextDropBehavior Handler="{StaticResource SeriesDropHandler}"/>
+      </Interaction.Behaviors>
+      <DockPanel>
+        <DockPanel DockPanel.Dock="Top">
+          <StackPanel Orientation="Horizontal"
+                      Spacing="5"
+                      Margin="5"
+                      DockPanel.Dock="Right">
+            <TextBlock Text="Layout:"
+                       VerticalAlignment="Center"/>
+            <ComboBox x:Name="ComboBoxDisplayMode"
+                      DisplayMemberBinding="{Binding .,Converter={StaticResource DisplayModeDescriptionConverter}}"
+                      SelectedItem="{Binding Path=DisplayMode}"/>
+          </StackPanel>
+          <Button Content="Series" Margin="5">
+            <Button.Flyout>
+              <Flyout>
+                <Panel>
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding AvailableSeries}">
+                      <ItemsControl.DataTemplates>
+                        <DataTemplate DataType="viewmodels:AvailableSeriesViewModel">
+                          <CheckBox IsChecked="{Binding IsSelected}">
+                            <TextBlock Text="{Binding Scatter.LegendText}"/>
+                          </CheckBox>
+                        </DataTemplate>
+                      </ItemsControl.DataTemplates>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Panel>
+              </Flyout>
+            </Button.Flyout>
+          </Button>
+        </DockPanel>
+        <Grid x:Name="GridMainDisplay"
+              ColumnSpacing="5"
+              RowSpacing="5">
+          <scottPlot:AvaPlot x:Name="Chart"
+                             IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"/>
+          <hgrid:Grid x:Name="HierarchyGrid"
+                      ViewModel="{Binding HierarchyGridViewModel}"
+                      IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
+          <GridSplitter x:Name="Splitter"
+                        IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"/>
+        </Grid>
+      </DockPanel>
+    </Border>
+
+    <Border IsVisible="{Binding IsParsingCsv}"
+            Background="{DynamicResource ThemeControlMidBrush}"
+            BorderBrush="{DynamicResource ThemeBorderMidBrush}"
+            BorderThickness="{DynamicResource ThemeBorderThickness}"
+            Padding="10">
+      <local:CsvParserView HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        ViewModel="{Binding CsvParserViewModel}"
+                        DataContext="{Binding CsvParserViewModel}"
+                        />
+    </Border>
+
+  </Grid>
 </UserControl>

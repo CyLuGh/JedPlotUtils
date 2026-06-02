@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="ClosedXML" />
+    <PackageReference Include="CsvHelper" />
     <PackageReference Include="HierarchyGrid.Definitions" />
     <PackageReference Include="ReactiveUI" />
     <PackageReference Include="ReactiveUI.SourceGenerators">

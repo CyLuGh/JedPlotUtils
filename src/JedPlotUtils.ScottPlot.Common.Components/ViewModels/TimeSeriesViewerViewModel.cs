@@ -1,5 +1,6 @@
 ﻿using System.Collections.Frozen;
 using System.Reactive.Linq;
+using System.Windows.Input;
 using DynamicData;
 using HierarchyGrid.Definitions;
 using LanguageExt;
@@ -62,6 +63,16 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
     public Interaction<Func<DateOnly, string>, RxUnit> ChangeDateFormatterInteraction { get; } =
         new(RxApp.MainThreadScheduler);
 
+    [Reactive]
+    public partial CsvParserViewModel? CsvParserViewModel { get; set; }
+
+    [ObservableAsProperty]
+    private bool _isParsingCsv;
+
+    //public ReactiveCommand<string, RxUnit> TryParseCsvCommand { get; }
+    //public ReactiveCommand<string, RxUnit> TryParseExcelCommand { get; }
+    //public ReactiveCommand<string, RxUnit> TryParseTextCommand { get; }
+
     public TimeSeriesViewerViewModel()
     {
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
@@ -71,6 +82,10 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
         HighlightChartCommand = CreateCommandHighlightChartCommand();
         DisplaySelectionOnChartCommand = CreateCommandDisplaySelectionOnChartCommand();
         ChangeDateFormatterCommand = CreateCommandChangeDateFormatterCommand();
+
+        _isParsingCsvHelper = this.WhenAnyValue(x => x.CsvParserViewModel)
+            .Select(x => x is not null)
+            .ToProperty(this, x => x.IsParsingCsv, scheduler: RxApp.MainThreadScheduler);
 
         HierarchyGridViewModel
             .WhenAnyValue(x => x.HoveredCell)
@@ -407,5 +422,11 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
         _infoCache.Connect().DisposeMany().Select(_ => _infoCache.Items.ToSeq()).InvokeCommand(cmd);
 
         return cmd;
+    }
+
+    [ReactiveCommand]
+    private async Task TryParseCsv(string file)
+    {
+        CsvParserViewModel = new CsvParserViewModel() { FilePath = file };
     }
 }
