@@ -91,15 +91,15 @@ public partial class CsvParserViewModel : ReactiveObject, IActivatableViewModel
         _dataPreviewHelper = cmd.ToProperty(
             this,
             x => x.DataPreview,
-            scheduler: RxApp.MainThreadScheduler
+            scheduler: RxSchedulers.MainThreadScheduler
         );
 
         _columnsHelper = cmd.Select(c => Enumerable.Range(1, c.Length).ToArray())
-            .ToProperty(this, x => x.Columns, scheduler: RxApp.MainThreadScheduler);
+            .ToProperty(this, x => x.Columns, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenAnyValue(x => x.Columns)
             .Where(cols => cols?.Length > 0 && (PeriodIndex == 0 || PeriodIndex > cols.Length))
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe(cols =>
             {
                 PeriodIndex = 1;

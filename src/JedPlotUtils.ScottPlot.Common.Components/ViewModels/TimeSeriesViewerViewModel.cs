@@ -39,7 +39,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
 
     public ReactiveCommand<DisplayMode, RxUnit> AdaptDisplayModeCommand { get; }
     public Interaction<DisplayMode, RxUnit> AdaptDisplayModeInteraction { get; } =
-        new(RxApp.MainThreadScheduler);
+        new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<
         (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
@@ -48,20 +48,20 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
 
     public ReactiveCommand<Seq<TimeSeriesInfo>, HashMap<Scatter, string>> DrawChartCommand { get; }
     public Interaction<Seq<PlotSeries>, HashMap<Scatter, string>> DrawChartInteraction { get; } =
-        new(RxApp.MainThreadScheduler);
+        new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<Option<(Scatter, DateOnly)>, bool> HighlightGridCommand { get; }
     public ReactiveCommand<Option<(Scatter, DateOnly)>, RxUnit> HighlightChartCommand { get; }
     public Interaction<Option<(Scatter, DateOnly)>, RxUnit> HighlightChartInteraction { get; } =
-        new(RxApp.MainThreadScheduler);
+        new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<Seq<Scatter>, RxUnit> DisplaySelectionOnChartCommand { get; }
     public Interaction<Seq<Scatter>, RxUnit> DisplaySelectionOnChartInteraction { get; } =
-        new(RxApp.MainThreadScheduler);
+        new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<Func<DateOnly, string>, RxUnit> ChangeDateFormatterCommand { get; }
     public Interaction<Func<DateOnly, string>, RxUnit> ChangeDateFormatterInteraction { get; } =
-        new(RxApp.MainThreadScheduler);
+        new(RxSchedulers.MainThreadScheduler);
 
     [Reactive]
     public partial CsvParserViewModel? CsvParserViewModel { get; set; }
@@ -85,7 +85,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
 
         _isParsingCsvHelper = this.WhenAnyValue(x => x.CsvParserViewModel)
             .Select(x => x is not null)
-            .ToProperty(this, x => x.IsParsingCsv, scheduler: RxApp.MainThreadScheduler);
+            .ToProperty(this, x => x.IsParsingCsv, scheduler: RxSchedulers.MainThreadScheduler);
 
         HierarchyGridViewModel
             .WhenAnyValue(x => x.HoveredCell)
@@ -123,7 +123,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
                     .ToSeq()
                     .Strict();
             })
-            .ToProperty(this, x => x.AvailableSeries, scheduler: RxApp.MainThreadScheduler);
+            .ToProperty(this, x => x.AvailableSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenAnyValue(x => x.AvailableSeries)
             .DistinctUntilChanged()
@@ -131,7 +131,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
             .Switch()
             .Throttle(TimeSpan.FromMilliseconds(50))
             .Select(_ => AvailableSeries.Where(x => x.IsSelected))
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe(sel =>
             {
                 SelectedSeries = sel.Map(s => s.Scatter);
@@ -225,7 +225,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
         this.WhenAnyValue(x => x.HoveredPoint)
             .DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);
 
         this.WhenAnyValue(x => x.HoveredPoint)
@@ -233,7 +233,7 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
             .CombineLatest(cmd.Where(x => x == true))
             .Select(t => t.First)
             .Throttle(TimeSpan.FromMilliseconds(50))
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);
 
         cmd.Where(x => x == false).InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
@@ -417,7 +417,11 @@ public partial class TimeSeriesViewerViewModel : ReactiveObject, IActivatableVie
             (Seq<TimeSeriesInfo> seq) => DrawChartInteraction.Handle(seq.Map(x => x.PlotSeries))
         );
 
-        _seriesHelper = cmd.ToProperty(this, x => x.Series, scheduler: RxApp.MainThreadScheduler);
+        _seriesHelper = cmd.ToProperty(
+            this,
+            x => x.Series,
+            scheduler: RxSchedulers.MainThreadScheduler
+        );
 
         _infoCache.Connect().DisposeMany().Select(_ => _infoCache.Items.ToSeq()).InvokeCommand(cmd);
 

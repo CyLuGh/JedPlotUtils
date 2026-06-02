@@ -33,7 +33,7 @@ public partial class TimeSeriesSampleViewModel : ReactiveObject
     }
 
     public Interaction<Seq<PlotSeries>, RxUnit> DrawChartInteraction { get; } =
-        new(RxApp.MainThreadScheduler);
+        new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<Seq<ChartTs>, RxUnit> DrawChartCommand { get; }
 

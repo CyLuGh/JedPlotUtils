@@ -18,7 +18,7 @@ namespace AvaloniaApplication
             AppBuilder
                 .Configure<App>()
                 .UsePlatformDetect()
-                .UseReactiveUI()
+                .UseReactiveUI(_ => { })
                 .WithInterFont()
                 .LogToTrace();
     }

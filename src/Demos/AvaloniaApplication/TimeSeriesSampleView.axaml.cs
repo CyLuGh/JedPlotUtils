@@ -91,7 +91,7 @@ public partial class TimeSeriesSampleView : ReactiveUserControl<TimeSeriesSample
                 handler => view.SPlot.PointerMoved += handler,
                 handler => view.SPlot.PointerMoved -= handler
             )
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(disposables);
 
@@ -106,7 +106,7 @@ public partial class TimeSeriesSampleView : ReactiveUserControl<TimeSeriesSample
                 handler => view.SPlot.PointerExited += handler,
                 handler => view.SPlot.PointerExited -= handler
             )
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(disposables);
 
