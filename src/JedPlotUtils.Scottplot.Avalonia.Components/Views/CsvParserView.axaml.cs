@@ -1,12 +1,7 @@
-using System.Reactive.Disposables.Fluent;
-using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
 using JedPlotUtils.ScottPlot.Common.Components.ViewModels;
-using ReactiveUI;
 using ReactiveUI.Avalonia;
 
-namespace JedPlotUtils.Scottplot.Avalonia.Components;
+namespace JedPlotUtils.Scottplot.Avalonia.Components.Views;
 
 public partial class CsvParserView : ReactiveUserControl<CsvParserViewModel>
 {

@@ -4,7 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewmodels="using:JedPlotUtils.ScottPlot.Common.Components.ViewModels"
              mc:Ignorable="d" d:DesignWidth="800"
-             x:Class="JedPlotUtils.Scottplot.Avalonia.Components.CsvParserView"
+             x:Class="JedPlotUtils.Scottplot.Avalonia.Components.Views.CsvParserView"
              x:DataType="viewmodels:CsvParserViewModel">
   <StackPanel Spacing="10"
               MaxWidth="1000">

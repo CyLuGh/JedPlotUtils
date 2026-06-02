@@ -3,10 +3,18 @@
     <Project Path="Demos/AvaloniaApplication/AvaloniaApplication.csproj" Id="2fb75dd1-a45b-42a9-a48f-91fb3c3f9dfc" />
     <Project Path="Demos/DemoData/DemoData.csproj" Id="c11035ef-c55a-4f62-8bfe-1544a20791f6" />
     <Project Path="Demos/WpfApplication/WpfApplication.csproj" Id="d8b032a3-dde3-4a64-be85-c4ed1eb48855" />
+    <Project Path="LC_AvaloniaApplication/LC_AvaloniaApplication.csproj" Id="ce43b0cf-80d2-4b66-b78a-a1c178f11fc7" />
   </Folder>
-  <Project Path="JedPlotUtils.Scottplot.Avalonia.Components/JedPlotUtils.Scottplot.Avalonia.Components.csproj" Id="2213ec66-f6c7-4902-b492-f7d7c67c7c10" DisplayName="JedPlotUtils.ScottPlot.Avalonia.Components" />
-  <Project Path="JedPlotUtils.ScottPlot.Avalonia/JedPlotUtils.ScottPlot.Avalonia.csproj" Id="7a4dd988-0fad-4002-9f4a-38ed53785bf3" />
-  <Project Path="JedPlotUtils.ScottPlot.Common.Components/JedPlotUtils.ScottPlot.Common.Components.csproj" Id="9ef207ee-c124-494d-ae4f-4300596bdfdf" />
-  <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
-  <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
+  <Folder Name="/LiveCharts/">
+    <Project Path="JedPlotUtils.LiveCharts.Avalonia.Components/JedPlotUtils.LiveCharts.Avalonia.Components.csproj" Id="5c7195d6-3462-4a2a-826d-d67a769f0c8a" />
+    <Project Path="JedPlotUtils.LiveCharts.Common.Components/JedPlotUtils.LiveCharts.Common.Components.csproj" Id="3930d48a-4232-40ea-9e08-f51d720d4b8d" />
+  </Folder>
+  <Folder Name="/ScottPlot/">
+    <Project Path="JedPlotUtils.Scottplot.Avalonia.Components/JedPlotUtils.Scottplot.Avalonia.Components.csproj" Id="2213ec66-f6c7-4902-b492-f7d7c67c7c10" />
+    <Project Path="JedPlotUtils.ScottPlot.Avalonia/JedPlotUtils.ScottPlot.Avalonia.csproj" Id="7a4dd988-0fad-4002-9f4a-38ed53785bf3" />
+    <Project Path="JedPlotUtils.ScottPlot.Common.Components/JedPlotUtils.ScottPlot.Common.Components.csproj" Id="9ef207ee-c124-494d-ae4f-4300596bdfdf" />
+    <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
+    <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
+  </Folder>
+  <Project Path="JedPlotUtils/JedPlotUtils.csproj" Id="e5cf6873-b2ce-467e-b05e-b1a57b911c82" />
 </Solution>

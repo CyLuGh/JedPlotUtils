@@ -8,6 +8,7 @@
              xmlns:viewmodels="using:JedPlotUtils.ScottPlot.Common.Components.ViewModels"
              xmlns:converters="using:JedPlotUtils.ScottPlot.Avalonia.Components.Converters"
              xmlns:local="using:JedPlotUtils.Scottplot.Avalonia.Components"
+             xmlns:views="clr-namespace:JedPlotUtils.Scottplot.Avalonia.Components.Views"
              mc:Ignorable="d"
              d:DesignWidth="800"
              d:DesignHeight="450"
@@ -75,11 +76,11 @@
             BorderBrush="{DynamicResource ThemeBorderMidBrush}"
             BorderThickness="{DynamicResource ThemeBorderThickness}"
             Padding="10">
-      <local:CsvParserView HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        ViewModel="{Binding CsvParserViewModel}"
-                        DataContext="{Binding CsvParserViewModel}"
-                        />
+      <!-- <views:CsvParserView HorizontalAlignment="Center" -->
+      <!--                   VerticalAlignment="Center" -->
+      <!--                   ViewModel="{Binding CsvParserViewModel}" -->
+      <!--                   DataContext="{Binding CsvParserViewModel}" -->
+      <!--                   /> -->
     </Border>
 
   </Grid>
