@@ -16,6 +16,7 @@ using ReactiveUI;
 using ReactiveUI.Avalonia;
 using AV = Avalonia;
 using RxUnit = System.Reactive.Unit;
+using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components;
 
@@ -63,6 +64,9 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 o =>
                     (o, args) =>
                     {
+                        if (viewModel.SelectionMode == SelectionMode.None)
+                            return;
+
                         var chart = (CartesianChart)o!;
                         var pos = args.GetPosition(chart);
 
@@ -78,7 +82,14 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                             return;
                         }
 
-                        viewModel.Selection = new([(Identifier)found[0].Context.Series.Tag]);
+                        viewModel.Selection = viewModel.SelectionMode switch
+                        {
+                            SelectionMode.Single => new([(Identifier)found[0].Context.Series.Tag]),
+                            SelectionMode.Multiple => viewModel.Selection.Add(
+                                (Identifier)found[0].Context.Series.Tag
+                            ),
+                            _ => viewModel.Selection,
+                        };
                     },
                 handler => view.CartesianChart.PointerPressed += handler,
                 handler => view.CartesianChart.PointerPressed -= handler

@@ -14,8 +14,9 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
-    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache =
-        new(x => x.Identifier);
+    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache = new(x =>
+        x.Identifier
+    );
     protected readonly IObservable<IChangeSet<TimeSeriesInfo, Identifier>> _cacheUpdates;
 
     protected readonly ReadOnlyObservableCollection<TimeSeriesInfo> _seriesInfos;
@@ -30,8 +31,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial IPalette Palette { get; set; } = new TangoPalette();
 
     [Reactive]
+    public partial JedPlotUtils.Models.SelectionMode SelectionMode { get; set; } =
+        JedPlotUtils.Models.SelectionMode.Single;
+
+    [Reactive]
     public partial LanguageExt.HashSet<Identifier> Selection { get; set; }
 
+    /// <summary>
+    /// The point that is currently hovered in the chart or the grid.
+    /// </summary>
     [Reactive]
     public partial Option<(Identifier, DateOnly)> HoveredPoint { get; set; }
 
@@ -94,6 +102,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     );
                 })
                 .DisposeWith(disposables);
+
+            this.WhenAnyValue(x => x.SelectionMode)
+                .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
+                .DisposeWith(disposables);
         });
     }
 
@@ -102,7 +114,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         bool
     > CreateCommandHighlightGridCommand()
     {
-        var cmd = ReactiveCommand.CreateRunInBackground(
+        /* Grid highlighting must be done on UI thread otherwise it will throw an exception if grid has to scroll to
+           an element that is not yet drawn */
+        var cmd = ReactiveCommand.Create(
             (Option<(Identifier, DateOnly)> si) => DoHighlightGrid(si)
         );
 
@@ -112,11 +126,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Merge(hoverObservable.CombineLatest(cmd.Where(x => x == true)).Select(t => t.First))
             .DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);
 
-        cmd.Where(x => x == false)
-            .Do(_ => Console.WriteLine(HierarchyGridViewModel.HoveredCell))
-            .InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
+        cmd.Where(x => x == false).InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
 
         return cmd;
     }
@@ -194,21 +207,21 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                x => x,
-                                () => double.NaN
-                            ),
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(x => x, () => double.NaN),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                _ => Qualification.Normal,
-                                () => Qualification.Empty
-                            ),
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
                         double d => double.IsNaN(d) ? Qualification.Empty : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
