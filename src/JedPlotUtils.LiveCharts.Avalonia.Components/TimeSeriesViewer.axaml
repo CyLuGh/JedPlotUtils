@@ -8,19 +8,20 @@
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewer"
              x:DataType="viewModels:TimeSeriesViewerViewModel">
-    <Grid x:Name="GridMainDisplay">
-        <lvc:CartesianChart x:Name="CartesianChart" 
-                            Series="{Binding Path=LineSeries}"
-                            FindingStrategy="ExactMatch"
-                            >
+  <Grid x:Name="GridMainDisplay">
+    <lvc:CartesianChart x:Name="CartesianChart"
+                        Series="{Binding Path=LineSeries}"
+                        FindingStrategy="ExactMatch">
+      <lvc:CartesianChart.XAxes>
+        <lvc:XamlDateTimeAxis></lvc:XamlDateTimeAxis>
+      </lvc:CartesianChart.XAxes>
+    </lvc:CartesianChart>
 
-        </lvc:CartesianChart>
-        
-        <hgrid:Grid x:Name="HierarchyGrid"
-                    ViewModel="{Binding HierarchyGridViewModel}"
+    <hgrid:Grid x:Name="HierarchyGrid"
+                ViewModel="{Binding HierarchyGridViewModel}"
                    />
-        
-        <GridSplitter x:Name="Splitter"/>
-    </Grid>
-    
+
+    <GridSplitter x:Name="Splitter"/>
+  </Grid>
+
 </UserControl>

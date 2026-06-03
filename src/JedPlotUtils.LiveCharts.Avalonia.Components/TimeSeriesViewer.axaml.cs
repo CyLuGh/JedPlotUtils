@@ -2,12 +2,16 @@ using System.Reactive.Disposables;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using Avalonia.Controls;
+using Avalonia.Input;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using LanguageExt;
+using LiveChartsCore.Defaults;
+using LiveChartsCore.Drawing;
 using LiveChartsCore.Kernel;
 using LiveChartsCore.Kernel.Events;
 using LiveChartsCore.Kernel.Sketches;
+using LiveChartsCore.SkiaSharpView.Avalonia;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
 using AV = Avalonia;
@@ -53,6 +57,35 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             })
             .DisposeWith(disposables);
 
+        /* Mouse click */
+        Observable
+            .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
+                o =>
+                    (o, args) =>
+                    {
+                        var chart = (CartesianChart)o!;
+                        var pos = args.GetPosition(chart);
+
+                        // Convert Avalonia point → LiveCharts point
+                        var lvcPoint = new LvcPoint((float)pos.X, (float)pos.Y);
+
+                        // Hit test
+                        var found = chart.CoreChart.FindHoveredPointsBy(lvcPoint).ToSeq();
+
+                        if (found.IsEmpty)
+                        {
+                            viewModel.Selection = LanguageExt.HashSet<Identifier>.Empty;
+                            return;
+                        }
+
+                        viewModel.Selection = new([(Identifier)found[0].Context.Series.Tag]);
+                    },
+                handler => view.CartesianChart.PointerPressed += handler,
+                handler => view.CartesianChart.PointerPressed -= handler
+            )
+            .Subscribe()
+            .DisposeWith(disposables);
+
         /* Mouse over chart */
         Observable
             .FromEvent<
@@ -74,10 +107,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 if (!nItems.IsEmpty)
                 {
                     var point = nItems[0];
-                    var date = point.Coordinate.SecondaryValue.ToDateOnly();
-                    if (point.Context.Series.Tag is Identifier identifier)
+                    if (
+                        point.Context is
+                        { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
+                    )
                     {
-                        viewModel.HoveredPoint = (identifier, date);
+                        viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
                     }
                     else
                     {
@@ -93,7 +128,30 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
         viewModel.HighlightChartPointInteraction.RegisterHandler(ctx =>
         {
-            ctx.SetOutput(System.Reactive.Unit.Default);
+            ctx.Input.IfSome(t =>
+            {
+                var (identifier, period) = t;
+                var dateTime = period.ToDateTime(TimeOnly.MinValue);
+
+                var chartPoints =
+                    from s in view.CartesianChart.Series.Find(s =>
+                        s.Tag?.Equals(identifier) == true
+                    )
+                    from pt in s.Fetch(view.CartesianChart.CoreChart)
+                        .Where(p =>
+                            p.Context.DataSource is DateTimePoint op && op.DateTime == dateTime
+                        )
+                    select pt;
+
+                view.CartesianChart.Tooltip?.Show(chartPoints, view.CartesianChart.CoreChart);
+            });
+
+            ctx.Input.IfNone(() =>
+            {
+                view.CartesianChart.Tooltip?.Hide(view.CartesianChart.CoreChart);
+            });
+
+            ctx.SetOutput(RxUnit.Default);
         });
     }
 

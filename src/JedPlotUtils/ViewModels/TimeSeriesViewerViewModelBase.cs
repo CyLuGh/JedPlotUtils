@@ -4,6 +4,7 @@ using System.Reactive.Linq;
 using DynamicData;
 using HierarchyGrid.Definitions;
 using JedPlotUtils.Models;
+using JedPlotUtils.Palette;
 using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
@@ -13,9 +14,8 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
-    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache = new(x =>
-        x.Identifier
-    );
+    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache =
+        new(x => x.Identifier);
     protected readonly IObservable<IChangeSet<TimeSeriesInfo, Identifier>> _cacheUpdates;
 
     protected readonly ReadOnlyObservableCollection<TimeSeriesInfo> _seriesInfos;
@@ -27,18 +27,26 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
 
     [Reactive]
+    public partial IPalette Palette { get; set; } = new TangoPalette();
+
+    [Reactive]
+    public partial LanguageExt.HashSet<Identifier> Selection { get; set; }
+
+    [Reactive]
     public partial Option<(Identifier, DateOnly)> HoveredPoint { get; set; }
 
     public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HighlightCellGridCommand { get; }
-    public ReactiveCommand<(Identifier, DateOnly), Unit> HighlightChartPointCommand { get; }
+    public ReactiveCommand<Option<(Identifier, DateOnly)>, Unit> HighlightChartPointCommand { get; }
 
     public ReactiveCommand<
         (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
         HierarchyDefinitions
     > BuildHierarchyGridDefinitions { get; }
 
-    public Interaction<(Identifier, DateOnly), Unit> HighlightChartPointInteraction { get; } =
-        new(RxSchedulers.MainThreadScheduler);
+    public Interaction<
+        Option<(Identifier, DateOnly)>,
+        Unit
+    > HighlightChartPointInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     [Reactive]
     public partial DisplayMode DisplayMode { get; set; }
@@ -63,10 +71,28 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenActivated(disposables =>
         {
-            this.WhenAnyValue(x => x.HoveredPoint)
-                .Select(o => o.Match(Observable.Return, Observable.Empty<(Identifier, DateOnly)>))
-                .Switch()
-                .InvokeCommand(HighlightChartPointCommand)
+            HierarchyGridViewModel
+                .WhenAnyValue(x => x.HoveredCell)
+                .Throttle(TimeSpan.FromMilliseconds(50))
+                .DistinctUntilChanged()
+                .Subscribe(o =>
+                {
+                    HoveredPoint = o.Match(
+                        pc =>
+                        {
+                            if (
+                                pc.ConsumerDefinition.Tag is DateOnly period
+                                && pc.ProducerDefinition.Tag is Identifier identifier
+                            )
+                            {
+                                return (identifier, period);
+                            }
+
+                            return Option<(Identifier, DateOnly)>.None;
+                        },
+                        () => Option<(Identifier, DateOnly)>.None
+                    );
+                })
                 .DisposeWith(disposables);
         });
     }
@@ -76,25 +102,21 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         bool
     > CreateCommandHighlightGridCommand()
     {
-        var cmd = ReactiveCommand.Create(
+        var cmd = ReactiveCommand.CreateRunInBackground(
             (Option<(Identifier, DateOnly)> si) => DoHighlightGrid(si)
         );
 
-        this.WhenAnyValue(x => x.HoveredPoint)
+        var hoverObservable = this.WhenAnyValue(x => x.HoveredPoint).Publish().RefCount();
+
+        hoverObservable
+            .Merge(hoverObservable.CombineLatest(cmd.Where(x => x == true)).Select(t => t.First))
             .DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
-            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);
 
-        this.WhenAnyValue(x => x.HoveredPoint)
-            .DistinctUntilChanged()
-            .CombineLatest(cmd.Where(x => x == true))
-            .Select(t => t.First)
-            .Throttle(TimeSpan.FromMilliseconds(50))
-            .ObserveOn(RxSchedulers.MainThreadScheduler)
-            .InvokeCommand(cmd);
-
-        cmd.Where(x => !x).InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
+        cmd.Where(x => x == false)
+            .Do(_ => Console.WriteLine(HierarchyGridViewModel.HoveredCell))
+            .InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
 
         return cmd;
     }
@@ -109,12 +131,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<(Identifier, DateOnly), Unit> CreateHighlightPointCommand()
+    private ReactiveCommand<Option<(Identifier, DateOnly)>, Unit> CreateHighlightPointCommand()
     {
         HighlightChartPointInteraction.RegisterHandler(ctx => ctx.SetOutput(Unit.Default));
-        var cmd = ReactiveCommand.CreateFromObservable<(Identifier, DateOnly), Unit>(t =>
+        var cmd = ReactiveCommand.CreateFromObservable<Option<(Identifier, DateOnly)>, Unit>(t =>
             HighlightChartPointInteraction.Handle(t)
         );
+
+        this.WhenAnyValue(x => x.HoveredPoint).InvokeCommand(cmd);
+
         return cmd;
     }
 
@@ -169,21 +194,21 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(x => x, () => double.NaN),
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                x => x,
+                                () => double.NaN
+                            ),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                _ => Qualification.Normal,
+                                () => Qualification.Empty
+                            ),
                         double d => double.IsNaN(d) ? Qualification.Empty : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
@@ -212,7 +237,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         var cell = HierarchyGridViewModel.DrawnCells.Find(pc =>
             pc.ProducerDefinition.Tag?.Equals(identifier) == true
-            && period.Equals(((DateOnly)pc.ConsumerDefinition.Tag))
+            && pc.ConsumerDefinition.Tag?.Equals(period) == true
         );
 
         if (cell.IsNone) /* Cell is not drawn */
@@ -226,10 +251,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 : -1;
 
             var consumerOffset = !HierarchyGridViewModel.DrawnCells.Exists(pc =>
-                period.Equals(((DateOnly)pc.ConsumerDefinition.Tag))
+                pc.ConsumerDefinition.Tag?.Equals(period) == true
             )
                 ? HierarchyGridViewModel
-                    .Consumers.Find(x => period.Equals(((DateOnly)x.Tag)))
+                    .Consumers.Find(x => x.Tag?.Equals(period) == true)
                     .Match(c => c.Position, () => -1)
                 : -1;
 
