@@ -1,5 +1,7 @@
 ﻿using System;
 using Avalonia;
+using JedPlotUtils.LiveCharts.Avalonia.Components;
+using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using ReactiveUI.Avalonia;
 
 namespace LC_AvaloniaApplication
@@ -23,6 +25,9 @@ namespace LC_AvaloniaApplication
 #endif
                 .WithInterFont()
                 .LogToTrace()
-                .UseReactiveUI(rx => { });
+                .UseReactiveUI(rx =>
+                {
+                    rx.RegisterView<TimeSeriesViewer, TimeSeriesViewerViewModel>();
+                });
     }
 }

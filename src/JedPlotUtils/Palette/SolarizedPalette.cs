@@ -2,7 +2,7 @@
 
 namespace JedPlotUtils.Palette;
 
-public class SolarizedPalette : APalette
+public record SolarizedPalette : APalette
 {
     public override string Name => "Solarized";
 
@@ -29,6 +29,8 @@ public class SolarizedPalette : APalette
             new Color("#859900") // green   - 15
         );
     }
+
+    public new Color BackgroundColor { get; } = new("#fdf6e3");
 
     public override Color GetColor(int index)
     {

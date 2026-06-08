@@ -2,10 +2,11 @@
 
 namespace JedPlotUtils.Palette;
 
-public abstract class APalette : IPalette
+public abstract record APalette : IPalette
 {
     public abstract string Name { get; }
     public Seq<Color> Colors { get; protected set; }
+    public Color BackgroundColor { get; } = new(255, 255, 255);
 
     public virtual Color GetColor(int index)
     {

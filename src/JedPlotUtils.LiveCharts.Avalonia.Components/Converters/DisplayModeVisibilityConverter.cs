@@ -1,29 +1,31 @@
 ﻿using System.Globalization;
 using Avalonia.Data;
 using Avalonia.Data.Converters;
-using JedPlotUtils.ScottPlot.Common.Components;
+using JedPlotUtils.Models;
 
-namespace JedPlotUtils.ScottPlot.Avalonia.Components.Converters;
+namespace JedPlotUtils.LiveCharts.Avalonia.Components.Converters;
 
 public class DisplayModeVisibilityConverter : IValueConverter
 {
-    public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
+    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
         if (value is DisplayMode displayMode && parameter is string component)
         {
-            return component switch
+            var res = component switch
             {
                 "Chart" => GetChartVisibility(displayMode),
                 "Grid" => GetGridVisibility(displayMode),
                 "Splitter" => GetSplitterVisibility(displayMode),
                 _ => false
             };
+
+            return res;
         }
 
         return BindingOperations.DoNothing;
     }
 
-    public object? ConvertBack(
+    public object ConvertBack(
         object? value,
         Type targetType,
         object? parameter,

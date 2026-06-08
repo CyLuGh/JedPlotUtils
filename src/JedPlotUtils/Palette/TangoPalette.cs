@@ -2,7 +2,7 @@
 
 namespace JedPlotUtils.Palette;
 
-public class TangoPalette : APalette
+public record TangoPalette : APalette
 {
     public override string Name => "Tango";
 

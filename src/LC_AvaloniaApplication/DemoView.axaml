@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:jpu="using:JedPlotUtils.LiveCharts.Avalonia.Components"
+             xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
+             xmlns:lcAvaloniaApplication="clr-namespace:LC_AvaloniaApplication"
+             xmlns:rxui="http://reactiveui.net"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="LC_AvaloniaApplication.DemoView"
+             x:DataType="lcAvaloniaApplication:DemoViewModel">
+  <TabControl>
+    <TabItem Header="Simple">
+      <DockPanel VerticalSpacing="10">
+        <Grid ColumnDefinitions="Auto,*">
+          <StackPanel Spacing="5">
+            <ComboBox x:Name="ComboBoxPalettes"
+                      HorizontalAlignment="Stretch"
+                      SelectedItem="{Binding TimeSeriesViewModel.Palette}">
+              <ComboBox.ItemTemplate>
+                <DataTemplate DataType="palette:IPalette">
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+            <ComboBox x:Name="ComboBoxDisplayModes"
+                      HorizontalAlignment="Stretch"
+                      SelectedItem="{Binding TimeSeriesViewModel.DisplayMode}">
+
+            </ComboBox>
+            <Button Content="Add series"
+                    Command="{Binding AddSeries}"
+                    HorizontalAlignment="Stretch"/>
+            <Button Content="Clear"
+                    Command="{Binding ClearSeries}"
+                    HorizontalAlignment="Stretch"/>
+          </StackPanel>
+
+          <rxui:ViewModelViewHost ViewModel="{Binding TimeSeriesViewModel}"
+                                  Grid.Column="1"/>
+        </Grid>
+      </DockPanel>
+    </TabItem>
+  </TabControl>
+</UserControl>

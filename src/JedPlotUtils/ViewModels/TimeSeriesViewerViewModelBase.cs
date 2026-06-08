@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Globalization;
 using System.Reactive.Disposables.Fluent;
 using System.Reactive.Linq;
 using DynamicData;
@@ -14,9 +15,8 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
-    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache = new(x =>
-        x.Identifier
-    );
+    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache =
+        new(x => x.Identifier);
     protected readonly IObservable<IChangeSet<TimeSeriesInfo, Identifier>> _cacheUpdates;
 
     protected readonly ReadOnlyObservableCollection<TimeSeriesInfo> _seriesInfos;
@@ -25,13 +25,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public HierarchyGridViewModel HierarchyGridViewModel { get; } = new();
 
     [Reactive]
-    public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
-
-    [Reactive]
     public partial IPalette Palette { get; set; } = new TangoPalette();
 
     [Reactive]
-    public partial JedPlotUtils.Models.SelectionMode SelectionMode { get; set; } =
+    public partial Models.SelectionMode SelectionMode { get; set; } =
         JedPlotUtils.Models.SelectionMode.Single;
 
     [Reactive]
@@ -62,6 +59,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public Interaction<DisplayMode, Unit> AdaptDisplayModeInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
+    [Reactive]
+    public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
+    public ReactiveCommand<Func<DateOnly, string>, Unit> AdaptXAxisCommand { get; }
+    public Interaction<Func<DateOnly, string>, Unit> AdaptXAxisInteraction { get; } =
+        new(RxSchedulers.MainThreadScheduler);
+
     protected TimeSeriesViewerViewModelBase()
     {
         _cacheUpdates = _seriesCache.Connect().RefCount();
@@ -76,6 +79,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         HighlightCellGridCommand = CreateCommandHighlightGridCommand();
         HighlightChartPointCommand = CreateHighlightPointCommand();
         BuildHierarchyGridDefinitions = CreateCommandBuildHierarchyGridDefinitions();
+        AdaptXAxisCommand = CreateCommandAdaptXAxisCommand();
 
         this.WhenActivated(disposables =>
         {
@@ -109,6 +113,26 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         });
     }
 
+    private ReactiveCommand<Func<DateOnly, string>, Unit> CreateCommandAdaptXAxisCommand()
+    {
+        AdaptXAxisInteraction.RegisterHandler(ctx => ctx.SetOutput(Unit.Default));
+        var cmd = ReactiveCommand.CreateFromObservable<Func<DateOnly, string>, Unit>(f =>
+            AdaptXAxisInteraction.Handle(f)
+        );
+
+        this.WhenAnyValue(x => x.DateFormatter)
+            .Select(o =>
+                o.Match(
+                    Observable.Return,
+                    () => Observable.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                )
+            )
+            .Switch()
+            .InvokeCommand(cmd);
+
+        return cmd;
+    }
+
     private ReactiveCommand<
         Option<(Identifier, DateOnly)>,
         bool
@@ -123,13 +147,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         var hoverObservable = this.WhenAnyValue(x => x.HoveredPoint).Publish().RefCount();
 
         hoverObservable
-            .Merge(hoverObservable.CombineLatest(cmd.Where(x => x == true)).Select(t => t.First))
+            .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
             .DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);
 
-        cmd.Where(x => x == false).InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
+        cmd.Where(x => !x)
+            .Throttle(TimeSpan.FromMilliseconds(250))
+            .InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
 
         return cmd;
     }
@@ -178,7 +204,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             )
             .InvokeCommand(cmd);
 
-        cmd.Subscribe(defs => HierarchyGridViewModel.Set(defs));
+        cmd.Subscribe(definitions => HierarchyGridViewModel.Set(definitions));
 
         return cmd;
     }
@@ -207,28 +233,32 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(x => x, () => double.NaN),
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                x => x,
+                                () => double.NaN
+                            ),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
-                        double d => double.IsNaN(d) ? Qualification.Empty : Qualification.Normal,
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                _ => Qualification.Normal,
+                                () => Qualification.Empty
+                            ),
+                        double dbl
+                            => double.IsNaN(dbl) ? Qualification.Empty : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
                 Formatter = o =>
                     o switch
                     {
-                        double d => double.IsNaN(d) ? string.Empty : d.ToString(),
+                        double dbl
+                            => double.IsNaN(dbl)
+                                ? string.Empty
+                                : dbl.ToString(CultureInfo.InvariantCulture),
                         _ => string.Empty,
                     },
             })
@@ -242,6 +272,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         if (hp.IsNone)
         {
             HierarchyGridViewModel.HoveredCell = Option<PositionedCell>.None;
+            HierarchyGridViewModel.HoveredColumn = -1;
+            HierarchyGridViewModel.HoveredRow = -1;
+
             return false;
         }
 

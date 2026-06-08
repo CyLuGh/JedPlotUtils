@@ -2,22 +2,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:jpu="using:JedPlotUtils.LiveCharts.Avalonia.Components"
+        xmlns:lcAvaloniaApplication="clr-namespace:LC_AvaloniaApplication"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="LC_AvaloniaApplication.MainWindow"
         Title="LC_AvaloniaApplication">
-  <TabControl>
-    <TabItem Header="Simple">
-      <DockPanel VerticalSpacing="10">
-        <UniformGrid Rows="1" ColumnSpacing="5" Margin="5" HorizontalAlignment="Left" DockPanel.Dock="Bottom">
-          <Button Content="Add series"
-                  Click="AddSeries"></Button>
-            <Button Content="Clear"
-                    Click="ClearSeries"></Button>
-        </UniformGrid>
-
-        <jpu:TimeSeriesViewer x:Name="TimeSeriesViewer"/>
-      </DockPanel>
-    </TabItem>
-  </TabControl>
+  <lcAvaloniaApplication:DemoView/>
 </Window>

@@ -85,9 +85,8 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                         viewModel.Selection = viewModel.SelectionMode switch
                         {
                             SelectionMode.Single => new([(Identifier)found[0].Context.Series.Tag]),
-                            SelectionMode.Multiple => viewModel.Selection.Add(
-                                (Identifier)found[0].Context.Series.Tag
-                            ),
+                            SelectionMode.Multiple
+                                => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag),
                             _ => viewModel.Selection,
                         };
                     },
@@ -234,11 +233,11 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         {
             case DisplayMode.BothVertical:
                 grid.ColumnDefinitions = ColumnDefinitions.Parse("*");
-                grid.RowDefinitions = RowDefinitions.Parse("*,Auto,*");
+                grid.RowDefinitions = RowDefinitions.Parse("2*,Auto,*");
                 break;
 
             case DisplayMode.BothHorizontal:
-                grid.ColumnDefinitions = ColumnDefinitions.Parse("*,Auto,*");
+                grid.ColumnDefinitions = ColumnDefinitions.Parse("2*,Auto,*");
                 grid.RowDefinitions = RowDefinitions.Parse("*");
                 break;
 
