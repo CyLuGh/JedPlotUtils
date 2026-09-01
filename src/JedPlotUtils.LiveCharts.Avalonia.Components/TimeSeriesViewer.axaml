@@ -1,0 +1,38 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+             xmlns:hgrid="using:HierarchyGrid.Avalonia"
+             xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels"
+             xmlns:converters="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.Converters"
+             xmlns:skiaSharpView="clr-namespace:LiveChartsCore.SkiaSharpView;assembly=LiveChartsCore.SkiaSharpView"
+             xmlns:painting="clr-namespace:LiveChartsCore.SkiaSharpView.Painting;assembly=LiveChartsCore.SkiaSharpView"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewer"
+             x:DataType="viewModels:TimeSeriesViewerViewModel">
+  <UserControl.Resources>
+    <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
+    <converters:ColorConverter x:Key="ColorConverter"/>
+  </UserControl.Resources>
+  <Grid x:Name="GridMainDisplay">
+    <lvc:CartesianChart x:Name="CartesianChart"
+                        Series="{Binding Path=LineSeries}"
+                        FindingStrategy="ExactMatch"
+                        XAxes="{Binding XAxes}"
+                        IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
+                        DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
+                        >
+  
+
+    </lvc:CartesianChart>
+
+    <hgrid:Grid x:Name="HierarchyGrid"
+                ViewModel="{Binding HierarchyGridViewModel}"
+                IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
+
+    <GridSplitter x:Name="Splitter"
+                  IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"/>
+  </Grid>
+
+</UserControl>

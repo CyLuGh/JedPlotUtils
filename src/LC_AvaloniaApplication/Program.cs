@@ -1,8 +1,10 @@
 ﻿using System;
 using Avalonia;
+using JedPlotUtils.LiveCharts.Avalonia.Components;
+using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using ReactiveUI.Avalonia;
 
-namespace AvaloniaApplication
+namespace LC_AvaloniaApplication
 {
     internal class Program
     {
@@ -18,8 +20,14 @@ namespace AvaloniaApplication
             AppBuilder
                 .Configure<App>()
                 .UsePlatformDetect()
-                .UseReactiveUI(_ => { })
+#if DEBUG
+                .WithDeveloperTools()
+#endif
                 .WithInterFont()
-                .LogToTrace();
+                .LogToTrace()
+                .UseReactiveUI(rx =>
+                {
+                    rx.RegisterView<TimeSeriesViewer, TimeSeriesViewerViewModel>();
+                });
     }
 }

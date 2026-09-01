@@ -218,7 +218,7 @@ public partial class TimeSeriesViewerView : ReactiveUserControl<TimeSeriesViewer
                 handler => view.Chart.PointerMoved += handler,
                 handler => view.Chart.PointerMoved -= handler
             )
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(disposables);
 
@@ -236,7 +236,7 @@ public partial class TimeSeriesViewerView : ReactiveUserControl<TimeSeriesViewer
                 handler => view.Chart.PointerExited += handler,
                 handler => view.Chart.PointerExited -= handler
             )
-            .ObserveOn(RxApp.MainThreadScheduler)
+            .ObserveOn(RxSchedulers.MainThreadScheduler)
             .Subscribe()
             .DisposeWith(disposables);
 
