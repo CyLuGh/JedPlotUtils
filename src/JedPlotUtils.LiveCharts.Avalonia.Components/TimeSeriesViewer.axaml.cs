@@ -1,6 +1,3 @@
-using System.Reactive.Disposables;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
 using Avalonia.Controls;
 using Avalonia.Input;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
@@ -14,8 +11,10 @@ using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView.Avalonia;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals;
 using AV = Avalonia;
-using RxUnit = System.Reactive.Unit;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components;
@@ -29,7 +28,8 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         this.WhenActivated(disposables =>
         {
             this.WhenAnyValue(x => x.ViewModel)
-                .WhereNotNull()
+                .Where(vm => vm is not null)
+                .Select(vm => vm!)
                 .Do(vm => PopulateFromViewModel(this, vm, disposables))
                 .Do(vm => vm.DisplayMode = DisplayMode.BothHorizontal)
                 .Subscribe()
@@ -40,7 +40,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     private static void PopulateFromViewModel(
         TimeSeriesViewer view,
         TimeSeriesViewerViewModel viewModel,
-        CompositeDisposable disposables
+        MultipleDisposable disposables
     )
     {
         /* Display Mode */
@@ -54,87 +54,86 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     viewModel.HierarchyGridViewModel
                 );
                 SetGridSplitterConstraints(view.Splitter, ctx.Input);
-                ctx.SetOutput(System.Reactive.Unit.Default);
+                ctx.SetOutput(RxVoid.Default);
             })
             .DisposeWith(disposables);
 
         /* Mouse click */
-        Observable
+        Signal
             .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
-                o =>
-                    (o, args) =>
-                    {
-                        if (viewModel.SelectionMode == SelectionMode.None)
-                            return;
-
-                        var chart = (CartesianChart)o!;
-                        var pos = args.GetPosition(chart);
-
-                        // Convert Avalonia point → LiveCharts point
-                        var lvcPoint = new LvcPoint((float)pos.X, (float)pos.Y);
-
-                        // Hit test
-                        var found = chart.CoreChart.FindHoveredPointsBy(lvcPoint).ToSeq();
-
-                        if (found.IsEmpty)
-                        {
-                            viewModel.Selection = LanguageExt.HashSet<Identifier>.Empty;
-                            return;
-                        }
-
-                        viewModel.Selection = viewModel.SelectionMode switch
-                        {
-                            SelectionMode.Single => new([(Identifier)found[0].Context.Series.Tag]),
-                            SelectionMode.Multiple
-                                => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag),
-                            _ => viewModel.Selection,
-                        };
-                    },
                 handler => view.CartesianChart.PointerPressed += handler,
                 handler => view.CartesianChart.PointerPressed -= handler
             )
-            .Subscribe()
+            .Subscribe(t =>
+            {
+                var args = t.EventArgs;
+                if (viewModel.SelectionMode == SelectionMode.None)
+                    return;
+
+                var chart = (CartesianChart)t.Sender!;
+                var pos = args.GetPosition(chart);
+
+                // Convert Avalonia point → LiveCharts point
+                var lvcPoint = new LvcPoint((float)pos.X, (float)pos.Y);
+
+                // Hit test
+                var found = chart.CoreChart.FindHoveredPointsBy(lvcPoint).ToSeq();
+
+                if (found.IsEmpty)
+                {
+                    viewModel.Selection = LanguageExt.HashSet<Identifier>.Empty;
+                    return;
+                }
+
+                viewModel.Selection = viewModel.SelectionMode switch
+                {
+                    SelectionMode.Single => new([(Identifier)found[0].Context.Series.Tag]),
+                    SelectionMode.Multiple
+                        => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag),
+                    _ => viewModel.Selection,
+                };
+            })
             .DisposeWith(disposables);
 
         /* Mouse over chart */
-        Observable
-            .FromEvent<
-                ChartPointHoverHandler,
-                (
-                    IChartView chart,
-                    IEnumerable<ChartPoint>? newItems,
-                    IEnumerable<ChartPoint>? oldItems
-                )
-            >(
-                handler => (chart, newItems, oldItems) => handler((chart, newItems, oldItems)),
-                h => view.CartesianChart.HoveredPointsChanged += h,
-                h => view.CartesianChart.HoveredPointsChanged -= h
-            )
-            .Subscribe(x =>
-            {
-                var (chart, newItems, oldItems) = x;
-                var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
-                if (!nItems.IsEmpty)
-                {
-                    var point = nItems[0];
-                    if (
-                        point.Context is
-                        { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
-                    )
-                    {
-                        viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
-                    }
-                    else
-                    {
-                        viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
-                    }
-                }
-                else
-                {
-                    viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
-                }
-            })
-            .DisposeWith(disposables);
+        // Observable
+        // .FromEvent<
+        //     ChartPointHoverHandler,
+        //     (
+        //         IChartView chart,
+        //         IEnumerable<ChartPoint>? newItems,
+        //         IEnumerable<ChartPoint>? oldItems
+        //     )
+        // >(
+        //     handler => (chart, newItems, oldItems) => handler((chart, newItems, oldItems)),
+        //     h => view.CartesianChart.HoveredPointsChanged += h,
+        //     h => view.CartesianChart.HoveredPointsChanged -= h
+        // )
+        // .Subscribe(x =>
+        // {
+        //     var (chart, newItems, oldItems) = x;
+        //     var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
+        //     if (!nItems.IsEmpty)
+        //     {
+        //         var point = nItems[0];
+        //         if (
+        //             point.Context is
+        //             { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
+        //         )
+        //         {
+        //             viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
+        //         }
+        //         else
+        //         {
+        //             viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
+        //         }
+        //     }
+        //     else
+        //     {
+        //         viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
+        //     }
+        // })
+        // .DisposeWith(disposables);
 
         viewModel.HighlightChartPointInteraction.RegisterHandler(ctx =>
         {
@@ -161,7 +160,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 view.CartesianChart.Tooltip?.Hide(view.CartesianChart.CoreChart);
             });
 
-            ctx.SetOutput(RxUnit.Default);
+            ctx.SetOutput(RxVoid.Default);
         });
     }
 

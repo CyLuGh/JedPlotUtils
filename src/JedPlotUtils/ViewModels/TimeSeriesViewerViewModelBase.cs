@@ -1,26 +1,26 @@
-﻿using System.Collections.ObjectModel;
-using System.Globalization;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
-using DynamicData;
+﻿using System.Globalization;
 using HierarchyGrid.Definitions;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using LanguageExt;
 using ReactiveUI;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
-using Unit = System.Reactive.Unit;
 
 namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
-    protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache =
-        new(x => x.Identifier);
-    protected readonly IObservable<IChangeSet<TimeSeriesInfo, Identifier>> _cacheUpdates;
+    [Reactive]
+    protected partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; set; }
 
-    protected readonly ReadOnlyObservableCollection<TimeSeriesInfo> _seriesInfos;
-    public ReadOnlyObservableCollection<TimeSeriesInfo> SeriesInfos => _seriesInfos;
+    // protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache =
+    //     new(x => x.Identifier);
+    // protected readonly IObservable<IChangeSet<TimeSeriesInfo, Identifier>> _cacheUpdates;
+    //
+    // protected readonly ReadOnlyObservableCollection<TimeSeriesInfo> _seriesInfos;
+    // public ReadOnlyObservableCollection<TimeSeriesInfo> SeriesInfos => _seriesInfos;
 
     public HierarchyGridViewModel HierarchyGridViewModel { get; } = new();
 
@@ -41,7 +41,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial Option<(Identifier, DateOnly)> HoveredPoint { get; set; }
 
     public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HighlightCellGridCommand { get; }
-    public ReactiveCommand<Option<(Identifier, DateOnly)>, Unit> HighlightChartPointCommand { get; }
+    public ReactiveCommand<
+        Option<(Identifier, DateOnly)>,
+        RxVoid
+    > HighlightChartPointCommand { get; }
 
     public ReactiveCommand<
         (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
@@ -50,13 +53,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public Interaction<
         Option<(Identifier, DateOnly)>,
-        Unit
+        RxVoid
     > HighlightChartPointInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     [Reactive]
     public partial DisplayMode DisplayMode { get; set; }
-    public ReactiveCommand<DisplayMode, Unit> AdaptDisplayModeCommand { get; }
-    public Interaction<DisplayMode, Unit> AdaptDisplayModeInteraction { get; } =
+    public ReactiveCommand<DisplayMode, RxVoid> AdaptDisplayModeCommand { get; }
+    public Interaction<DisplayMode, RxVoid> AdaptDisplayModeInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
     [Reactive]
@@ -67,13 +70,14 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     protected TimeSeriesViewerViewModelBase()
     {
-        _cacheUpdates = _seriesCache.Connect().RefCount();
-
-        _cacheUpdates
-            .ObserveOn(RxSchedulers.MainThreadScheduler)
-            .Bind(out _seriesInfos)
-            .DisposeMany()
-            .Subscribe();
+        // TODO
+        // _cacheUpdates = _seriesCache.Connect().RefCount();
+        //
+        // _cacheUpdates
+        //     .ObserveOn(RxSchedulers.MainThreadScheduler)
+        //     .Bind(out _seriesInfos)
+        //     .DisposeMany()
+        //     .Subscribe();
 
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
         HighlightCellGridCommand = CreateCommandHighlightGridCommand();
@@ -123,8 +127,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
                 o.Match(
-                    Observable.Return,
-                    () => Observable.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                    Signal.Return,
+                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .Switch()
@@ -147,7 +151,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         var hoverObservable = this.WhenAnyValue(x => x.HoveredPoint).Publish().RefCount();
 
         hoverObservable
-            .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
+            .Merge(
+                hoverObservable
+                    .CombineLatest(cmd.Where(x => x), (First, Second) => (First, Second))
+                    .Select(t => t.First)
+            )
             .DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxSchedulers.MainThreadScheduler)
@@ -160,9 +168,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<DisplayMode, Unit> CreateCommandAdaptDisplayModeCommand()
+    private ReactiveCommand<DisplayMode, RxVoid> CreateCommandAdaptDisplayModeCommand()
     {
-        AdaptDisplayModeInteraction.RegisterHandler(ctx => ctx.SetOutput(Unit.Default));
+        AdaptDisplayModeInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
         var cmd = ReactiveCommand.CreateFromObservable(
             (DisplayMode dm) => AdaptDisplayModeInteraction.Handle(dm)
         );
@@ -170,10 +178,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<Option<(Identifier, DateOnly)>, Unit> CreateHighlightPointCommand()
+    private ReactiveCommand<Option<(Identifier, DateOnly)>, RxVoid> CreateHighlightPointCommand()
     {
-        HighlightChartPointInteraction.RegisterHandler(ctx => ctx.SetOutput(Unit.Default));
-        var cmd = ReactiveCommand.CreateFromObservable<Option<(Identifier, DateOnly)>, Unit>(t =>
+        HighlightChartPointInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        var cmd = ReactiveCommand.CreateFromObservable<Option<(Identifier, DateOnly)>, RxVoid>(t =>
             HighlightChartPointInteraction.Handle(t)
         );
 
@@ -195,12 +203,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             }
         );
 
-        _cacheUpdates
-            .DisposeMany()
-            .Select(_ => _seriesCache.Items.ToSeq())
+        this.WhenAnyValue(x => x.SeriesCache)
+            .Select(hm => hm.Values.ToSeq())
             .CombineLatest(
                 this.WhenAnyValue(x => x.DateFormatter)
-                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM")))
+                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM"))),
+                (a, b) => (a, b)
             )
             .InvokeCommand(cmd);
 
@@ -337,11 +345,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public void Add(TimeSeriesInfo tsi)
     {
-        _seriesCache.AddOrUpdate(tsi);
+        SeriesCache = SeriesCache.AddOrUpdate(tsi.Identifier, tsi);
     }
 
     public void Clear()
     {
-        _seriesCache.Clear();
+        SeriesCache = SeriesCache.Clear();
     }
 }

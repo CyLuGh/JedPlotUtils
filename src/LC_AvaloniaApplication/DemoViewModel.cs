@@ -7,8 +7,10 @@ using JedPlotUtils.Palette;
 using JedPlotUtils.ViewModels;
 using ReactiveUI;
 using ReactiveUI.SourceGenerators;
-using RxCommand = ReactiveUI.ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit>;
-using RxUnit = System.Reactive.Unit;
+using RxCommand = ReactiveUI.ReactiveCommand<
+    ReactiveUI.Primitives.RxVoid,
+    ReactiveUI.Primitives.RxVoid
+>;
 
 namespace LC_AvaloniaApplication;
 

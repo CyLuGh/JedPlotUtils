@@ -1,13 +1,12 @@
 ﻿using System.Collections.ObjectModel;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
-using DynamicData;
 using LanguageExt;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ReactiveUI;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
@@ -33,15 +32,18 @@ public partial class TimeSeriesViewerViewModel
                 Console.WriteLine(x);
             });
 
-        _lineSeriesHelper = _cacheUpdates
-            .DisposeMany()
-            .CombineLatest(this.WhenAnyValue(x => x.Palette), this.WhenAnyValue(x => x.Selection))
+        _lineSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
+            .CombineLatest(
+                this.WhenAnyValue(x => x.Palette),
+                this.WhenAnyValue(x => x.Selection),
+                (a, b, c) => (a, b, c)
+            )
             .ObserveOn(RxSchedulers.TaskpoolScheduler)
             .Select(t =>
             {
-                var (_, palette, selection) = t;
-                return _seriesCache
-                    .Items.Select(
+                var (map, palette, selection) = t;
+                return map
+                    .Values.Select(
                         (tsi, index) =>
                         {
                             float thickness = selection.IsEmpty
@@ -91,8 +93,8 @@ public partial class TimeSeriesViewerViewModel
             this.WhenAnyValue(x => x.DateFormatter)
                 .Select(o =>
                     o.Match(
-                        Observable.Return,
-                        () => Observable.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                        Signal.Return,
+                        () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                     )
                 )
                 .Switch()

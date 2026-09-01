@@ -1,11 +1,10 @@
 using System;
-using System.Reactive.Disposables;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Disposables;
 
 namespace LC_AvaloniaApplication;
 
@@ -27,7 +26,8 @@ public partial class DemoView : ReactiveUserControl<DemoViewModel>
         this.WhenActivated(disposables =>
         {
             this.WhenAnyValue(x => x.ViewModel)
-                .WhereNotNull()
+                .Where(vm => vm is not null)
+                .Select(vm => vm!)
                 .Do(vm => PopulateFromViewModel(this, vm, disposables))
                 .Subscribe()
                 .DisposeWith(disposables);
@@ -37,7 +37,7 @@ public partial class DemoView : ReactiveUserControl<DemoViewModel>
     private static void PopulateFromViewModel(
         DemoView view,
         DemoViewModel viewModel,
-        CompositeDisposable disposables
+        MultipleDisposable disposables
     )
     {
         //view.TimeSeriesViewer.ViewModel = viewModel.TimeSeriesViewModel;

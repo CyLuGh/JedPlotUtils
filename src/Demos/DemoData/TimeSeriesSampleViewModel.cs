@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive;
 using System.Text;
 using System.Threading.Tasks;
 using JedPlotUtils.ScottPlot;
 using LanguageExt;
 using ReactiveUI;
+using ReactiveUI.Primitives;
 using ReactiveUI.SourceGenerators;
-using RxUnit = System.Reactive.Unit;
 
 namespace DemoData;
 
@@ -19,11 +18,11 @@ public partial class TimeSeriesSampleViewModel : ReactiveObject
         DrawChartCommand = CreateDrawChartCommand(BuildSampleCommand);
     }
 
-    private ReactiveCommand<Seq<ChartTs>, RxUnit> CreateDrawChartCommand(
-        ReactiveCommand<RxUnit, Seq<ChartTs>> buildSampleCommand
+    private ReactiveCommand<Seq<ChartTs>, RxVoid> CreateDrawChartCommand(
+        ReactiveCommand<RxVoid, Seq<ChartTs>> buildSampleCommand
     )
     {
-        DrawChartInteraction.RegisterHandler(ctx => ctx.SetOutput(RxUnit.Default));
+        DrawChartInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
         var cmd = ReactiveCommand.CreateFromObservable(
             (Seq<ChartTs> seq) => DrawChartInteraction.Handle(seq.Map(x => x.ToPlotSeries()))
         );
@@ -32,10 +31,10 @@ public partial class TimeSeriesSampleViewModel : ReactiveObject
         return cmd;
     }
 
-    public Interaction<Seq<PlotSeries>, RxUnit> DrawChartInteraction { get; } =
+    public Interaction<Seq<PlotSeries>, RxVoid> DrawChartInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
-    public ReactiveCommand<Seq<ChartTs>, RxUnit> DrawChartCommand { get; }
+    public ReactiveCommand<Seq<ChartTs>, RxVoid> DrawChartCommand { get; }
 
     [ReactiveCommand]
     private Seq<ChartTs> BuildSample() => new TsGenerator().Sample;
