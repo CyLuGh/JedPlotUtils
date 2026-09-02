@@ -11,6 +11,7 @@
     <PackageReference Include="CsvHelper" />
     <PackageReference Include="HierarchyGrid.Definitions" />
     <PackageReference Include="ReactiveUI" />
+    <PackageReference Include="ReactiveUI.Primitives" />
     <PackageReference Include="ReactiveUI.SourceGenerators">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

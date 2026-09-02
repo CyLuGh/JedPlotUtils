@@ -43,6 +43,8 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         MultipleDisposable disposables
     )
     {
+        view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
+
         /* Display Mode */
         viewModel
             .AdaptDisplayModeInteraction.RegisterHandler(ctx =>
@@ -96,44 +98,44 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .DisposeWith(disposables);
 
         /* Mouse over chart */
-        // Observable
-        // .FromEvent<
-        //     ChartPointHoverHandler,
-        //     (
-        //         IChartView chart,
-        //         IEnumerable<ChartPoint>? newItems,
-        //         IEnumerable<ChartPoint>? oldItems
-        //     )
-        // >(
-        //     handler => (chart, newItems, oldItems) => handler((chart, newItems, oldItems)),
-        //     h => view.CartesianChart.HoveredPointsChanged += h,
-        //     h => view.CartesianChart.HoveredPointsChanged -= h
-        // )
-        // .Subscribe(x =>
-        // {
-        //     var (chart, newItems, oldItems) = x;
-        //     var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
-        //     if (!nItems.IsEmpty)
-        //     {
-        //         var point = nItems[0];
-        //         if (
-        //             point.Context is
-        //             { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
-        //         )
-        //         {
-        //             viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
-        //         }
-        //         else
-        //         {
-        //             viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
-        //         }
-        //     }
-        //     else
-        //     {
-        //         viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
-        //     }
-        // })
-        // .DisposeWith(disposables);
+        Signal
+            .FromEvent<
+                ChartPointHoverHandler,
+                (
+                    IChartView chart,
+                    IEnumerable<ChartPoint>? newItems,
+                    IEnumerable<ChartPoint>? oldItems
+                )
+            >(
+                handler => (chart, newItems, oldItems) => handler((chart, newItems, oldItems)),
+                h => view.CartesianChart.HoveredPointsChanged += h,
+                h => view.CartesianChart.HoveredPointsChanged -= h
+            )
+            .Subscribe(x =>
+            {
+                var (chart, newItems, oldItems) = x;
+                var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
+                if (!nItems.IsEmpty)
+                {
+                    var point = nItems[0];
+                    if (
+                        point.Context is
+                        { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
+                    )
+                    {
+                        viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
+                    }
+                    else
+                    {
+                        viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
+                    }
+                }
+                else
+                {
+                    viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
+                }
+            })
+            .DisposeWith(disposables);
 
         viewModel.HighlightChartPointInteraction.RegisterHandler(ctx =>
         {

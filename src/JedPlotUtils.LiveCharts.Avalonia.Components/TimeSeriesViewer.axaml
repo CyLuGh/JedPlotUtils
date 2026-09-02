@@ -28,7 +28,6 @@
     </lvc:CartesianChart>
 
     <hgrid:Grid x:Name="HierarchyGrid"
-                ViewModel="{Binding HierarchyGridViewModel}"
                 IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
 
     <GridSplitter x:Name="Splitter"
