@@ -31,7 +31,6 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 .Where(vm => vm is not null)
                 .Select(vm => vm!)
                 .Do(vm => PopulateFromViewModel(this, vm, disposables))
-                .Do(vm => vm.DisplayMode = DisplayMode.BothHorizontal)
                 .Subscribe()
                 .DisposeWith(disposables);
         });
@@ -44,6 +43,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     )
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
+        view.ConfigurationView.ViewModel = viewModel.Configuration;
 
         /* Display Mode */
         viewModel
@@ -69,7 +69,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .Subscribe(t =>
             {
                 var args = t.EventArgs;
-                if (viewModel.SelectionMode == SelectionMode.None)
+                if (viewModel.SeriesSelectionMode == SelectionMode.None)
                     return;
 
                 var chart = (CartesianChart)t.Sender!;
@@ -87,11 +87,14 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     return;
                 }
 
-                viewModel.Selection = viewModel.SelectionMode switch
+                viewModel.Selection = viewModel.SeriesSelectionMode switch
                 {
-                    SelectionMode.Single => new([(Identifier)found[0].Context.Series.Tag]),
+                    SelectionMode.Single
+                        => viewModel
+                            .Selection.Clear()
+                            .Add((Identifier)found[0].Context.Series.Tag!),
                     SelectionMode.Multiple
-                        => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag),
+                        => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag!),
                     _ => viewModel.Selection,
                 };
             })

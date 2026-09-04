@@ -34,9 +34,8 @@ public partial class TimeSeriesViewerViewModel
 
         _lineSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
             .CombineLatest(
-                this.WhenAnyValue(x => x.Palette),
-                this.WhenAnyValue(x => x.Selection),
-                (a, b, c) => (a, b, c)
+                this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
+                this.WhenAnyValue(x => x.Selection)
             )
             .ObserveOn(RxSchedulers.TaskpoolScheduler)
             .Select(t =>

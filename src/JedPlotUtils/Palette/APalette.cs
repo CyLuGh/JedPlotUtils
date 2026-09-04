@@ -16,4 +16,14 @@ public abstract record APalette : IPalette
 
         return Colors[i];
     }
+
+    // public virtual bool Equals(APalette? other)
+    // {
+    //     return Name.Equals(other?.Name);
+    // }
+
+    // public override int GetHashCode()
+    // {
+    //     return Name.GetHashCode();
+    // }
 }

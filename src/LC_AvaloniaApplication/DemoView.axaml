@@ -14,20 +14,6 @@
       <DockPanel VerticalSpacing="10">
         <Grid ColumnDefinitions="Auto,*">
           <StackPanel Spacing="5">
-            <ComboBox x:Name="ComboBoxPalettes"
-                      HorizontalAlignment="Stretch"
-                      SelectedItem="{Binding TimeSeriesViewModel.Palette}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate DataType="palette:IPalette">
-                  <TextBlock Text="{Binding Name}"/>
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ComboBox x:Name="ComboBoxDisplayModes"
-                      HorizontalAlignment="Stretch"
-                      SelectedItem="{Binding TimeSeriesViewModel.DisplayMode}">
-
-            </ComboBox>
             <Button Content="Add series"
                     Command="{Binding AddSeries}"
                     HorizontalAlignment="Stretch"/>

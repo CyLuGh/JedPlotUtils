@@ -10,6 +10,7 @@
     <PackageReference Include="ClosedXML" />
     <PackageReference Include="CsvHelper" />
     <PackageReference Include="HierarchyGrid.Definitions" />
+    <PackageReference Include="JDPlus.WS.Client" />
     <PackageReference Include="ReactiveUI" />
     <PackageReference Include="ReactiveUI.Primitives" />
     <PackageReference Include="ReactiveUI.SourceGenerators">

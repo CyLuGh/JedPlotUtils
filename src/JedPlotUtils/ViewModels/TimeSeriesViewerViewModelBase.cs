@@ -1,5 +1,6 @@
 ﻿using System.Globalization;
 using HierarchyGrid.Definitions;
+using JDPlus.WS.Client;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using LanguageExt;
@@ -7,6 +8,8 @@ using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
+using Splat;
+using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
 namespace JedPlotUtils.ViewModels;
 
@@ -15,21 +18,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [Reactive]
     protected partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; set; }
 
-    // protected readonly SourceCache<TimeSeriesInfo, Identifier> _seriesCache =
-    //     new(x => x.Identifier);
-    // protected readonly IObservable<IChangeSet<TimeSeriesInfo, Identifier>> _cacheUpdates;
-    //
-    // protected readonly ReadOnlyObservableCollection<TimeSeriesInfo> _seriesInfos;
-    // public ReadOnlyObservableCollection<TimeSeriesInfo> SeriesInfos => _seriesInfos;
-
     public HierarchyGridViewModel HierarchyGridViewModel { get; } = new();
 
     [Reactive]
     public partial IPalette Palette { get; set; } = new TangoPalette();
 
     [Reactive]
-    public partial Models.SelectionMode SelectionMode { get; set; } =
-        JedPlotUtils.Models.SelectionMode.Single;
+    public partial SelectionMode SeriesSelectionMode { get; set; } = SelectionMode.Single;
 
     [Reactive]
     public partial LanguageExt.HashSet<Identifier> Selection { get; set; }
@@ -40,7 +35,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [Reactive]
     public partial Option<(Identifier, DateOnly)> HoveredPoint { get; set; }
 
-    public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HighlightCellGridCommand { get; }
+    public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HoverCellGridCommand { get; }
     public ReactiveCommand<
         Option<(Identifier, DateOnly)>,
         RxVoid
@@ -68,22 +63,41 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public Interaction<Func<DateOnly, string>, Unit> AdaptXAxisInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
+    public TimeSeriesViewerConfigurationViewModel Configuration { get; }
+
+    [ObservableAsProperty(ReadOnly = false)]
+    private Option<CommunicationManager> _wsManager;
+
+    [ObservableAsProperty(ReadOnly = false)]
+    private bool _isConnecting;
+
+    [ObservableAsProperty]
+    private bool _hasConnection;
+
+    public ReactiveCommand<
+        TimeSeriesViewerConfigurationViewModel,
+        Option<CommunicationManager>
+    > GetConnectionCommand { get; }
+
+    public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
+
     protected TimeSeriesViewerViewModelBase()
     {
-        // TODO
-        // _cacheUpdates = _seriesCache.Connect().RefCount();
-        //
-        // _cacheUpdates
-        //     .ObserveOn(RxSchedulers.MainThreadScheduler)
-        //     .Bind(out _seriesInfos)
-        //     .DisposeMany()
-        //     .Subscribe();
-
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
-        HighlightCellGridCommand = CreateCommandHighlightGridCommand();
+        HoverCellGridCommand = CreateCommandHoverGridCommand();
         HighlightChartPointCommand = CreateHighlightPointCommand();
         BuildHierarchyGridDefinitions = CreateCommandBuildHierarchyGridDefinitions();
         AdaptXAxisCommand = CreateCommandAdaptXAxisCommand();
+
+        GetConnectionCommand = CreateCommandGetConnection();
+        ToggleHighlightsCommand = CreateCommandToggleHighlights();
+
+        Configuration =
+            Locator.Current.GetService<TimeSeriesViewerConfigurationViewModel>() ?? new();
+
+        _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
+            .Select(o => o.IsSome)
+            .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenActivated(disposables =>
         {
@@ -111,10 +125,125 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 })
                 .DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.SelectionMode)
+            this.WhenAnyValue(x => x.SeriesSelectionMode)
                 .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
                 .DisposeWith(disposables);
+
+            Signal
+                .Return(Configuration)
+                .Delay(TimeSpan.FromMilliseconds(50))
+                .Merge(Configuration.SaveCommand.Select(_ => Configuration))
+                .Do(ApplySettings)
+                .InvokeCommand(GetConnectionCommand)
+                .DisposeWith(disposables);
+
+            HierarchyGridViewModel
+                .WhenAnyValue(x => x.Producers)
+                .Select(ps =>
+                {
+                    var selected = ps.Select(p =>
+                            p.WhenAnyValue(x => x.IsHighlighted)
+                                .DistinctUntilChanged()
+                                .Where(x => x)
+                                .Select(_ => (Identifier)p.Tag!)
+                        )
+                        .Merge();
+
+                    return selected;
+                })
+                .Switch()
+                .Do(_ =>
+                {
+                    if (SeriesSelectionMode == SelectionMode.None)
+                    {
+                        foreach (var p in HierarchyGridViewModel.Producers)
+                            p.IsHighlighted = false;
+                    }
+                })
+                .Subscribe(x =>
+                {
+                    Selection = SeriesSelectionMode switch
+                    {
+                        SelectionMode.Single => Selection.Clear().AddOrUpdate(x),
+                        SelectionMode.Multiple => Selection.AddOrUpdate(x),
+                        _ => Selection
+                    };
+                });
+
+            HierarchyGridViewModel
+                .WhenAnyValue(x => x.Producers)
+                .Select(ps =>
+                {
+                    var selected = ps.Select(p =>
+                            p.WhenAnyValue(x => x.IsHighlighted)
+                                .DistinctUntilChanged()
+                                .Where(x => !x)
+                                .Select(_ => (Identifier)p.Tag!)
+                        )
+                        .Merge();
+
+                    return selected;
+                })
+                .Switch()
+                .Subscribe(x =>
+                {
+                    Selection = Selection.Remove(x);
+                });
         });
+    }
+
+    private void ApplySettings(TimeSeriesViewerConfigurationViewModel settings)
+    {
+        SeriesSelectionMode = settings.SeriesSelectionMode;
+        DisplayMode = settings.DisplayMode;
+        Palette = settings.Palette ?? Palettes.Available[0];
+    }
+
+    private ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> CreateCommandToggleHighlights()
+    {
+        var cmd = ReactiveCommand.Create(
+            (LanguageExt.HashSet<Identifier> selection) =>
+            {
+                foreach (var producer in HierarchyGridViewModel.Producers)
+                {
+                    producer.IsHighlighted =
+                        producer.Tag is Identifier identifier && selection.Contains(identifier);
+                }
+            }
+        );
+
+        this.WhenAnyValue(x => x.Selection).DistinctUntilChanged().InvokeCommand(cmd);
+        cmd.Select(_ => false).InvokeCommand(HierarchyGridViewModel, x => x.DrawGridCommand);
+
+        return cmd;
+    }
+
+    private ReactiveCommand<
+        TimeSeriesViewerConfigurationViewModel,
+        Option<CommunicationManager>
+    > CreateCommandGetConnection()
+    {
+        var cmd = ReactiveCommand.CreateFromTask(
+            async (TimeSeriesViewerConfigurationViewModel configuration) =>
+            {
+                var cm = new CommunicationManager(configuration.WebServiceAddress);
+                await cm.GetVersion();
+                return Option<CommunicationManager>.Some(cm);
+            }
+        );
+
+        _isConnectingHelper = cmd.IsExecuting.ToProperty(
+            this,
+            x => x.IsConnecting,
+            scheduler: RxSchedulers.MainThreadScheduler
+        );
+
+        _wsManagerHelper = cmd.Merge(
+                cmd.ThrownExceptions.Select(_ => Option<CommunicationManager>.None)
+            )
+            .ToProperty(this, x => x.WsManager, initialValue: Option<CommunicationManager>.None);
+
+        return cmd;
     }
 
     private ReactiveCommand<Func<DateOnly, string>, Unit> CreateCommandAdaptXAxisCommand()
@@ -137,25 +266,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<
-        Option<(Identifier, DateOnly)>,
-        bool
-    > CreateCommandHighlightGridCommand()
+    private ReactiveCommand<Option<(Identifier, DateOnly)>, bool> CreateCommandHoverGridCommand()
     {
         /* Grid highlighting must be done on UI thread otherwise it will throw an exception if grid has to scroll to
            an element that is not yet drawn */
-        var cmd = ReactiveCommand.Create(
-            (Option<(Identifier, DateOnly)> si) => DoHighlightGrid(si)
-        );
+        var cmd = ReactiveCommand.Create((Option<(Identifier, DateOnly)> si) => DoHoverGrid(si));
 
         var hoverObservable = this.WhenAnyValue(x => x.HoveredPoint).Publish().RefCount();
 
         hoverObservable
-            .Merge(
-                hoverObservable
-                    .CombineLatest(cmd.Where(x => x), (First, Second) => (First, Second))
-                    .Select(t => t.First)
-            )
+            .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
             .DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxSchedulers.MainThreadScheduler)
@@ -174,7 +294,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         var cmd = ReactiveCommand.CreateFromObservable(
             (DisplayMode dm) => AdaptDisplayModeInteraction.Handle(dm)
         );
-        this.WhenAnyValue(x => x.DisplayMode).InvokeCommand(cmd);
+        this.WhenAnyValue(x => x.DisplayMode)
+            .Throttle(TimeSpan.FromMilliseconds(20))
+            .InvokeCommand(cmd);
         return cmd;
     }
 
@@ -207,8 +329,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Select(hm => hm.Values.ToSeq())
             .CombineLatest(
                 this.WhenAnyValue(x => x.DateFormatter)
-                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM"))),
-                (a, b) => (a, b)
+                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM")))
             )
             .InvokeCommand(cmd);
 
@@ -275,7 +396,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return new HierarchyDefinitions(producers, consumers);
     }
 
-    private bool DoHighlightGrid(Option<(Identifier, DateOnly)> hp)
+    private bool DoHoverGrid(Option<(Identifier, DateOnly)> hp)
     {
         if (hp.IsNone)
         {

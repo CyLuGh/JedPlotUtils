@@ -10,18 +10,11 @@ namespace LC_AvaloniaApplication;
 
 public partial class DemoView : ReactiveUserControl<DemoViewModel>
 {
-    public IPalette[] Palettes { get; }
-
     public DemoView()
     {
         ViewModel = new DemoViewModel();
 
         InitializeComponent();
-
-        Palettes = [new TangoPalette(), new SolarizedPalette()];
-        ComboBoxPalettes.ItemsSource = Palettes;
-
-        ComboBoxDisplayModes.ItemsSource = Enum.GetValues<DisplayMode>();
 
         this.WhenActivated(disposables =>
         {
