@@ -15,10 +15,6 @@
   <UserControl.Resources>
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
     <converters:ColorConverter x:Key="ColorConverter"/>
-
-    <StreamGeometry x:Key="SettingsGeometry">
-
-    </StreamGeometry>
   </UserControl.Resources>
   <Grid RowDefinitions="*,Auto"
         RowSpacing="5">
@@ -26,13 +22,20 @@
           RowSpacing="3"
           ColumnSpacing="3"
           Grid.Row="0">
-      <lvc:CartesianChart x:Name="CartesianChart"
-                          Series="{Binding Path=LineSeries}"
-                          FindingStrategy="ExactMatch"
-                          XAxes="{Binding XAxes}"
-                          IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
-                          DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
-                        >
+        <Grid.ContextMenu>
+            <ContextMenu>
+                <MenuItem Header="Disaggregate"
+                          Command="{Binding DisaggregateCommand}"
+                          CommandParameter="{Binding SingleSelection}"/>
+            </ContextMenu>
+        </Grid.ContextMenu>
+        <lvc:CartesianChart x:Name="CartesianChart"
+                            Series="{Binding Path=AllSeries}"
+                            FindingStrategy="ExactMatch"
+                            XAxes="{Binding XAxes}"
+                            IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
+                            DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
+        >
       </lvc:CartesianChart>
 
       <hgrid:Grid x:Name="HierarchyGrid"

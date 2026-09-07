@@ -17,6 +17,9 @@
             <Button Content="Add series"
                     Command="{Binding AddSeries}"
                     HorizontalAlignment="Stretch"/>
+            <Button Content="Add series with auxiliary data"
+                    Command="{Binding AddSeriesWithAuxiliaryData}"
+                    HorizontalAlignment="Stretch"/>
             <Button Content="Clear"
                     Command="{Binding ClearSeries}"
                     HorizontalAlignment="Stretch"/>

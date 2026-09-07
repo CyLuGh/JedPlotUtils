@@ -81,6 +81,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
 
+    [ObservableAsProperty]
+    private Option<TimeSeriesInfo> _singleSelection;
+
     protected TimeSeriesViewerViewModelBase()
     {
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
@@ -92,12 +95,25 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         GetConnectionCommand = CreateCommandGetConnection();
         ToggleHighlightsCommand = CreateCommandToggleHighlights();
 
+        DisaggregateCommand = CreateCommandDisaggregateCommand();
+        CreateDisaggregatedSeriesCommand = CreateCommandCreateDisaggregatedSeriesCommand(
+            DisaggregateCommand
+        );
+
         Configuration =
             Locator.Current.GetService<TimeSeriesViewerConfigurationViewModel>() ?? new();
 
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
             .Select(o => o.IsSome)
             .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
+
+        _singleSelectionHelper = this.WhenAnyValue(x => x.Selection)
+            .Select(selection =>
+                selection.Length == 1
+                    ? SeriesCache.Values.Where(x => selection.Contains(x.Identifier)).ToSeq()[0]
+                    : Option<TimeSeriesInfo>.None
+            )
+            .ToProperty(this, x => x.SingleSelection, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenActivated(disposables =>
         {
@@ -154,11 +170,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .Switch()
                 .Do(_ =>
                 {
-                    if (SeriesSelectionMode == SelectionMode.None)
-                    {
-                        foreach (var p in HierarchyGridViewModel.Producers)
-                            p.IsHighlighted = false;
-                    }
+                    if (SeriesSelectionMode != SelectionMode.None)
+                        return;
+
+                    foreach (var p in HierarchyGridViewModel.Producers)
+                        p.IsHighlighted = false;
                 })
                 .Subscribe(x =>
                 {
@@ -345,6 +361,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     {
         var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
 
+        // TODO: sort by identifier? put derived series afterwards?
         var producers = infos.Map(info => new ProducerDefinition
         {
             Content = info.Label,
@@ -469,8 +486,19 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         SeriesCache = SeriesCache.AddOrUpdate(tsi.Identifier, tsi);
     }
 
-    public void Clear()
+    public void Clear(bool derivedOnly)
     {
-        SeriesCache = SeriesCache.Clear();
+        if (derivedOnly)
+        {
+            var derived = SeriesCache
+                .Values.Where(tsi => tsi.IsDerived)
+                .Select(tsi => tsi.Identifier)
+                .ToSeq();
+            SeriesCache = SeriesCache.RemoveRange(derived);
+        }
+        else
+        {
+            SeriesCache = SeriesCache.Clear();
+        }
     }
 }
