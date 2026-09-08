@@ -1,7 +1,9 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using JDPlus.WS.Models;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
+using JedPlotUtils.ViewModels;
 using LanguageExt;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
@@ -44,6 +46,19 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
         view.ConfigurationView.ViewModel = viewModel.Configuration;
+
+        viewModel
+            .GetDisaggregationRequestInteraction.RegisterHandler(async ctx =>
+            {
+                var dovm = new DisaggregationOptionsViewModel();
+                view.DialogContent.Content = new DisaggregationOptionsView() { ViewModel = dovm };
+                viewModel.IsDialogOpen = true;
+                var res = await dovm.Result;
+                ctx.SetOutput(res);
+                viewModel.IsDialogOpen = false;
+                view.DialogContent.Content = null;
+            })
+            .DisposeWith(disposables);
 
         /* Display Mode */
         viewModel

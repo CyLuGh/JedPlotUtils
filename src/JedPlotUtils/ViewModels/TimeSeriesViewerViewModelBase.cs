@@ -1,4 +1,8 @@
-﻿using System.Globalization;
+﻿global using RxCommand = ReactiveUI.ReactiveCommand<
+    ReactiveUI.Primitives.RxVoid,
+    ReactiveUI.Primitives.RxVoid
+>;
+using System.Globalization;
 using HierarchyGrid.Definitions;
 using JDPlus.WS.Client;
 using JedPlotUtils.Models;
@@ -15,6 +19,9 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
+    [Reactive]
+    public partial bool IsDialogOpen { get; set; }
+
     [Reactive]
     protected partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; set; }
 
@@ -84,8 +91,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [ObservableAsProperty]
     private Option<TimeSeriesInfo> _singleSelection;
 
+    public RxCommand ClearDerivedCommand { get; }
+
     protected TimeSeriesViewerViewModelBase()
     {
+        ClearDerivedCommand = ReactiveCommand.Create(() => Clear(true));
+
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
         HoverCellGridCommand = CreateCommandHoverGridCommand();
         HighlightChartPointCommand = CreateHighlightPointCommand();
@@ -347,6 +358,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 this.WhenAnyValue(x => x.DateFormatter)
                     .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM")))
             )
+            .Throttle(TimeSpan.FromMilliseconds(50))
             .InvokeCommand(cmd);
 
         cmd.Subscribe(definitions => HierarchyGridViewModel.Set(definitions));
@@ -354,22 +366,28 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private static HierarchyDefinitions DoBuildHierarchyGridDefinitions(
+    private HierarchyDefinitions DoBuildHierarchyGridDefinitions(
         Seq<TimeSeriesInfo> infos,
         Func<DateOnly, string> formatter
     )
     {
-        var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
+        var map = infos
+            .Where(info => info.Level < Level.Tertiary)
+            .Map(info => (info.Identifier, info.Data))
+            .ToHashMap();
 
-        // TODO: sort by identifier? put derived series afterwards?
-        var producers = infos.Map(info => new ProducerDefinition
-        {
-            Content = info.Label,
-            Tag = info.Identifier,
-            Producer = () => info.Identifier,
-        });
+        var producers = infos
+            .Where(info => info.Level < Level.Tertiary)
+            .OrderBy(info => info.Identifier)
+            .Map(info => new ProducerDefinition
+            {
+                Content = info.Label,
+                Tag = info.Identifier,
+                Producer = () => info.Identifier,
+            });
 
         var consumers = infos
+            .Where(info => info.Level < Level.Tertiary)
             .GetDates()
             .Order()
             .Map(d => new ConsumerDefinition
@@ -407,10 +425,27 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                                 : dbl.ToString(CultureInfo.InvariantCulture),
                         _ => string.Empty,
                     },
+                ContextItems = o =>
+                    o switch
+                    {
+                        Identifier _ => [.. BuildContext()],
+                        _ => []
+                    }
             })
             .ToSeq();
 
         return new HierarchyDefinitions(producers, consumers);
+    }
+
+    private IEnumerable<(string description, Action<ResultSet> action)> BuildContext()
+    {
+        yield return new(
+            "JD+|Disaggregate",
+            _ =>
+            {
+                Signal.Return(SingleSelection).InvokeCommand(DisaggregateCommand);
+            }
+        );
     }
 
     private bool DoHoverGrid(Option<(Identifier, DateOnly)> hp)
@@ -483,7 +518,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public void Add(TimeSeriesInfo tsi)
     {
-        SeriesCache = SeriesCache.AddOrUpdate(tsi.Identifier, tsi);
+        SeriesCache = SeriesCache.AddOrUpdate(
+            tsi.Identifier,
+            tsi with
+            {
+                Index = SeriesCache.Count
+            }
+        );
     }
 
     public void Clear(bool derivedOnly)
@@ -494,11 +535,24 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .Values.Where(tsi => tsi.IsDerived)
                 .Select(tsi => tsi.Identifier)
                 .ToSeq();
-            SeriesCache = SeriesCache.RemoveRange(derived);
+            var temp = SeriesCache.RemoveRange(derived);
+            SeriesCache = temp
+                .Values.OrderBy(tsi => tsi.Identifier)
+                .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
+                .ToHashMap();
         }
         else
         {
             SeriesCache = SeriesCache.Clear();
         }
+    }
+
+    public void Remove(Identifier identifier)
+    {
+        var temp = SeriesCache.Remove(identifier);
+        SeriesCache = temp
+            .Values.OrderBy(tsi => tsi.Identifier)
+            .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
+            .ToHashMap();
     }
 }

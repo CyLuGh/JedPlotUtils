@@ -33,8 +33,8 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         "timeSeriesViewerSettings.json"
     );
 
-    public ReactiveCommand<RxVoid, RxVoid> SaveCommand { get; }
-    public ReactiveCommand<RxVoid, RxVoid> LoadCommand { get; }
+    public RxCommand SaveCommand { get; }
+    public RxCommand LoadCommand { get; }
 
     public TimeSeriesViewerConfigurationViewModel()
     {
@@ -54,7 +54,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         Palette = settings.Palette.ToPalette();
     }
 
-    private ReactiveCommand<RxVoid, RxVoid> CreateCommandLoad()
+    private RxCommand CreateCommandLoad()
     {
         var cmd = ReactiveCommand.CreateRunInBackground(() =>
         {
@@ -63,7 +63,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<RxVoid, RxVoid> CreateCommandSave()
+    private RxCommand CreateCommandSave()
     {
         var cmd = ReactiveCommand.CreateRunInBackground(() =>
         {

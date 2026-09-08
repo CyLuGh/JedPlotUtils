@@ -46,7 +46,7 @@ public partial class TimeSeriesViewerViewModel
                 return map
                     .Values.Where(tsi => tsi.ChartType != SeriesChartType.Range)
                     .Select(
-                        (tsi, index) =>
+                        (tsi) =>
                         {
                             float thickness = selection.IsEmpty
                                 ? 2
@@ -57,11 +57,11 @@ public partial class TimeSeriesViewerViewModel
                             var stroke =
                                 selection.IsEmpty || selection.Contains(tsi.Identifier)
                                     ? new SolidColorPaint(
-                                        palette.GetColor(index).Convert(),
+                                        palette.GetColor(tsi.Index).Convert(),
                                         thickness
                                     )
                                     : new SolidColorPaint(
-                                        palette.GetColor(index).Convert(),
+                                        palette.GetColor(tsi.Index).Convert(),
                                         thickness
                                     )
                                     {
@@ -72,7 +72,7 @@ public partial class TimeSeriesViewerViewModel
                                 tsi.ChartType == SeriesChartType.Area
                                     ? new SolidColorPaint(
                                         palette
-                                            .GetColor(index)
+                                            .GetColor(tsi.Index)
                                             .Convert()
                                             .WithAlpha(
                                                 selection.IsEmpty
@@ -98,12 +98,8 @@ public partial class TimeSeriesViewerViewModel
                                 Stroke = stroke,
                                 Fill = fill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                GeometrySize = tsi.IsDerived
-                                    ? 0
-                                    : tsi.ChartType == SeriesChartType.Line
-                                        ? 12
-                                        : 6,
-                                IsHoverable = !tsi.IsDerived
+                                GeometrySize = GetGeometrySize(tsi),
+                                IsHoverable = tsi.Level != Level.Tertiary
                             };
                         }
                     )
@@ -125,9 +121,8 @@ public partial class TimeSeriesViewerViewModel
                         tsi is { ChartType: SeriesChartType.Range, AuxiliaryData.IsEmpty: false }
                     )
                     .Select(
-                        (tsi, index) =>
+                        (tsi) =>
                         {
-                            var shift = map.Values.Count(x => x.ChartType != SeriesChartType.Range);
                             float thickness = selection.IsEmpty
                                 ? 2
                                 : selection.Contains(tsi.Identifier)
@@ -137,11 +132,11 @@ public partial class TimeSeriesViewerViewModel
                             var stroke =
                                 selection.IsEmpty || selection.Contains(tsi.Identifier)
                                     ? new SolidColorPaint(
-                                        palette.GetColor(index + shift).Convert(),
+                                        palette.GetColor(tsi.Index).Convert().WithAlpha(60),
                                         thickness
                                     )
                                     : new SolidColorPaint(
-                                        palette.GetColor(index + shift).Convert(),
+                                        palette.GetColor(tsi.Index).Convert().WithAlpha(60),
                                         thickness
                                     )
                                     {
@@ -152,12 +147,12 @@ public partial class TimeSeriesViewerViewModel
                                 tsi.ChartType == SeriesChartType.Range
                                     ? new SolidColorPaint(
                                         palette
-                                            .GetColor(index + shift)
+                                            .GetColor(tsi.Index)
                                             .Convert()
                                             .WithAlpha(
                                                 selection.IsEmpty
                                                 || selection.Contains(tsi.Identifier)
-                                                    ? (byte)60
+                                                    ? (byte)40
                                                     : (byte)20
                                             )
                                     )
@@ -180,7 +175,8 @@ public partial class TimeSeriesViewerViewModel
                                 Stroke = stroke,
                                 Fill = fill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = !tsi.IsDerived
+                                IsHoverable = tsi.Level != Level.Tertiary,
+                                GeometrySize = GetGeometrySize(tsi)
                             };
                         }
                     )
@@ -207,6 +203,15 @@ public partial class TimeSeriesViewerViewModel
                 .DisposeWith(disposables);
         });
     }
+
+    private static double GetGeometrySize(TimeSeriesInfo tsi) =>
+        tsi.Level switch
+        {
+            Level.Primary => tsi.ChartType == SeriesChartType.Line ? 12d : 6d,
+            Level.Secondary => 4d,
+            Level.Tertiary => 0d,
+            _ => 12d
+        };
 
     private ReactiveCommand<
         Func<DateOnly, string>,

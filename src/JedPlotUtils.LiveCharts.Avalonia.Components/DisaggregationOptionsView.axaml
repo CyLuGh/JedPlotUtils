@@ -1,0 +1,87 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="650"
+             x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.DisaggregationOptionsView"
+             x:DataType="viewModels:DisaggregationOptionsViewModel">
+  <StackPanel Spacing="16">
+    <TextBlock Text="Temporal disaggregation options" 
+               VerticalAlignment="Center"
+               FontWeight="Bold" 
+               FontSize="18" 
+               Margin="20 0"/>
+
+    <Separator/>
+
+    <UniformGrid Columns="2"
+                 RowSpacing="4"
+                 Margin="10">
+      <TextBlock Text="Algorithm:"
+                 VerticalAlignment="Center"/>
+      <TextBox Text="{Binding Algorithm}"/>
+      <TextBlock Text="Model:"
+                 VerticalAlignment="Center"/>
+      <TextBox Text="{Binding Model}"/>
+      <TextBlock Text="Fixed Rho:"
+                 VerticalAlignment="Center"/>
+      <ToggleSwitch IsChecked="{Binding FixedRho}"/>
+      <TextBlock Text="Rho:"
+                 VerticalAlignment="Center"/>
+      <NumericUpDown Value="{Binding Rho}"/>
+      <TextBlock Text="Truncated Rho:"
+                 VerticalAlignment="Center"/>
+      <NumericUpDown Value="{Binding TruncatedRho}"/>
+      <TextBlock Text="Constant:"
+                 VerticalAlignment="Center"/>
+      <ToggleSwitch IsChecked="{Binding Constant}"/>
+      <TextBlock Text="Average:"
+                 VerticalAlignment="Center"/>
+      <ToggleSwitch IsChecked="{Binding Average}"/>
+      <TextBlock Text="Trend:"
+                 VerticalAlignment="Center"/>
+      <ToggleSwitch IsChecked="{Binding Trend}"/>
+      <TextBlock Text="Zero Init:"
+                 VerticalAlignment="Center"/>
+      <ToggleSwitch IsChecked="{Binding ZeroInit}"/>
+      <TextBlock Text="DiffuserEgs:"
+                 VerticalAlignment="Center"/>
+      <ToggleSwitch IsChecked="{Binding DiffuserEgs}"/>
+      <CheckBox Content="Frequency:"
+                IsChecked="{Binding HasFrequency}"
+                VerticalAlignment="Center"/>
+      <ComboBox SelectedItem="{Binding Frequency}"
+                ItemsSource="{Binding Frequencies}"
+                HorizontalAlignment="Stretch"
+                IsEnabled="{Binding HasFrequency}"/>
+      <CheckBox Content="N Backcasts:"
+                IsChecked="{Binding HasBackcast}"
+                VerticalAlignment="Center"/>
+      <NumericUpDown Value="{Binding NBackcasts}"
+                     IsEnabled="{Binding HasBackcast}"
+                     FormatString="N0"
+                     ParsingNumberStyle="Integer"/>
+      <CheckBox Content="N Forecasts:"
+                IsChecked="{Binding HasForecast}"
+                VerticalAlignment="Center"/>
+      <NumericUpDown Value="{Binding NForecasts}"
+                     IsEnabled="{Binding HasForecast}"
+                     FormatString="N0"
+                     ParsingNumberStyle="Integer"/>
+
+    </UniformGrid>
+
+    <UniformGrid Rows="1"
+                 HorizontalAlignment="Right">
+      <Button Content="Cancel"
+              Command="{Binding CancelCommand}"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Center"/>
+      <Button Content="OK"
+              Command="{Binding ValidateCommand}"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Center"/>
+    </UniformGrid>
+  </StackPanel>
+</UserControl>

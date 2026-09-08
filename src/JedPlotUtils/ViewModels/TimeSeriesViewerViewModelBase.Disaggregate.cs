@@ -1,10 +1,9 @@
 using JDPlus.WS.Models;
 using JedPlotUtils.Models;
 using LanguageExt;
-using LanguageExt.SomeHelp;
 using ReactiveUI;
 using ReactiveUI.Primitives;
-using ReactiveUI.SourceGenerators;
+using ReactiveUI.Primitives.Signals;
 using Splat;
 
 namespace JedPlotUtils.ViewModels;
@@ -16,18 +15,39 @@ public partial class TimeSeriesViewerViewModelBase
         Option<TemporalDisaggregationResults>
     > DisaggregateCommand { get; }
 
+    public Interaction<
+        RxVoid,
+        Option<TemporalDisaggregationRequest>
+    > GetDisaggregationRequestInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
     private ReactiveCommand<
         Option<TimeSeriesInfo>,
         Option<TemporalDisaggregationResults>
     > CreateCommandDisaggregateCommand()
     {
+        GetDisaggregationRequestInteraction.RegisterHandler(ctx =>
+            ctx.SetOutput(
+                new TemporalDisaggregationRequest()
+                {
+                    Model = "Rw",
+                    Algorithm = "SqrtDiffuse",
+                    NBackcasts = 0,
+                    NForecasts = 6
+                }
+            )
+        );
+
         var canExecute = this.WhenAnyValue(x => x.HasConnection)
             .CombineLatest(this.WhenAnyValue(x => x.SingleSelection).Select(sel => sel.IsSome))
             .Select(t => t is { First: true, Second: true })
             .ObserveOn(RxSchedulers.MainThreadScheduler);
 
         var cmd = ReactiveCommand.CreateFromTask(
-            (Option<TimeSeriesInfo> tsi) => Disaggregate(tsi),
+            async (Option<TimeSeriesInfo> tsi) =>
+            {
+                var req = await GetDisaggregationRequestInteraction.Handle(RxVoid.Default);
+                return await Disaggregate(tsi, req).ConfigureAwait(false);
+            },
             canExecute
         );
 
@@ -37,28 +57,29 @@ public partial class TimeSeriesViewerViewModelBase
     }
 
     private async Task<Option<TemporalDisaggregationResults>> Disaggregate(
-        Option<TimeSeriesInfo> option
+        Option<TimeSeriesInfo> oSeries,
+        Option<TemporalDisaggregationRequest> oRequest
     )
     {
-        var elements = from cm in WsManager from tsi in option select (cm, tsi);
+        var elements =
+            from cm in WsManager
+            from tsi in oSeries
+            from req in oRequest
+            select (cm, tsi, req);
 
         var derived = await elements.MatchAsync(
             async t =>
             {
-                var (cm, tsi) = t;
+                var (cm, tsi, req) = t;
                 var data = tsi.Data.ToSeq();
+
                 var tsData = await cm.BuildTsData(
                     data,
                     aggregationType: AggregationType.None,
                     Frequency.Undefined
                 );
-                var results = await cm.ProcessTemporalDisaggregation(
-                    tsData,
-                    model: "Rw",
-                    algorithm: "SqrtDiffuse",
-                    nBackcasts: 0,
-                    nForecasts: 6
-                );
+
+                var results = await cm.ProcessTemporalDisaggregation(req with { Y = tsData });
 
                 return Option<TemporalDisaggregationResults>.Some(results);
             },
@@ -90,9 +111,8 @@ public partial class TimeSeriesViewerViewModelBase
                 o.IfSome(res =>
                 {
                     var disaggregatedSeries = res.DisaggregatedSeries.GetDateValues();
-                    Add(new TimeSeriesInfo(disaggregatedSeries, isDerived: true));
-
                     var stDevSeries = res.StDevDisaggregatedSeries.GetDateValues();
+
                     Add(
                         new TimeSeriesInfo(
                             stDevSeries.Select(t =>
@@ -101,7 +121,15 @@ public partial class TimeSeriesViewerViewModelBase
                             stDevSeries.Select(t =>
                                 (t.Key, disaggregatedSeries.Find(t.Key, d => d, () => 0d) - t.Value)
                             ),
-                            isDerived: true
+                            level: Level.Tertiary
+                        )
+                    );
+
+                    Add(
+                        new TimeSeriesInfo(
+                            "Disaggregated",
+                            disaggregatedSeries,
+                            level: Level.Secondary
                         )
                     );
                 });

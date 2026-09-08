@@ -10,6 +10,13 @@ public enum SeriesChartType
     Range
 }
 
+public enum Level
+{
+    Primary,
+    Secondary,
+    Tertiary
+}
+
 public readonly record struct TimeSeriesInfo
 {
     public Identifier Identifier { get; }
@@ -17,20 +24,22 @@ public readonly record struct TimeSeriesInfo
     public HashMap<DateOnly, double> Data { get; }
     public SeriesChartType ChartType { get; }
     public HashMap<DateOnly, double> AuxiliaryData { get; }
-    public bool IsDerived => Identifier.IsDerived;
+    public Level Level => Identifier.Level;
+    public bool IsDerived => Level != Level.Primary;
+    public int Index { get; init; }
 
     public TimeSeriesInfo(
         string identifier,
         string label,
         IEnumerable<(DateOnly, double)> data,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Line
     )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
         ArgumentNullException.ThrowIfNull(label);
 
-        Identifier = new(identifier, isDerived);
+        Identifier = new(identifier, level);
         Label = label;
         Data = data.ToHashMap();
         ChartType = chartType;
@@ -41,14 +50,14 @@ public readonly record struct TimeSeriesInfo
         string label,
         IEnumerable<(DateOnly, double)> data,
         IEnumerable<(DateOnly, double)> auxiliary,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Range
     )
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(identifier, nameof(identifier));
         ArgumentNullException.ThrowIfNull(label, nameof(label));
 
-        Identifier = new(identifier, isDerived);
+        Identifier = new(identifier, level);
         Label = label;
         Data = data.ToHashMap();
         AuxiliaryData = auxiliary.ToHashMap();
@@ -59,14 +68,14 @@ public readonly record struct TimeSeriesInfo
         Option<string> identifier,
         Option<string> label,
         IEnumerable<(DateOnly, double)> data,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Line
     )
         : this(
             identifier.Match(i => i, () => Guid.CreateVersion7().ToString()),
             label.Match(l => l, () => string.Empty),
             data,
-            isDerived,
+            level,
             chartType
         ) { }
 
@@ -75,7 +84,7 @@ public readonly record struct TimeSeriesInfo
         Option<string> label,
         IEnumerable<(DateOnly, double)> data,
         IEnumerable<(DateOnly, double)> auxiliary,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Range
     )
         : this(
@@ -83,40 +92,35 @@ public readonly record struct TimeSeriesInfo
             label.Match(l => l, () => string.Empty),
             data,
             auxiliary,
-            isDerived,
+            level,
             chartType
         ) { }
 
     public TimeSeriesInfo(
         Option<string> label,
         IEnumerable<(DateOnly, double)> data,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Line
     )
-        : this(
-            Option<string>.None,
-            label.Match(l => l, () => string.Empty),
-            data,
-            isDerived,
-            chartType
-        ) { }
+        : this(Option<string>.None, label.Match(l => l, () => string.Empty), data, level, chartType)
+    { }
 
-    public TimeSeriesInfo(IEnumerable<(DateOnly, double)> data, bool isDerived = false)
-        : this(Option<string>.None, Option<string>.None, data, isDerived) { }
+    public TimeSeriesInfo(IEnumerable<(DateOnly, double)> data, Level level = Level.Primary)
+        : this(Option<string>.None, Option<string>.None, data, level) { }
 
     public TimeSeriesInfo(
         IEnumerable<(DateOnly, double)> data,
         IEnumerable<(DateOnly, double)> auxiliary,
-        bool isDerived = false
+        Level level = Level.Primary
     )
-        : this(Option<string>.None, Option<string>.None, data, auxiliary, isDerived) { }
+        : this(Option<string>.None, Option<string>.None, data, auxiliary, level) { }
 
     public TimeSeriesInfo(
         string identifier,
         string label,
         DateOnly[] dates,
         double[] values,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Line
     )
     {
@@ -126,7 +130,7 @@ public readonly record struct TimeSeriesInfo
         ArgumentNullException.ThrowIfNull(values);
         ArgumentOutOfRangeException.ThrowIfNotEqual(dates.Length, values.Length);
 
-        Identifier = new(identifier, isDerived);
+        Identifier = new(identifier, level);
         Label = label;
         Data = Enumerable.Range(0, dates.Length).Select(i => (dates[i], values[i])).ToHashMap();
         ChartType = chartType;
@@ -138,7 +142,7 @@ public readonly record struct TimeSeriesInfo
         DateOnly[] dates,
         double[] values,
         double[] auxiliaries,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Range
     )
     {
@@ -150,7 +154,7 @@ public readonly record struct TimeSeriesInfo
         ArgumentOutOfRangeException.ThrowIfNotEqual(dates.Length, values.Length);
         ArgumentOutOfRangeException.ThrowIfNotEqual(dates.Length, auxiliaries.Length);
 
-        Identifier = new(identifier, isDerived);
+        Identifier = new(identifier, level);
         Label = label;
         Data = Enumerable.Range(0, dates.Length).Select(i => (dates[i], values[i])).ToHashMap();
         AuxiliaryData = Enumerable
@@ -165,7 +169,7 @@ public readonly record struct TimeSeriesInfo
         Option<string> label,
         DateOnly[] dates,
         double[] values,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Line
     )
         : this(
@@ -173,7 +177,7 @@ public readonly record struct TimeSeriesInfo
             label.Match(l => l, () => string.Empty),
             dates,
             values,
-            isDerived,
+            level,
             chartType
         ) { }
 
@@ -183,7 +187,7 @@ public readonly record struct TimeSeriesInfo
         DateOnly[] dates,
         double[] values,
         double[] auxiliaries,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Range
     )
         : this(
@@ -192,7 +196,7 @@ public readonly record struct TimeSeriesInfo
             dates,
             values,
             auxiliaries,
-            isDerived,
+            level,
             chartType
         ) { }
 
@@ -200,7 +204,7 @@ public readonly record struct TimeSeriesInfo
         Option<string> label,
         DateOnly[] dates,
         double[] values,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Line
     )
         : this(
@@ -208,7 +212,7 @@ public readonly record struct TimeSeriesInfo
             label.Match(l => l, () => string.Empty),
             dates,
             values,
-            isDerived,
+            level,
             chartType
         ) { }
 
@@ -217,7 +221,7 @@ public readonly record struct TimeSeriesInfo
         DateOnly[] dates,
         double[] values,
         double[] auxiliaries,
-        bool isDerived = false,
+        Level level = Level.Primary,
         SeriesChartType chartType = SeriesChartType.Range
     )
         : this(
@@ -226,7 +230,7 @@ public readonly record struct TimeSeriesInfo
             dates,
             values,
             auxiliaries,
-            isDerived,
+            level,
             chartType
         ) { }
 
