@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using DocumentFormat.OpenXml.Office.PowerPoint.Y2021.M06.Main;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -14,7 +15,9 @@ using ReactiveUI;
 using ReactiveUI.Avalonia;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
+using Splat;
 using AV = Avalonia;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
@@ -102,13 +105,15 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             })
             .DisposeWith(disposables);
 
+        HandleDragDrop(view, viewModel, disposables);
+
         /* Mouse click */
         Signal
             .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
                 handler => view.CartesianChart.PointerPressed += handler,
                 handler => view.CartesianChart.PointerPressed -= handler
             )
-            .Subscribe(t =>
+            .SubscribeAsync(async t =>
             {
                 var args = t.EventArgs;
 
@@ -144,6 +149,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                         => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag!),
                     _ => viewModel.Selection,
                 };
+
+                var dragData = new DataTransfer();
+                // TODO (see https://docs.avaloniaui.net/docs/how-to/drag-and-drop-how-to)
+                dragData.Add(DataTransferItem.CreateText("Dragging chart"));
+
+                var result = await DragDrop.DoDragDropAsync(args, dragData, DragDropEffects.Copy);
             })
             .DisposeWith(disposables);
 
@@ -214,6 +225,53 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
             ctx.SetOutput(RxVoid.Default);
         });
+    }
+
+    private static void HandleDragDrop(
+        TimeSeriesViewer view,
+        TimeSeriesViewerViewModel viewModel,
+        MultipleDisposable disposables
+    )
+    {
+        Signal
+            .FromEventPattern<EventHandler<DragEventArgs>, DragEventArgs>(
+                handler => DragDrop.AddDragOverHandler(view.GridMainDisplay, handler),
+                handler => DragDrop.AddDragOverHandler(view.GridMainDisplay, handler)
+            )
+            .Subscribe(t =>
+            {
+                var args = t.EventArgs;
+                args.DragEffects =
+                    args.DataTransfer.Formats.Contains(DataFormat.Text)
+                    || args.DataTransfer.Formats.Contains(DataFormat.File)
+                        ? DragDropEffects.Copy
+                        : DragDropEffects.None;
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<EventHandler<DragEventArgs>, DragEventArgs>(
+                handler => DragDrop.AddDropHandler(view.GridMainDisplay, handler),
+                handler => DragDrop.RemoveDropHandler(view.GridMainDisplay, handler)
+            )
+            .Subscribe(t =>
+            {
+                var e = t.EventArgs;
+                // TODO
+                viewModel.Log().Debug(e.DataTransfer.TryGetText());
+
+                if (e.DataTransfer.TryGetFiles() is { } files)
+                {
+                    // TODO: check csv, check xlsx, check open office
+                    foreach (var file in files)
+                    {
+                        var path = file.Path.LocalPath;
+                        // Process the file
+                        viewModel.Log().Debug(path);
+                    }
+                }
+            })
+            .DisposeWith(disposables);
     }
 
     private static void SetGridSplitterConstraints(GridSplitter splitter, DisplayMode displayMode)

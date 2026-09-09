@@ -9,6 +9,7 @@
              xmlns:skiaSharpView="clr-namespace:LiveChartsCore.SkiaSharpView;assembly=LiveChartsCore.SkiaSharpView"
              xmlns:painting="clr-namespace:LiveChartsCore.SkiaSharpView.Painting;assembly=LiveChartsCore.SkiaSharpView"
              xmlns:components="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components"
+             
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewer"
              x:DataType="viewModels:TimeSeriesViewerViewModel">
@@ -20,6 +21,7 @@
 
     <RelativePanel>
       <Grid x:Name="GridMainDisplay"
+            DragDrop.AllowDrop="True"
             RowSpacing="3"
             ColumnSpacing="3"
             RelativePanel.AlignTopWithPanel="True"
