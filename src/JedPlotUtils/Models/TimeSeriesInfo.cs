@@ -20,7 +20,7 @@ public enum Level
 public readonly record struct TimeSeriesInfo
 {
     public Identifier Identifier { get; }
-    public string Label { get; }
+    public string Label { get; init; }
     public HashMap<DateOnly, double> Data { get; }
     public SeriesChartType ChartType { get; }
     public HashMap<DateOnly, double> AuxiliaryData { get; }

@@ -10,6 +10,9 @@ namespace JedPlotUtils.ViewModels;
 
 public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
 {
+    private readonly TaskCompletionSource<RxVoid> _result = new();
+    public Task<RxVoid> Result => _result.Task;
+
     [Reactive]
     public partial string WebServiceAddress { get; set; } = string.Empty;
 
@@ -27,7 +30,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
 
     public static DisplayMode[] AvailableDisplayMode => Enum.GetValues<DisplayMode>();
 
-    private readonly string _settingsPath = Path.Combine(
+    private static readonly string _settingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "unknown",
         "timeSeriesViewerSettings.json"
@@ -76,11 +79,12 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     Palette = Palette?.Name ?? string.Empty
                 }
             );
+            _result.TrySetResult(RxVoid.Default);
         });
         return cmd;
     }
 
-    public TimeSeriesViewerSettings Load()
+    public static TimeSeriesViewerSettings Load()
     {
         try
         {
@@ -91,9 +95,8 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
             return JsonSerializer.Deserialize<TimeSeriesViewerSettings>(json)
                 ?? TimeSeriesViewerSettings.Default;
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            this.Log().Error(ex);
             return TimeSeriesViewerSettings.Default;
         }
     }

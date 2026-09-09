@@ -38,7 +38,10 @@ public partial class TimeSeriesViewerViewModelBase
         );
 
         var canExecute = this.WhenAnyValue(x => x.HasConnection)
-            .CombineLatest(this.WhenAnyValue(x => x.SingleSelection).Select(sel => sel.IsSome))
+            .CombineLatest(
+                this.WhenAnyValue(x => x.SingleSelection)
+                    .Select(sel => sel.Match(tsi => tsi.Level == Level.Primary, () => false))
+            )
             .Select(t => t is { First: true, Second: true })
             .ObserveOn(RxSchedulers.MainThreadScheduler);
 

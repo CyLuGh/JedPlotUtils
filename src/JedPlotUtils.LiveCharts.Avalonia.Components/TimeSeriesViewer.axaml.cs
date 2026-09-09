@@ -1,6 +1,5 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using JDPlus.WS.Models;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -45,7 +44,22 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     )
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
-        view.ConfigurationView.ViewModel = viewModel.Configuration;
+
+        viewModel
+            .ShowSettingsInteraction.RegisterHandler(async ctx =>
+            {
+                var cvm = new TimeSeriesViewerConfigurationViewModel();
+                view.DialogContent.Content = new TimeSeriesViewerConfigurationView()
+                {
+                    ViewModel = cvm
+                };
+                viewModel.IsDialogOpen = true;
+                await cvm.Result;
+                ctx.SetOutput(RxVoid.Default);
+                viewModel.IsDialogOpen = false;
+                view.DialogContent.Content = null;
+            })
+            .DisposeWith(disposables);
 
         viewModel
             .GetDisaggregationRequestInteraction.RegisterHandler(async ctx =>
@@ -54,6 +68,19 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 view.DialogContent.Content = new DisaggregationOptionsView() { ViewModel = dovm };
                 viewModel.IsDialogOpen = true;
                 var res = await dovm.Result;
+                ctx.SetOutput(res);
+                viewModel.IsDialogOpen = false;
+                view.DialogContent.Content = null;
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .RenameSeriesInteraction.RegisterHandler(async ctx =>
+            {
+                var rsvm = new RenameSeriesViewModel() { CurrentName = ctx.Input.Label };
+                view.DialogContent.Content = new RenameSeriesView() { ViewModel = rsvm };
+                viewModel.IsDialogOpen = true;
+                var res = await rsvm.Result;
                 ctx.SetOutput(res);
                 viewModel.IsDialogOpen = false;
                 view.DialogContent.Content = null;
@@ -84,7 +111,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .Subscribe(t =>
             {
                 var args = t.EventArgs;
-                if (viewModel.SeriesSelectionMode == SelectionMode.None)
+
+                /* Only update selection from left click and if selection mode allows it */
+                if (
+                    !args.Properties.IsLeftButtonPressed
+                    || viewModel.SeriesSelectionMode == SelectionMode.None
+                )
                     return;
 
                 var chart = (CartesianChart)t.Sender!;

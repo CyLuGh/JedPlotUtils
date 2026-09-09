@@ -1,0 +1,64 @@
+<UserControl
+  x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.RenameSeriesView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+  d:DesignHeight="450"
+  d:DesignWidth="400"
+  x:DataType="viewModels:RenameSeriesViewModel"
+  MinWidth="400"
+  mc:Ignorable="d">
+  <StackPanel Spacing="16">
+    <TextBlock
+      Margin="20,0"
+      VerticalAlignment="Center"
+      FontSize="18"
+      FontWeight="Bold"
+      Text="Rename series" />
+
+    <Separator />
+
+    <Grid
+      Margin="10"
+      ColumnDefinitions="Auto,*"
+      ColumnSpacing="10"
+      RowDefinitions="Auto,Auto"
+      RowSpacing="4">
+      <TextBlock
+        Grid.Row="0"
+        Grid.Column="0"
+        VerticalAlignment="Center"
+        Text="Current label:" />
+      <TextBox
+        Grid.Row="0"
+        Grid.Column="1"
+        IsReadOnly="True"
+        Text="{Binding CurrentName}" />
+
+      <TextBlock
+        Grid.Row="1"
+        Grid.Column="0"
+        VerticalAlignment="Center"
+        Text="New label:" />
+      <TextBox
+        Grid.Row="1"
+        Grid.Column="1"
+        Text="{Binding NewName}" />
+    </Grid>
+
+    <UniformGrid HorizontalAlignment="Right" Rows="1">
+      <Button
+        HorizontalAlignment="Stretch"
+        HorizontalContentAlignment="Center"
+        Command="{Binding CancelCommand}"
+        Content="Cancel" />
+      <Button
+        HorizontalAlignment="Stretch"
+        HorizontalContentAlignment="Center"
+        Command="{Binding ValidateCommand}"
+        Content="Rename series" />
+    </UniformGrid>
+  </StackPanel>
+</UserControl>

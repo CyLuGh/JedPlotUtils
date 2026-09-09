@@ -2,6 +2,10 @@
     ReactiveUI.Primitives.RxVoid,
     ReactiveUI.Primitives.RxVoid
 >;
+global using RxInteraction = ReactiveUI.Interaction<
+    ReactiveUI.Primitives.RxVoid,
+    ReactiveUI.Primitives.RxVoid
+>;
 using System.Globalization;
 using HierarchyGrid.Definitions;
 using JDPlus.WS.Client;
@@ -70,7 +74,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public Interaction<Func<DateOnly, string>, Unit> AdaptXAxisInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
-    public TimeSeriesViewerConfigurationViewModel Configuration { get; }
+    [Reactive]
+    public partial TimeSeriesViewerSettings Configuration { get; set; }
 
     [ObservableAsProperty(ReadOnly = false)]
     private Option<CommunicationManager> _wsManager;
@@ -82,7 +87,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     private bool _hasConnection;
 
     public ReactiveCommand<
-        TimeSeriesViewerConfigurationViewModel,
+        TimeSeriesViewerSettings,
         Option<CommunicationManager>
     > GetConnectionCommand { get; }
 
@@ -93,8 +98,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public RxCommand ClearDerivedCommand { get; }
 
+    public Interaction<TimeSeriesInfo, string?> RenameSeriesInteraction { get; } =
+        new(RxSchedulers.MainThreadScheduler);
+    public ReactiveCommand<Option<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
+    public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
+    public RxCommand ShowSettingsCommand { get; }
+    public RxInteraction ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
     protected TimeSeriesViewerViewModelBase()
     {
+        ShowSettingsCommand = CreateCommandShowSettingsCommand();
         ClearDerivedCommand = ReactiveCommand.Create(() => Clear(true));
 
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
@@ -111,8 +124,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             DisaggregateCommand
         );
 
-        Configuration =
-            Locator.Current.GetService<TimeSeriesViewerConfigurationViewModel>() ?? new();
+        RenameSeriesCommand = CreateCommandRenameSeriesCommand();
+        RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
+
+        Configuration = TimeSeriesViewerConfigurationViewModel.Load();
 
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
             .Select(o => o.IsSome)
@@ -156,10 +171,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
                 .DisposeWith(disposables);
 
-            Signal
-                .Return(Configuration)
+            this.WhenAnyValue(x => x.Configuration)
                 .Delay(TimeSpan.FromMilliseconds(50))
-                .Merge(Configuration.SaveCommand.Select(_ => Configuration))
                 .Do(ApplySettings)
                 .InvokeCommand(GetConnectionCommand)
                 .DisposeWith(disposables);
@@ -219,11 +232,57 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         });
     }
 
-    private void ApplySettings(TimeSeriesViewerConfigurationViewModel settings)
+    private RxCommand CreateCommandShowSettingsCommand()
+    {
+        ShowSettingsInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        var cmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            await ShowSettingsInteraction.Handle(RxVoid.Default);
+            Configuration = TimeSeriesViewerConfigurationViewModel.Load();
+        });
+        return cmd;
+    }
+
+    private ReactiveCommand<
+        LanguageExt.HashSet<Identifier>,
+        RxVoid
+    > CreateCommandRemoveSelectionCommand()
+    {
+        var canExecute = this.WhenAnyValue(x => x.Selection)
+            .Select(sel => !sel.IsEmpty)
+            .ObserveOn(RxSchedulers.MainThreadScheduler);
+        var cmd = ReactiveCommand.Create(
+            (LanguageExt.HashSet<Identifier> selection) => Remove(selection),
+            canExecute
+        );
+        return cmd;
+    }
+
+    private ReactiveCommand<Option<TimeSeriesInfo>, RxVoid> CreateCommandRenameSeriesCommand()
+    {
+        RenameSeriesInteraction.RegisterHandler(ctx => ctx.SetOutput(string.Empty));
+        var canExecute = this.WhenAnyValue(x => x.SingleSelection)
+            .Select(sel => sel.IsSome)
+            .ObserveOn(RxSchedulers.MainThreadScheduler);
+        var cmd = ReactiveCommand.CreateFromTask(
+            async (Option<TimeSeriesInfo> oTimeSeries) =>
+            {
+                await oTimeSeries.IfSomeAsync(async tsi =>
+                {
+                    var newName = await RenameSeriesInteraction.Handle(tsi);
+                    RenameSeries(tsi, newName);
+                });
+            },
+            canExecute
+        );
+        return cmd;
+    }
+
+    private void ApplySettings(TimeSeriesViewerSettings settings)
     {
         SeriesSelectionMode = settings.SeriesSelectionMode;
         DisplayMode = settings.DisplayMode;
-        Palette = settings.Palette ?? Palettes.Available[0];
+        Palette = settings.Palette.ToPalette();
     }
 
     private ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> CreateCommandToggleHighlights()
@@ -246,14 +305,18 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     }
 
     private ReactiveCommand<
-        TimeSeriesViewerConfigurationViewModel,
+        TimeSeriesViewerSettings,
         Option<CommunicationManager>
     > CreateCommandGetConnection()
     {
         var cmd = ReactiveCommand.CreateFromTask(
-            async (TimeSeriesViewerConfigurationViewModel configuration) =>
+            async (TimeSeriesViewerSettings configuration) =>
             {
-                var cm = new CommunicationManager(configuration.WebServiceAddress);
+                var cm = new CommunicationManager(
+                    !string.IsNullOrWhiteSpace(configuration.WebServiceAddress)
+                        ? configuration.WebServiceAddress
+                        : TimeSeriesViewerSettings.DefaultWebServiceAddress
+                );
                 await cm.GetVersion();
                 return Option<CommunicationManager>.Some(cm);
             }
@@ -425,7 +488,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                                 : dbl.ToString(CultureInfo.InvariantCulture),
                         _ => string.Empty,
                     },
-                ContextItems = o =>
+                ObservableContextItems = o =>
                     o switch
                     {
                         Identifier _ => [.. BuildContext()],
@@ -437,14 +500,25 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return new HierarchyDefinitions(producers, consumers);
     }
 
-    private IEnumerable<(string description, Action<ResultSet> action)> BuildContext()
+    private IEnumerable<(
+        string description,
+        Action<ResultSet> action,
+        IObservable<bool> canExecute
+    )> BuildContext()
     {
         yield return new(
             "JD+|Disaggregate",
             _ =>
             {
                 Signal.Return(SingleSelection).InvokeCommand(DisaggregateCommand);
-            }
+            },
+            this.WhenAnyValue(x => x.HasConnection)
+                .CombineLatest(
+                    this.WhenAnyValue(x => x.SingleSelection)
+                        .Select(sel => sel.Match(tsi => tsi.Level == Level.Primary, () => false))
+                )
+                .Select(t => t is { First: true, Second: true })
+                .ObserveOn(RxSchedulers.MainThreadScheduler)
         );
     }
 
@@ -516,6 +590,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return false;
     }
 
+    public void ClearSelection()
+    {
+        Selection = Selection.Clear();
+    }
+
     public void Add(TimeSeriesInfo tsi)
     {
         SeriesCache = SeriesCache.AddOrUpdate(
@@ -525,6 +604,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Index = SeriesCache.Count
             }
         );
+
+        ClearSelection();
     }
 
     public void Clear(bool derivedOnly)
@@ -545,14 +626,26 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         {
             SeriesCache = SeriesCache.Clear();
         }
+
+        ClearSelection();
     }
 
-    public void Remove(Identifier identifier)
+    public void RenameSeries(TimeSeriesInfo tsi, string? newName)
     {
-        var temp = SeriesCache.Remove(identifier);
+        if (string.IsNullOrWhiteSpace(newName))
+            return;
+
+        SeriesCache = SeriesCache.AddOrUpdate(tsi.Identifier, tsi with { Label = newName });
+        ClearSelection();
+    }
+
+    public void Remove(IEnumerable<Identifier> identifiers)
+    {
+        var temp = SeriesCache.RemoveRange(identifiers);
         SeriesCache = temp
             .Values.OrderBy(tsi => tsi.Identifier)
             .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
             .ToHashMap();
+        ClearSelection();
     }
 }
