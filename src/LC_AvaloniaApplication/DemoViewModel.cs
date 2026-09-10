@@ -6,8 +6,13 @@ using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using JedPlotUtils.ViewModels;
 using ReactiveUI;
+using ReactiveUI.Primitives;
 using ReactiveUI.SourceGenerators;
 using RxCommand = ReactiveUI.ReactiveCommand<
+    ReactiveUI.Primitives.RxVoid,
+    ReactiveUI.Primitives.RxVoid
+>;
+using RxInteraction = ReactiveUI.Interaction<
     ReactiveUI.Primitives.RxVoid,
     ReactiveUI.Primitives.RxVoid
 >;
@@ -32,6 +37,9 @@ public partial class DemoViewModel : BaseViewModel
     public RxCommand AddSeriesWithAuxiliaryData { get; }
     public RxCommand ClearSeries { get; }
 
+    public RxCommand AddChartWindow { get; }
+    public RxInteraction AddChartWindowInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
     public DemoViewModel()
     {
         TimeSeriesViewModel = new TimeSeriesViewerViewModel();
@@ -55,6 +63,11 @@ public partial class DemoViewModel : BaseViewModel
                 )
         );
         ClearSeries = ReactiveCommand.Create(() => TimeSeriesViewModel.Clear(false));
+
+        AddChartWindowInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        AddChartWindow = ReactiveCommand.CreateFromObservable(
+            () => AddChartWindowInteraction.Handle(RxVoid.Default)
+        );
     }
 
     private TimeSeriesInfo GenerateTimeSeriesInfo(

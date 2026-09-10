@@ -13,7 +13,9 @@
     <TabItem Header="Simple">
       <DockPanel VerticalSpacing="10">
         <Grid ColumnDefinitions="Auto,*">
-          <StackPanel Spacing="5">
+          <UniformGrid Columns="1" 
+                       RowSpacing="5"
+                       VerticalAlignment="Top">
             <Button Content="Add series"
                     Command="{Binding AddSeries}"
                     HorizontalAlignment="Stretch"/>
@@ -23,7 +25,10 @@
             <Button Content="Clear"
                     Command="{Binding ClearSeries}"
                     HorizontalAlignment="Stretch"/>
-          </StackPanel>
+            <Button Content="Open new chart"
+                    Command="{Binding AddChartWindow}"
+                    HorizontalAlignment="Stretch"/>
+          </UniformGrid>
 
           <rxui:ViewModelViewHost ViewModel="{Binding TimeSeriesViewModel}"
                                   Grid.Column="1"/>

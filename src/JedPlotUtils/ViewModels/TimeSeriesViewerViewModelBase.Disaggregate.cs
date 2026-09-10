@@ -11,7 +11,7 @@ namespace JedPlotUtils.ViewModels;
 public partial class TimeSeriesViewerViewModelBase
 {
     public ReactiveCommand<
-        Option<TimeSeriesInfo>,
+        Seq<TimeSeriesInfo>,
         Option<TemporalDisaggregationResults>
     > DisaggregateCommand { get; }
 
@@ -21,7 +21,7 @@ public partial class TimeSeriesViewerViewModelBase
     > GetDisaggregationRequestInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     private ReactiveCommand<
-        Option<TimeSeriesInfo>,
+        Seq<TimeSeriesInfo>,
         Option<TemporalDisaggregationResults>
     > CreateCommandDisaggregateCommand()
     {
@@ -39,17 +39,19 @@ public partial class TimeSeriesViewerViewModelBase
 
         var canExecute = this.WhenAnyValue(x => x.HasConnection)
             .CombineLatest(
-                this.WhenAnyValue(x => x.SingleSelection)
-                    .Select(sel => sel.Match(tsi => tsi.Level == Level.Primary, () => false))
+                this.WhenAnyValue(x => x.SelectedSeries)
+                    .Select(sel =>
+                        sel.HeadOrNone().Match(tsi => tsi.Level == Level.Primary, () => false)
+                    )
             )
             .Select(t => t is { First: true, Second: true })
             .ObserveOn(RxSchedulers.MainThreadScheduler);
 
         var cmd = ReactiveCommand.CreateFromTask(
-            async (Option<TimeSeriesInfo> tsi) =>
+            async (Seq<TimeSeriesInfo> seq) =>
             {
                 var req = await GetDisaggregationRequestInteraction.Handle(RxVoid.Default);
-                return await Disaggregate(tsi, req).ConfigureAwait(false);
+                return await Disaggregate(seq.HeadOrNone(), req).ConfigureAwait(false);
             },
             canExecute
         );
@@ -102,7 +104,7 @@ public partial class TimeSeriesViewerViewModelBase
         RxVoid
     > CreateCommandCreateDisaggregatedSeriesCommand(
         ReactiveCommand<
-            Option<TimeSeriesInfo>,
+            Seq<TimeSeriesInfo>,
             Option<TemporalDisaggregationResults>
         > disaggregateCommand
     )

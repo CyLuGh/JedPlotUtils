@@ -39,7 +39,7 @@
             <ContextMenu>
               <MenuItem Header="Rename series"
                         Command="{Binding RenameSeriesCommand}"
-                        CommandParameter="{Binding SingleSelection}"/>
+                        CommandParameter="{Binding SelectedSeries}"/>
               <MenuItem Header="Remove selected series"
                         Command="{Binding RemoveSelectionCommand}"
                         CommandParameter="{Binding Selection}"/>
@@ -48,7 +48,7 @@
                         IsVisible="{Binding HasConnection}">
                 <MenuItem Header="Disaggregate"
                           Command="{Binding DisaggregateCommand}"
-                          CommandParameter="{Binding SingleSelection}"/>
+                          CommandParameter="{Binding SelectedSeries}"/>
                 <MenuItem Header="Clear derived series"
                           Command="{Binding ClearDerivedCommand}"/>
               </MenuItem>

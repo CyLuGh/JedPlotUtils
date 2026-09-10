@@ -94,13 +94,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
 
     [ObservableAsProperty]
-    private Option<TimeSeriesInfo> _singleSelection;
+    public Seq<TimeSeriesInfo> _selectedSeries;
 
     public RxCommand ClearDerivedCommand { get; }
 
     public Interaction<TimeSeriesInfo, string?> RenameSeriesInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
-    public ReactiveCommand<Option<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
+    public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
     public RxCommand ShowSettingsCommand { get; }
     public RxInteraction ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
@@ -133,13 +133,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Select(o => o.IsSome)
             .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
 
-        _singleSelectionHelper = this.WhenAnyValue(x => x.Selection)
-            .Select(selection =>
-                selection.Length == 1
-                    ? SeriesCache.Values.Where(x => selection.Contains(x.Identifier)).ToSeq()[0]
-                    : Option<TimeSeriesInfo>.None
-            )
-            .ToProperty(this, x => x.SingleSelection, scheduler: RxSchedulers.MainThreadScheduler);
+        _selectedSeriesHelper = this.WhenAnyValue(x => x.Selection)
+            .Select(sel => SeriesCache.Values.Where(x => sel.Contains(x.Identifier)).ToSeq())
+            .ToProperty(this, x => x.SelectedSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenActivated(disposables =>
         {
@@ -258,20 +254,21 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<Option<TimeSeriesInfo>, RxVoid> CreateCommandRenameSeriesCommand()
+    private ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> CreateCommandRenameSeriesCommand()
     {
         RenameSeriesInteraction.RegisterHandler(ctx => ctx.SetOutput(string.Empty));
-        var canExecute = this.WhenAnyValue(x => x.SingleSelection)
-            .Select(sel => sel.IsSome)
+        var canExecute = this.WhenAnyValue(x => x.SelectedSeries)
+            .Select(sel => sel.Length == 1)
             .ObserveOn(RxSchedulers.MainThreadScheduler);
         var cmd = ReactiveCommand.CreateFromTask(
-            async (Option<TimeSeriesInfo> oTimeSeries) =>
+            async (Seq<TimeSeriesInfo> seq) =>
             {
-                await oTimeSeries.IfSomeAsync(async tsi =>
-                {
-                    var newName = await RenameSeriesInteraction.Handle(tsi);
-                    RenameSeries(tsi, newName);
-                });
+                await seq.HeadOrNone()
+                    .IfSomeAsync(async tsi =>
+                    {
+                        var newName = await RenameSeriesInteraction.Handle(tsi);
+                        RenameSeries(tsi, newName);
+                    });
             },
             canExecute
         );
@@ -510,12 +507,14 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             "JD+|Disaggregate",
             _ =>
             {
-                Signal.Return(SingleSelection).InvokeCommand(DisaggregateCommand);
+                Signal.Return(SelectedSeries.HeadOrNone()).InvokeCommand(DisaggregateCommand);
             },
             this.WhenAnyValue(x => x.HasConnection)
                 .CombineLatest(
-                    this.WhenAnyValue(x => x.SingleSelection)
-                        .Select(sel => sel.Match(tsi => tsi.Level == Level.Primary, () => false))
+                    this.WhenAnyValue(x => x.SelectedSeries)
+                        .Select(sel =>
+                            sel.HeadOrNone().Match(tsi => tsi.Level == Level.Primary, () => false)
+                        )
                 )
                 .Select(t => t is { First: true, Second: true })
                 .ObserveOn(RxSchedulers.MainThreadScheduler)
@@ -605,6 +604,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             }
         );
 
+        ClearSelection();
+    }
+
+    public void Add(IEnumerable<TimeSeriesInfo> series)
+    {
+        var temp = SeriesCache.AddOrUpdateRange(series.Select(tsi => (tsi.Identifier, tsi)));
+        SeriesCache = temp
+            .Values.OrderBy(tsi => tsi.Identifier)
+            .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
+            .ToHashMap();
         ClearSelection();
     }
 

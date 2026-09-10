@@ -1,4 +1,6 @@
 using System;
+using Avalonia.Controls;
+using JedPlotUtils.LiveCharts.Avalonia.Components;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using ReactiveUI;
@@ -34,5 +36,21 @@ public partial class DemoView : ReactiveUserControl<DemoViewModel>
     )
     {
         //view.TimeSeriesViewer.ViewModel = viewModel.TimeSeriesViewModel;
+
+        viewModel
+            .AddChartWindowInteraction.RegisterHandler(ctx =>
+            {
+                var window = TopLevel.GetTopLevel(view) as Window;
+                if (window is not null)
+                {
+                    var chartWindow = new Window()
+                    {
+                        Content = new TimeSeriesViewer() { ViewModel = new() }
+                    };
+                    chartWindow.Show(window);
+                }
+                ctx.SetOutput(RxVoid.Default);
+            })
+            .DisposeWith(disposables);
     }
 }

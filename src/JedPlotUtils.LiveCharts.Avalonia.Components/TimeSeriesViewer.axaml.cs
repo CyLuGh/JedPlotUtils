@@ -1,3 +1,6 @@
+using System.Text;
+using System.Text.Json;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using DocumentFormat.OpenXml.Office.PowerPoint.Y2021.M06.Main;
@@ -40,7 +43,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         });
     }
 
-    private static void PopulateFromViewModel(
+    private Option<PointerPressedEventArgs> _dragPointerPressedEventArgs;
+    private bool _dragStarted = false;
+
+    private void PopulateFromViewModel(
         TimeSeriesViewer view,
         TimeSeriesViewerViewModel viewModel,
         MultipleDisposable disposables
@@ -113,7 +119,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 handler => view.CartesianChart.PointerPressed += handler,
                 handler => view.CartesianChart.PointerPressed -= handler
             )
-            .SubscribeAsync(async t =>
+            .Subscribe(t =>
             {
                 var args = t.EventArgs;
 
@@ -146,15 +152,73 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                             .Selection.Clear()
                             .Add((Identifier)found[0].Context.Series.Tag!),
                     SelectionMode.Multiple
-                        => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag!),
+                        => viewModel.Selection.TryAdd((Identifier)found[0].Context.Series.Tag!),
                     _ => viewModel.Selection,
                 };
 
-                var dragData = new DataTransfer();
-                // TODO (see https://docs.avaloniaui.net/docs/how-to/drag-and-drop-how-to)
-                dragData.Add(DataTransferItem.CreateText("Dragging chart"));
+                if (!viewModel.Selection.IsEmpty)
+                {
+                    _dragPointerPressedEventArgs = args;
+                    _dragStarted = false;
+                }
+            })
+            .DisposeWith(disposables);
 
-                var result = await DragDrop.DoDragDropAsync(args, dragData, DragDropEffects.Copy);
+        Signal
+            .FromEventPattern<EventHandler<PointerEventArgs>, PointerEventArgs>(
+                handler => view.CartesianChart.PointerReleased += handler,
+                handler => view.CartesianChart.PointerReleased -= handler
+            )
+            .Subscribe(t =>
+            {
+                _dragStarted = false;
+                _dragPointerPressedEventArgs = Option<PointerPressedEventArgs>.None;
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<EventHandler<PointerEventArgs>, PointerEventArgs>(
+                handler => view.CartesianChart.PointerMoved += handler,
+                handler => view.CartesianChart.PointerMoved -= handler
+            )
+            .SubscribeAsync(async t =>
+            {
+                var args = t.EventArgs;
+                if (
+                    args.Properties.IsLeftButtonPressed
+                    && !viewModel.Selection.IsEmpty
+                    && !_dragStarted
+                )
+                {
+                    await _dragPointerPressedEventArgs.IfSomeAsync(async evt =>
+                    {
+                        var delta = args.GetPosition(view) - evt.GetPosition(view);
+                        if (delta is { X: < 5, Y: < 5 })
+                            return;
+
+                        _dragStarted = true;
+
+                        var dragData = new DataTransfer();
+                        // TODO (see https://docs.avaloniaui.net/docs/how-to/drag-and-drop-how-to)
+                        dragData.Add(DataTransferItem.CreateText(viewModel.SelectedSeries.ToCsv()));
+
+                        dragData.Add(
+                            DataTransferItem.Create(
+                                DataFormat.CreateBytesApplicationFormat("jedplot.timeseries"),
+                                viewModel.SelectedSeries.ToBytes()
+                            )
+                        );
+
+                        var result = await DragDrop.DoDragDropAsync(
+                            evt,
+                            dragData,
+                            DragDropEffects.Copy
+                        );
+
+                        _dragStarted = false;
+                        _dragPointerPressedEventArgs = Option<PointerPressedEventArgs>.None;
+                    });
+                }
             })
             .DisposeWith(disposables);
 
@@ -257,8 +321,27 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .Subscribe(t =>
             {
                 var e = t.EventArgs;
-                // TODO
-                viewModel.Log().Debug(e.DataTransfer.TryGetText());
+
+                var bytes = e.DataTransfer.TryGetValue(
+                    DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                );
+
+                if (bytes?.Length > 0)
+                {
+                    viewModel.Add(bytes.ToTimeSeriesInfo());
+                    return;
+                }
+
+                var text = e.DataTransfer.TryGetText();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var series = text.FromCsv();
+                    if (series.Length > 0)
+                    {
+                        viewModel.Add(series);
+                        return;
+                    }
+                }
 
                 if (e.DataTransfer.TryGetFiles() is { } files)
                 {
