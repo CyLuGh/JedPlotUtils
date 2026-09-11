@@ -1,9 +1,6 @@
-using System.Text;
-using System.Text.Json;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using DocumentFormat.OpenXml.Office.PowerPoint.Y2021.M06.Main;
+using Avalonia.Platform.Storage;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -20,7 +17,6 @@ using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
-using Splat;
 using AV = Avalonia;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
@@ -200,7 +196,21 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                         var dragData = new DataTransfer();
                         // TODO (see https://docs.avaloniaui.net/docs/how-to/drag-and-drop-how-to)
-                        dragData.Add(DataTransferItem.CreateText(viewModel.SelectedSeries.ToCsv()));
+                        var csv = viewModel.SelectedSeries.ToCsv();
+                        dragData.Add(DataTransferItem.CreateText(csv));
+                        var filePath = Path.Combine(
+                            Path.GetTempPath(),
+                            $"{Guid.CreateVersion7():N}.csv"
+                        );
+                        await File.WriteAllTextAsync(filePath, csv);
+
+                        var storageFile = await (
+                            TopLevel
+                                .GetTopLevel(view)
+                                ?.StorageProvider.TryGetFileFromPathAsync(filePath)
+                        ).ConfigureAwait(false);
+                        if (storageFile is not null)
+                            dragData.Add(DataTransferItem.CreateFile(storageFile));
 
                         dragData.Add(
                             DataTransferItem.Create(
@@ -322,6 +332,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             {
                 var e = t.EventArgs;
 
+                /* Internal binary format */
                 var bytes = e.DataTransfer.TryGetValue(
                     DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
                 );
@@ -332,6 +343,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     return;
                 }
 
+                /* Text format */
                 var text = e.DataTransfer.TryGetText();
                 if (!string.IsNullOrWhiteSpace(text))
                 {
@@ -343,14 +355,34 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     }
                 }
 
+                /* File format */
                 if (e.DataTransfer.TryGetFiles() is { } files)
                 {
                     // TODO: check csv, check xlsx, check open office
                     foreach (var file in files)
                     {
-                        var path = file.Path.LocalPath;
-                        // Process the file
-                        viewModel.Log().Debug(path);
+                        var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
+                        switch (extension)
+                        {
+                            case ".txt":
+                            case ".csv":
+                                {
+                                    var series = File.ReadAllText(file.Path.LocalPath).FromCsv();
+                                    if (series.Length > 0)
+                                        viewModel.Add(series);
+                                }
+                                break;
+
+                            case ".xlsx":
+                                {
+                                    var series = ExcelTimeSeriesInfoParser.FromExcel(
+                                        file.Path.LocalPath
+                                    );
+                                    if (series.Length > 0)
+                                        viewModel.Add(series);
+                                }
+                                break;
+                        }
                     }
                 }
             })
