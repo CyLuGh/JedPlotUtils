@@ -39,6 +39,23 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         });
     }
 
+    private void OpenDialogAnimation(TimeSeriesViewerViewModel viewModel, object? content)
+    {
+        DialogContent.Content = content;
+        viewModel.IsDialogOpen = true;
+        viewModel.DialogOpacity = 1;
+        // DialogBorder.RenderTransform = new ScaleTransform(1, 1);
+    }
+
+    private async Task CloseDialogAnimation(TimeSeriesViewerViewModel viewModel)
+    {
+        // DialogBorder.RenderTransform = new ScaleTransform(.8, .8);
+        viewModel.DialogOpacity = 0;
+        await Task.Delay(220);
+        viewModel.IsDialogOpen = false;
+        DialogContent.Content = null;
+    }
+
     private Option<PointerPressedEventArgs> _dragPointerPressedEventArgs;
     private bool _dragStarted = false;
 
@@ -70,12 +87,13 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .GetDisaggregationRequestInteraction.RegisterHandler(async ctx =>
             {
                 var dovm = new DisaggregationOptionsViewModel();
-                view.DialogContent.Content = new DisaggregationOptionsView() { ViewModel = dovm };
-                viewModel.IsDialogOpen = true;
+                OpenDialogAnimation(
+                    viewModel,
+                    new DisaggregationOptionsView() { ViewModel = dovm }
+                );
                 var res = await dovm.Result;
                 ctx.SetOutput(res);
-                viewModel.IsDialogOpen = false;
-                view.DialogContent.Content = null;
+                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
             })
             .DisposeWith(disposables);
 
@@ -83,12 +101,21 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .RenameSeriesInteraction.RegisterHandler(async ctx =>
             {
                 var rsvm = new RenameSeriesViewModel() { CurrentName = ctx.Input.Label };
-                view.DialogContent.Content = new RenameSeriesView() { ViewModel = rsvm };
-                viewModel.IsDialogOpen = true;
+                OpenDialogAnimation(viewModel, new RenameSeriesView() { ViewModel = rsvm });
                 var res = await rsvm.Result;
                 ctx.SetOutput(res);
-                viewModel.IsDialogOpen = false;
-                view.DialogContent.Content = null;
+                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .GetFrequencyChangeOptionsInteraction.RegisterHandler(async ctx =>
+            {
+                var tsbvm = new TimeSeriesBuilderViewModel();
+                OpenDialogAnimation(viewModel, new TimeSeriesBuilderView() { ViewModel = tsbvm });
+                var res = await tsbvm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
             })
             .DisposeWith(disposables);
 
@@ -119,10 +146,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             {
                 var args = t.EventArgs;
 
-                /* Only update selection from left click and if selection mode allows it */
+                /* Only update selection from left click (except when selection is empty) and if selection mode allows it */
                 if (
-                    !args.Properties.IsLeftButtonPressed
-                    || viewModel.SeriesSelectionMode == SelectionMode.None
+                    viewModel.SeriesSelectionMode == SelectionMode.None
+                    || (!args.Properties.IsLeftButtonPressed && !viewModel.Selection.IsEmpty)
                 )
                     return;
 

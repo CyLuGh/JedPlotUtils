@@ -16,7 +16,6 @@ using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
-using Splat;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
 namespace JedPlotUtils.ViewModels;
@@ -27,12 +26,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial bool IsDialogOpen { get; set; }
 
     [Reactive]
+    public partial double DialogOpacity { get; set; }
+
+    [Reactive]
     protected partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; set; }
 
     public HierarchyGridViewModel HierarchyGridViewModel { get; } = new();
 
     [Reactive]
-    public partial IPalette Palette { get; set; } = new TangoPalette();
+    public partial IPalette Palette { get; set; } = Palettes.Available[0];
 
     [Reactive]
     public partial SelectionMode SeriesSelectionMode { get; set; } = SelectionMode.Single;
@@ -94,21 +96,24 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
 
     [ObservableAsProperty]
-    public Seq<TimeSeriesInfo> _selectedSeries;
+    private Seq<TimeSeriesInfo> _selectedSeries;
 
     public RxCommand ClearDerivedCommand { get; }
 
     public Interaction<TimeSeriesInfo, string?> RenameSeriesInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
     public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
-    public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
     public RxCommand ShowSettingsCommand { get; }
     public RxInteraction ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
+    public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
+    public RxCommand ClearSeriesCommand { get; }
 
     protected TimeSeriesViewerViewModelBase()
     {
         ShowSettingsCommand = CreateCommandShowSettingsCommand();
         ClearDerivedCommand = ReactiveCommand.Create(() => Clear(true));
+        ClearSeriesCommand = ReactiveCommand.Create(() => Clear());
 
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
         HoverCellGridCommand = CreateCommandHoverGridCommand();
@@ -123,6 +128,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         CreateDisaggregatedSeriesCommand = CreateCommandCreateDisaggregatedSeriesCommand(
             DisaggregateCommand
         );
+        ChangeFrequencyCommand = CreateCommandChangeFrequencyCommand();
 
         RenameSeriesCommand = CreateCommandRenameSeriesCommand();
         RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
@@ -617,7 +623,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearSelection();
     }
 
-    public void Clear(bool derivedOnly)
+    public void Clear(bool derivedOnly = false)
     {
         if (derivedOnly)
         {
@@ -648,7 +654,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearSelection();
     }
 
-    public void Remove(IEnumerable<Identifier> identifiers)
+    public void Remove(params IEnumerable<Identifier> identifiers)
     {
         var temp = SeriesCache.RemoveRange(identifiers);
         SeriesCache = temp

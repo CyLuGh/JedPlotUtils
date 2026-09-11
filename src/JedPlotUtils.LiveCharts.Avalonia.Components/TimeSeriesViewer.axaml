@@ -1,124 +1,117 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
-             xmlns:hgrid="using:HierarchyGrid.Avalonia"
-             xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels"
-             xmlns:converters="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.Converters"
-             xmlns:skiaSharpView="clr-namespace:LiveChartsCore.SkiaSharpView;assembly=LiveChartsCore.SkiaSharpView"
-             xmlns:painting="clr-namespace:LiveChartsCore.SkiaSharpView.Painting;assembly=LiveChartsCore.SkiaSharpView"
-             xmlns:components="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components"
-             
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewer"
-             x:DataType="viewModels:TimeSeriesViewerViewModel">
+<UserControl
+  x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewer"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:converters="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.Converters"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:hgrid="using:HierarchyGrid.Avalonia"
+  xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels"
+  d:DesignHeight="450"
+  d:DesignWidth="800"
+  x:DataType="viewModels:TimeSeriesViewerViewModel"
+  mc:Ignorable="d">
   <UserControl.Resources>
-    <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter"/>
-    <converters:ColorConverter x:Key="ColorConverter"/>
+    <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter" />
+    <converters:ColorConverter x:Key="ColorConverter" />
   </UserControl.Resources>
   <Panel>
-
     <RelativePanel>
-      <Grid x:Name="GridMainDisplay"
-            DragDrop.AllowDrop="True"
-            RowSpacing="3"
-            ColumnSpacing="3"
-            RelativePanel.AlignTopWithPanel="True"
-            RelativePanel.AlignBottomWithPanel="True"
-            RelativePanel.AlignLeftWithPanel="True"
-            RelativePanel.AlignRightWithPanel="True">
-        <lvc:CartesianChart x:Name="CartesianChart"
-                            Series="{Binding Path=AllSeries}"
-                            FindingStrategy="ExactMatch"
-                            XAxes="{Binding XAxes}"
-                            IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
-                            DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
-        >
+      <Grid
+        x:Name="GridMainDisplay"
+        ColumnSpacing="3"
+        DragDrop.AllowDrop="True"
+        RelativePanel.AlignBottomWithPanel="True"
+        RelativePanel.AlignLeftWithPanel="True"
+        RelativePanel.AlignRightWithPanel="True"
+        RelativePanel.AlignTopWithPanel="True"
+        RowSpacing="3">
+        <lvc:CartesianChart
+          x:Name="CartesianChart"
+          DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
+          FindingStrategy="ExactMatch"
+          IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
+          Series="{Binding Path=AllSeries}"
+          XAxes="{Binding XAxes}">
           <lvc:CartesianChart.ContextMenu>
             <ContextMenu>
-              <MenuItem Header="Rename series"
-                        Command="{Binding RenameSeriesCommand}"
-                        CommandParameter="{Binding SelectedSeries}"/>
-              <MenuItem Header="Remove selected series"
-                        Command="{Binding RemoveSelectionCommand}"
-                        CommandParameter="{Binding Selection}"/>
-              <Separator/>
-              <MenuItem Header="JD+"
-                        IsVisible="{Binding HasConnection}">
-                <MenuItem Header="Disaggregate"
-                          Command="{Binding DisaggregateCommand}"
-                          CommandParameter="{Binding SelectedSeries}"/>
-                <MenuItem Header="Clear derived series"
-                          Command="{Binding ClearDerivedCommand}"/>
+              <MenuItem
+                Command="{Binding RenameSeriesCommand}"
+                CommandParameter="{Binding SelectedSeries}"
+                Header="Rename series" />
+              <MenuItem
+                Command="{Binding RemoveSelectionCommand}"
+                CommandParameter="{Binding Selection}"
+                Header="Remove selected series" />
+              <MenuItem Command="{Binding ClearSeriesCommand}" Header="Clear series" />
+              <Separator IsVisible="{Binding HasConnection}" />
+              <MenuItem Header="JD+" IsVisible="{Binding HasConnection}">
+                <MenuItem
+                  Command="{Binding DisaggregateCommand}"
+                  CommandParameter="{Binding SelectedSeries}"
+                  Header="Disaggregate" />
+                <MenuItem
+                  Command="{Binding ChangeFrequencyCommand}"
+                  CommandParameter="{Binding SelectedSeries}"
+                  Header="Change frequency" />
+                <MenuItem Command="{Binding ClearDerivedCommand}" Header="Clear derived series" />
               </MenuItem>
-              <Separator/>
-              <MenuItem Header="Settings" Command="{Binding ShowSettingsCommand}"/>
+              <Separator />
+              <MenuItem Command="{Binding ShowSettingsCommand}" Header="Settings" />
             </ContextMenu>
           </lvc:CartesianChart.ContextMenu>
         </lvc:CartesianChart>
 
-        <hgrid:Grid x:Name="HierarchyGrid"
-                    IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"/>
+        <hgrid:Grid x:Name="HierarchyGrid" IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}" />
 
-        <GridSplitter x:Name="Splitter"
-                      IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"/>
+        <GridSplitter x:Name="Splitter" IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}" />
       </Grid>
-      <StackPanel Height="30"
-                  Margin="3"
-          Orientation="Horizontal" 
-          Spacing="5" 
-          RelativePanel.AlignBottomWithPanel="True"
-          RelativePanel.AlignRightWithPanel="True"
-          >
-        
+      <StackPanel
+        Height="30"
+        Margin="3"
+        Orientation="Horizontal"
+        RelativePanel.AlignBottomWithPanel="True"
+        RelativePanel.AlignRightWithPanel="True"
+        Spacing="5">
 
-        <Viewbox Height="24"
-            VerticalAlignment="Center"
-            HorizontalAlignment="Center"
-            IsVisible="{Binding IsConnecting}">
-            <Canvas Height="68.369" Width="68.369">
 
-                <Path Fill="Black"
-                      
-                      Data="M22.839,22.71c0.229,0.229,0.528,0.341,0.827,0.341s0.599-0.114,0.827-0.341l7.524-7.521l-7.524-7.526
-			c-0.455-0.455-1.195-0.455-1.651,0c-0.455,0.453-0.455,1.196,0,1.651l4.606,4.609H15.575C6.987,13.924,0,22.956,0,34.061
-			c0,11.104,6.989,20.138,15.575,20.138h14.407c0.645,0,1.168-0.522,1.168-1.168c0-0.644-0.523-1.168-1.168-1.168H15.575
-			c-7.299,0-13.239-7.984-13.239-17.802c0-9.815,5.94-17.801,13.239-17.801h12.069l-4.803,4.799
-			C22.382,21.515,22.382,22.255,22.839,22.71z"/>
+        <Viewbox
+          Height="24"
+          HorizontalAlignment="Center"
+          VerticalAlignment="Center"
+          IsVisible="{Binding IsConnecting}">
+          <Canvas Width="68.369" Height="68.369">
 
-                <Path Fill="Black"
-                      Data="M52.789,14.171H38.381c-0.644,0-1.168,0.521-1.168,1.168c0,0.642,0.524,1.168,1.168,1.168h14.407
-			c7.3,0,13.239,7.983,13.239,17.8c0,9.815-5.939,17.802-13.239,17.802H40.722l4.799-4.8c0.456-0.456,0.456-1.195,0-1.651
-			c-0.454-0.456-1.195-0.456-1.649,0l-7.524,7.521l7.524,7.528c0.229,0.228,0.527,0.34,0.828,0.34c0.297,0,0.598-0.114,0.826-0.34
-			c0.456-0.454,0.456-1.198,0-1.651l-4.607-4.61h11.875c8.586,0,15.575-9.031,15.575-20.138
-			C68.369,23.203,61.379,14.171,52.789,14.171z"/>
-            </Canvas>
+            <Path Data="M22.839,22.71c0.229,0.229,0.528,0.341,0.827,0.341s0.599-0.114,0.827-0.341l7.524-7.521l-7.524-7.526    c-0.455-0.455-1.195-0.455-1.651,0c-0.455,0.453-0.455,1.196,0,1.651l4.606,4.609H15.575C6.987,13.924,0,22.956,0,34.061    c0,11.104,6.989,20.138,15.575,20.138h14.407c0.645,0,1.168-0.522,1.168-1.168c0-0.644-0.523-1.168-1.168-1.168H15.575    c-7.299,0-13.239-7.984-13.239-17.802c0-9.815,5.94-17.801,13.239-17.801h12.069l-4.803,4.799    C22.382,21.515,22.382,22.255,22.839,22.71z" Fill="Black" />
+
+            <Path Data="M52.789,14.171H38.381c-0.644,0-1.168,0.521-1.168,1.168c0,0.642,0.524,1.168,1.168,1.168h14.407    c7.3,0,13.239,7.983,13.239,17.8c0,9.815-5.939,17.802-13.239,17.802H40.722l4.799-4.8c0.456-0.456,0.456-1.195,0-1.651    c-0.454-0.456-1.195-0.456-1.649,0l-7.524,7.521l7.524,7.528c0.229,0.228,0.527,0.34,0.828,0.34c0.297,0,0.598-0.114,0.826-0.34    c0.456-0.454,0.456-1.198,0-1.651l-4.607-4.61h11.875c8.586,0,15.575-9.031,15.575-20.138    C68.369,23.203,61.379,14.171,52.789,14.171z" Fill="Black" />
+          </Canvas>
         </Viewbox>
         <Panel IsVisible="{Binding !IsConnecting}">
-          <Viewbox Height="24"
-              VerticalAlignment="Center"
-              HorizontalAlignment="Center"
-              IsVisible="{Binding !HasConnection}">
-            <Canvas Height="512" Width="512">
+          <Viewbox
+            Height="24"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            IsVisible="{Binding !HasConnection}">
+            <Canvas Width="512" Height="512">
               <Canvas.RenderTransform>
-                <TranslateTransform X="44.810770" Y="44.810773"/>
+                <TranslateTransform X="44.810770" Y="44.810773" />
               </Canvas.RenderTransform>
-              <Path Fill="Black"
-                    Data="M64.9096686,176.449439 L102.621227,214.162133 L127.68601,189.097844 L157.855894,219.267728 L132.791352,244.332258 L178.046186,289.587092 L203.110735,264.522569 L233.280618,294.692452 L208.215604,319.75651 L245.929005,357.468775 L215.759115,387.638664 L200.674175,372.553724 C164.184635,409.043264 107.835262,413.56889 66.4194827,386.130595 L30.1698893,422.378447 L7.10542736e-15,392.208558 L36.2478616,355.958974 C8.809566,314.543194 13.3351883,258.193818 49.8247286,221.704277 L34.7397793,206.619328 L64.9096686,176.449439 Z M44.940846,14.7709487 L407.607513,377.437611 L377.437614,407.607509 L14.770952,44.9408427 L44.940846,14.7709487 Z M79.9946273,251.874176 C55.0010726,276.867731 55.0010726,317.390275 79.9946273,342.383829 C104.095555,366.484757 142.63606,367.345513 167.768387,344.96608 L170.504295,342.383844 L79.9946273,251.874176 Z M392.208558,3.57402996e-12 L422.378447,30.1698893 L375.463932,77.0861461 C402.902226,118.501926 398.376601,174.851298 361.887061,211.340839 L376.972011,226.425789 L346.802123,256.595677 L165.782787,75.5763413 L195.952675,45.4064533 L211.037614,60.491392 C247.527154,24.0018517 303.87653,19.4762293 345.29231,46.914525 L392.208558,3.57402996e-12 Z M243.943406,88.07904 L241.207513,90.6612907 L330.584541,180.038489 C348.320303,153.120457 353.236844,112.180968 331.717166,90.6612907 C307.616238,66.5603629 269.075733,65.6996071 243.943406,88.07904 Z"/>
+              <Path Data="M64.9096686,176.449439 L102.621227,214.162133 L127.68601,189.097844 L157.855894,219.267728 L132.791352,244.332258 L178.046186,289.587092 L203.110735,264.522569 L233.280618,294.692452 L208.215604,319.75651 L245.929005,357.468775 L215.759115,387.638664 L200.674175,372.553724 C164.184635,409.043264 107.835262,413.56889 66.4194827,386.130595 L30.1698893,422.378447 L7.10542736e-15,392.208558 L36.2478616,355.958974 C8.809566,314.543194 13.3351883,258.193818 49.8247286,221.704277 L34.7397793,206.619328 L64.9096686,176.449439 Z M44.940846,14.7709487 L407.607513,377.437611 L377.437614,407.607509 L14.770952,44.9408427 L44.940846,14.7709487 Z M79.9946273,251.874176 C55.0010726,276.867731 55.0010726,317.390275 79.9946273,342.383829 C104.095555,366.484757 142.63606,367.345513 167.768387,344.96608 L170.504295,342.383844 L79.9946273,251.874176 Z M392.208558,3.57402996e-12 L422.378447,30.1698893 L375.463932,77.0861461 C402.902226,118.501926 398.376601,174.851298 361.887061,211.340839 L376.972011,226.425789 L346.802123,256.595677 L165.782787,75.5763413 L195.952675,45.4064533 L211.037614,60.491392 C247.527154,24.0018517 303.87653,19.4762293 345.29231,46.914525 L392.208558,3.57402996e-12 Z M243.943406,88.07904 L241.207513,90.6612907 L330.584541,180.038489 C348.320303,153.120457 353.236844,112.180968 331.717166,90.6612907 C307.616238,66.5603629 269.075733,65.6996071 243.943406,88.07904 Z" Fill="Black" />
             </Canvas>
           </Viewbox>
 
-          <Viewbox Height="24"
-                   VerticalAlignment="Center"
-                   HorizontalAlignment="Center"
-                   IsVisible="{Binding HasConnection}">
-            <Canvas Height="512" Width="512">
+          <Viewbox
+            Height="24"
+            HorizontalAlignment="Center"
+            VerticalAlignment="Center"
+            IsVisible="{Binding HasConnection}">
+            <Canvas Width="512" Height="512">
               <Canvas.RenderTransform>
-                <TranslateTransform X="66.144108" Y="66.144108"/>
+                <TranslateTransform X="66.144108" Y="66.144108" />
               </Canvas.RenderTransform>
-              <Path Fill="Black"
-                    Data="M114.431169,84.2612793 L129.516113,99.346224 C166.005654,62.8566837 222.355026,58.3310613 263.770806,85.7693569 L349.541895,-9.76285719e-12 L379.711784,30.1698893 L293.942427,115.940978 C321.380723,157.356758 316.8551,213.70613 280.36556,250.195671 L295.450505,265.280615 L265.280615,295.450505 L250.195671,280.36556 C213.70613,316.8551 157.356758,321.380723 115.940978,293.942427 L30.1698893,379.711784 L8.52651283e-14,349.541895 L85.7693569,263.770806 C58.3310613,222.355026 62.8566837,166.005654 99.346224,129.516113 L84.2612793,114.431169 L114.431169,84.2612793 Z M129.516113,159.686003 C104.522559,184.679557 104.522559,225.202116 129.516113,250.195671 C153.617041,274.296598 192.157566,275.157346 217.289893,252.777913 L220.025781,250.195671 L129.516113,159.686003 Z M159.686003,129.516113 L250.195671,220.025781 C275.189225,195.032227 275.189225,154.509668 250.195671,129.516113 C226.094743,105.415186 187.554218,104.554438 162.421891,126.933871 L159.686003,129.516113 Z"/>
+              <Path Data="M114.431169,84.2612793 L129.516113,99.346224 C166.005654,62.8566837 222.355026,58.3310613 263.770806,85.7693569 L349.541895,-9.76285719e-12 L379.711784,30.1698893 L293.942427,115.940978 C321.380723,157.356758 316.8551,213.70613 280.36556,250.195671 L295.450505,265.280615 L265.280615,295.450505 L250.195671,280.36556 C213.70613,316.8551 157.356758,321.380723 115.940978,293.942427 L30.1698893,379.711784 L8.52651283e-14,349.541895 L85.7693569,263.770806 C58.3310613,222.355026 62.8566837,166.005654 99.346224,129.516113 L84.2612793,114.431169 L114.431169,84.2612793 Z M129.516113,159.686003 C104.522559,184.679557 104.522559,225.202116 129.516113,250.195671 C153.617041,274.296598 192.157566,275.157346 217.289893,252.777913 L220.025781,250.195671 L129.516113,159.686003 Z M159.686003,129.516113 L250.195671,220.025781 C275.189225,195.032227 275.189225,154.509668 250.195671,129.516113 C226.094743,105.415186 187.554218,104.554438 162.421891,126.933871 L159.686003,129.516113 Z" Fill="Black" />
             </Canvas>
           </Viewbox>
         </Panel>
@@ -126,14 +119,35 @@
 
     </RelativePanel>
 
-    <Border Background="#80000000"
-            IsVisible="{Binding IsDialogOpen}">
-      <Border Background="White" CornerRadius="8"
-              HorizontalAlignment="Center" VerticalAlignment="Center"
-              Padding="24" MinWidth="300" BoxShadow="0 8 16 0 #40000000">
-        <ContentControl x:Name="DialogContent" >
-          
-        </ContentControl>
+    <Border
+      x:Name="DialogOverlay"
+      Background="#80000000"
+      IsHitTestVisible="{Binding IsDialogOpen}"
+      Opacity="{Binding DialogOpacity}">
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Property="Opacity" Duration="0:0:0.2" />
+        </Transitions>
+      </Border.Transitions>
+      <Border
+        x:Name="DialogBorder"
+        MinWidth="300"
+        Padding="24"
+        HorizontalAlignment="Center"
+        VerticalAlignment="Center"
+        Background="White"
+        BoxShadow="0 8 16 0 #40000000"
+        CornerRadius="8">
+        <!-- <Border.RenderTransform> -->
+        <!--     <ScaleTransform ScaleX="0.8" ScaleY="0.8"/> -->
+        <!-- </Border.RenderTransform> -->
+        <!-- <Border.Transitions> -->
+        <!--     <Transitions> -->
+        <!--  <TransformOperationsTransition Property="RenderTransform"  -->
+        <!--  Duration="0:0:2"/>  -->
+        <!--     </Transitions> -->
+        <!-- </Border.Transitions> -->
+        <ContentControl x:Name="DialogContent" />
       </Border>
     </Border>
   </Panel>
