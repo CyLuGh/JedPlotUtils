@@ -8,7 +8,8 @@ public enum SeriesChartType
 {
     Line,
     Area,
-    Range
+    Range,
+    Column
 }
 
 public enum Level
@@ -26,7 +27,7 @@ public readonly record struct TimeSeriesInfo
 
     [JsonConverter(typeof(DateOnlyDoubleHashMapConverter))]
     public HashMap<DateOnly, double> Data { get; }
-    public SeriesChartType ChartType { get; }
+    public SeriesChartType ChartType { get; init; }
 
     [JsonConverter(typeof(DateOnlyDoubleHashMapConverter))]
     public HashMap<DateOnly, double> AuxiliaryData { get; }

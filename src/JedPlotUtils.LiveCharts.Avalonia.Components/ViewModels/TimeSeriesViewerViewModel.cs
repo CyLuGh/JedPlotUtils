@@ -23,6 +23,9 @@ public partial class TimeSeriesViewerViewModel
     private Seq<RangeLineSeries<DateTimeRangeValue>> _rangeSeries;
 
     [ObservableAsProperty]
+    private Seq<ColumnSeries<DateTimePoint>> _columnSeries;
+
+    [ObservableAsProperty]
     private Seq<ISeries> _allSeries;
 
     [ObservableAsProperty(ReadOnly = false)]
@@ -44,7 +47,10 @@ public partial class TimeSeriesViewerViewModel
             {
                 var (map, palette, selection) = t;
                 return map
-                    .Values.Where(tsi => tsi.ChartType != SeriesChartType.Range)
+                    .Values.Where(tsi =>
+                        tsi.ChartType == SeriesChartType.Line
+                        || tsi.ChartType == SeriesChartType.Area
+                    )
                     .Select(
                         (tsi) =>
                         {
@@ -184,9 +190,83 @@ public partial class TimeSeriesViewerViewModel
             })
             .ToProperty(this, x => x.RangeSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
+        _columnSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
+            .CombineLatest(
+                this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
+                this.WhenAnyValue(x => x.Selection)
+            )
+            .ObserveOn(RxSchedulers.TaskpoolScheduler)
+            .Select(t =>
+            {
+                var (map, palette, selection) = t;
+                return map
+                    .Values.Where(tsi => tsi.ChartType == SeriesChartType.Column)
+                    .Select(
+                        (tsi) =>
+                        {
+                            float thickness = selection.IsEmpty
+                                ? 2
+                                : selection.Contains(tsi.Identifier)
+                                    ? 3
+                                    : 1;
+
+                            var stroke =
+                                selection.IsEmpty || selection.Contains(tsi.Identifier)
+                                    ? new SolidColorPaint(
+                                        palette.GetColor(tsi.Index).Convert(),
+                                        thickness
+                                    )
+                                    : new SolidColorPaint(
+                                        palette.GetColor(tsi.Index).Convert(),
+                                        thickness
+                                    )
+                                    {
+                                        PathEffect = new DashEffect([3, 2])
+                                    };
+
+                            var fill = new SolidColorPaint(
+                                palette
+                                    .GetColor(tsi.Index)
+                                    .Convert()
+                                    .WithAlpha(
+                                        selection.IsEmpty || selection.Contains(tsi.Identifier)
+                                            ? (byte)60
+                                            : (byte)20
+                                    )
+                            );
+
+                            return new ColumnSeries<DateTimePoint>()
+                            {
+                                Name = tsi.Label,
+                                Values = new ObservableCollection<DateTimePoint>(
+                                    tsi.Data.OrderBy(x => x.Key)
+                                        .Select(x => new DateTimePoint(
+                                            x.Key.ToDateTime(TimeOnly.MinValue),
+                                            x.Value
+                                        ))
+                                ),
+                                Tag = tsi.Identifier,
+                                Stroke = stroke,
+                                Fill = fill,
+                                AnimationsSpeed = TimeSpan.Zero,
+                                IsHoverable = tsi.Level != Level.Tertiary
+                            };
+                        }
+                    )
+                    .ToSeq();
+            })
+            .ToProperty(this, x => x.ColumnSeries, scheduler: RxSchedulers.MainThreadScheduler);
+
         _allSeriesHelper = this.WhenAnyValue(x => x.LineSeries)
-            .CombineLatest(this.WhenAnyValue(x => x.RangeSeries))
-            .Select(t => t.First.Cast<ISeries>().Concat(t.Second.Cast<ISeries>()))
+            .CombineLatest(
+                this.WhenAnyValue(x => x.RangeSeries),
+                this.WhenAnyValue(x => x.ColumnSeries)
+            )
+            .Select(t =>
+                t.First.Cast<ISeries>()
+                    .Concat(t.Second.Cast<ISeries>())
+                    .Concat(t.Third.Cast<ISeries>())
+            )
             .ToProperty(this, x => x.AllSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenActivated(disposables =>

@@ -103,6 +103,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public Interaction<TimeSeriesInfo, string?> RenameSeriesInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
     public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
+    public ReactiveCommand<SeriesChartType, RxVoid> ChangeSeriesChartTypesCommand { get; }
     public RxCommand ShowSettingsCommand { get; }
     public RxInteraction ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
@@ -132,6 +133,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         RenameSeriesCommand = CreateCommandRenameSeriesCommand();
         RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
+
+        ChangeSeriesChartTypesCommand = CreateCommandChangeSeriesChartTypesCommand();
 
         Configuration = TimeSeriesViewerConfigurationViewModel.Load();
 
@@ -232,6 +235,23 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     Selection = Selection.Remove(x);
                 });
         });
+    }
+
+    private ReactiveCommand<SeriesChartType, RxVoid> CreateCommandChangeSeriesChartTypesCommand()
+    {
+        var canExecute = this.WhenAnyValue(x => x.Selection)
+            .Select(sel => sel.Count > 0)
+            .ObserveOn(RxSchedulers.MainThreadScheduler);
+        var cmd = ReactiveCommand.CreateRunInBackground(
+            (SeriesChartType sct) =>
+            {
+                foreach (var id in Selection)
+                    ChangeSeriesChartType(id, sct);
+            },
+            canExecute
+        );
+
+        return cmd;
     }
 
     private RxCommand CreateCommandShowSettingsCommand()
@@ -662,5 +682,17 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
             .ToHashMap();
         ClearSelection();
+    }
+
+    public void ChangeSeriesChartType(TimeSeriesInfo seriesInfo, SeriesChartType targetType) =>
+        ChangeSeriesChartType(seriesInfo.Identifier, targetType);
+
+    public void ChangeSeriesChartType(Identifier id, SeriesChartType targetType)
+    {
+        SeriesCache = SeriesCache.Find(
+            id,
+            tsi => SeriesCache.AddOrUpdate(id, tsi with { ChartType = targetType }),
+            () => SeriesCache
+        );
     }
 }

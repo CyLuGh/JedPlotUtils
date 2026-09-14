@@ -8,6 +8,7 @@
   xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels"
+  xmlns:models="clr-namespace:JedPlotUtils.Models;assembly=JedPlotUtils"
   d:DesignHeight="450"
   d:DesignWidth="800"
   x:DataType="viewModels:TimeSeriesViewerViewModel"
@@ -40,6 +41,18 @@
                 Command="{Binding RenameSeriesCommand}"
                 CommandParameter="{Binding SelectedSeries}"
                 Header="Rename series" />
+              <MenuItem Header="Change series type">
+                  <MenuItem Header="Line"
+                            Command="{Binding ChangeSeriesChartTypesCommand}"
+                            CommandParameter="{x:Static models:SeriesChartType.Line}"/>
+                  <MenuItem Header="Area"
+                            Command="{Binding ChangeSeriesChartTypesCommand}"
+                            CommandParameter="{x:Static models:SeriesChartType.Area}"/>
+                  <MenuItem Header="Column"
+                            Command="{Binding ChangeSeriesChartTypesCommand}"
+                            CommandParameter="{x:Static models:SeriesChartType.Column}"/>
+                 
+              </MenuItem>
               <MenuItem
                 Command="{Binding RemoveSelectionCommand}"
                 CommandParameter="{Binding Selection}"
