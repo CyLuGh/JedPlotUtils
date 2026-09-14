@@ -1,6 +1,9 @@
+using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
+using ClosedXML.Excel;
+using DocumentFormat.OpenXml.Spreadsheet;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -17,6 +20,7 @@ using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
+using SkiaSharp;
 using AV = Avalonia;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
@@ -222,14 +226,37 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                         _dragStarted = true;
 
                         var dragData = new DataTransfer();
-                        // TODO (see https://docs.avaloniaui.net/docs/how-to/drag-and-drop-how-to)
-                        var csv = viewModel.SelectedSeries.ToCsv();
-                        dragData.Add(DataTransferItem.CreateText(csv));
-                        var filePath = Path.Combine(
-                            Path.GetTempPath(),
-                            $"{Guid.CreateVersion7():N}.csv"
-                        );
-                        await File.WriteAllTextAsync(filePath, csv);
+
+                        string filePath;
+
+                        if ((args.KeyModifiers & KeyModifiers.Control) != 0)
+                        {
+                            var csv = viewModel.SelectedSeries.ToCsv(
+                                separator: "\t",
+                                formatProvider: CultureInfo.CurrentCulture
+                            );
+                            dragData.Add(DataTransferItem.CreateText(csv));
+
+                            filePath = Path.Combine(
+                                Path.GetTempPath(),
+                                $"{Guid.CreateVersion7():N}.xlsx"
+                            );
+                            await File.WriteAllBytesAsync(
+                                filePath,
+                                viewModel.SelectedSeries.ToExcelBytes()
+                            );
+                        }
+                        else
+                        {
+                            var csv = viewModel.SelectedSeries.ToCsv();
+                            dragData.Add(DataTransferItem.CreateText(csv));
+
+                            filePath = Path.Combine(
+                                Path.GetTempPath(),
+                                $"{Guid.CreateVersion7():N}.csv"
+                            );
+                            await File.WriteAllTextAsync(filePath, csv);
+                        }
 
                         var storageFile = await (
                             TopLevel

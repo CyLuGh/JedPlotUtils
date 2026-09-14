@@ -2,8 +2,10 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using ClosedXML.Excel;
 using CsvHelper;
 using CsvHelper.Configuration;
+using MoreLinq;
 
 namespace JedPlotUtils.Models;
 
@@ -31,6 +33,46 @@ public static class TimeSeriesInfoExtensions
             }
 
             return sb.ToString();
+        }
+
+        public (string[] headers, object?[][] rows) ToExcelFormat()
+        {
+            var seq = infos.ToSeq();
+
+            string[] headers = ["Period", .. seq.Map(x => x.Label)];
+            var rows = seq
+                .GetDates()
+                .Items
+                .OrderBy(x => x)
+                .Select(date => (object?[])
+                    [
+                        date,
+                        ..seq.Map(ts =>
+                        ts.Data.Find(
+                        date).MatchUnsafe(
+                        d => (object)d,
+                            () => null))
+                    ])
+                .ToArray();
+
+            return (headers, rows);
+        }
+
+        public byte[] ToExcelBytes()
+        {
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Data");
+
+            var (headers, rows) = infos.ToExcelFormat();
+            for (int c = 0; c < headers.Length; c++)
+                worksheet.Cell(1, c + 1).Value = headers[c];
+
+            worksheet.Cell(2, 1).InsertData(rows);
+            worksheet.Column(1).Style.DateFormat.Format = "yyyy-MM-dd";
+            worksheet.Columns().AdjustToContents();
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            return stream.ToArray();
         }
 
         public byte[] ToBytes() => Encoding.UTF8.GetBytes(infos.ToJson());
