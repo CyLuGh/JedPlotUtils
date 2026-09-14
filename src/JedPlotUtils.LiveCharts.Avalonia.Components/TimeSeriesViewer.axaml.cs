@@ -75,15 +75,13 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .ShowSettingsInteraction.RegisterHandler(async ctx =>
             {
                 var cvm = new TimeSeriesViewerConfigurationViewModel();
-                view.DialogContent.Content = new TimeSeriesViewerConfigurationView()
-                {
-                    ViewModel = cvm
-                };
-                viewModel.IsDialogOpen = true;
+                OpenDialogAnimation(
+                    viewModel,
+                    new TimeSeriesViewerConfigurationView() { ViewModel = cvm }
+                );
                 await cvm.Result;
                 ctx.SetOutput(RxVoid.Default);
-                viewModel.IsDialogOpen = false;
-                view.DialogContent.Content = null;
+                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
             })
             .DisposeWith(disposables);
 
@@ -300,6 +298,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 h => view.CartesianChart.HoveredPointsChanged += h,
                 h => view.CartesianChart.HoveredPointsChanged -= h
             )
+            .Throttle(TimeSpan.FromMilliseconds(20))
             .Subscribe(x =>
             {
                 var (chart, newItems, oldItems) = x;

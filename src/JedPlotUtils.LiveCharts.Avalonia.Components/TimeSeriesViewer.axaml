@@ -31,7 +31,7 @@
         <lvc:CartesianChart
           x:Name="CartesianChart"
           DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
-          FindingStrategy="ExactMatch"
+          FindingStrategy="ExactMatchTakeClosest"
           IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
           Series="{Binding Path=AllSeries}"
           XAxes="{Binding XAxes}">

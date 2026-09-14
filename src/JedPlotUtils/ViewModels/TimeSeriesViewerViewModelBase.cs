@@ -48,6 +48,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [Reactive]
     public partial Option<(Identifier, DateOnly)> HoveredPoint { get; set; }
 
+    [ObservableAsProperty]
+    private Option<(Identifier, DateOnly)> _throttledHoveredPoint;
+
     public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HoverCellGridCommand { get; }
     public ReactiveCommand<
         Option<(Identifier, DateOnly)>,
@@ -145,6 +148,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         _selectedSeriesHelper = this.WhenAnyValue(x => x.Selection)
             .Select(sel => SeriesCache.Values.Where(x => sel.Contains(x.Identifier)).ToSeq())
             .ToProperty(this, x => x.SelectedSeries, scheduler: RxSchedulers.MainThreadScheduler);
+
+        _throttledHoveredPointHelper = this.WhenAnyValue(x => x.HoveredPoint)
+            .Throttle(TimeSpan.FromMilliseconds(30))
+            .DistinctUntilChanged()
+            .ToProperty(
+                this,
+                x => x.ThrottledHoveredPoint,
+                scheduler: RxSchedulers.MainThreadScheduler
+            );
 
         this.WhenActivated(disposables =>
         {
@@ -385,7 +397,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
            an element that is not yet drawn */
         var cmd = ReactiveCommand.Create((Option<(Identifier, DateOnly)> si) => DoHoverGrid(si));
 
-        var hoverObservable = this.WhenAnyValue(x => x.HoveredPoint).Publish().RefCount();
+        var hoverObservable = this.WhenAnyValue(x => x.ThrottledHoveredPoint).Publish().RefCount();
 
         hoverObservable
             .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
@@ -420,7 +432,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             HighlightChartPointInteraction.Handle(t)
         );
 
-        this.WhenAnyValue(x => x.HoveredPoint).InvokeCommand(cmd);
+        this.WhenAnyValue(x => x.ThrottledHoveredPoint)
+            .DistinctUntilChanged()
+            .Throttle(TimeSpan.FromMilliseconds(20))
+            .InvokeCommand(cmd);
 
         return cmd;
     }

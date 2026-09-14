@@ -2,7 +2,7 @@ namespace JedPlotUtils.Palette;
 
 public static class Palettes
 {
-    public static IPalette[] Available { get; } = [new TangoPalette(), new SolarizedPalette(),new BankPalette()];
+    public static IPalette[] Available { get; } = [new TangoPalette(), new SolarizedPalette(),new BankPalette(),new LollipopPalette()];
 
     extension(string? name)
     {
