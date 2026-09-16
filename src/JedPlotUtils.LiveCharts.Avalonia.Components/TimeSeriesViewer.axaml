@@ -37,14 +37,19 @@
           XAxes="{Binding XAxes}">
           <lvc:CartesianChart.ContextMenu>
             <ContextMenu>
-              <MenuItem
-                Command="{Binding RenameSeriesCommand}"
-                CommandParameter="{Binding SelectedSeries}"
-                Header="Rename series" />
+              <MenuItem Header="Copy" Command="{Binding CopyToClipboardCommand}"/>
+              <MenuItem Header="Paste" Command="{Binding PasteFromClipboardCommand}"/>
+                <MenuItem
+                    Command="{Binding RenameSeriesCommand}"
+                    CommandParameter="{Binding SelectedSeries}"
+                    Header="Rename series" />
               <MenuItem Header="Change series type">
                   <MenuItem Header="Line"
                             Command="{Binding ChangeSeriesChartTypesCommand}"
                             CommandParameter="{x:Static models:SeriesChartType.Line}"/>
+                  <MenuItem Header="Step"
+                            Command="{Binding ChangeSeriesChartTypesCommand}"
+                            CommandParameter="{x:Static models:SeriesChartType.StepLine}"/>
                   <MenuItem Header="Area"
                             Command="{Binding ChangeSeriesChartTypesCommand}"
                             CommandParameter="{x:Static models:SeriesChartType.Area}"/>

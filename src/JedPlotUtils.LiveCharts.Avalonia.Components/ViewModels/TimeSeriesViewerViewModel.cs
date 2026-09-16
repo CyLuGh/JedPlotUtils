@@ -20,6 +20,9 @@ public partial class TimeSeriesViewerViewModel
     private Seq<LineSeries<DateTimePoint>> _lineSeries;
 
     [ObservableAsProperty]
+    private Seq<StepLineSeries<DateTimePoint>> _stepLineSeries;
+
+    [ObservableAsProperty]
     private Seq<RangeLineSeries<DateTimeRangeValue>> _rangeSeries;
 
     [ObservableAsProperty]
@@ -48,8 +51,7 @@ public partial class TimeSeriesViewerViewModel
                 var (map, palette, selection) = t;
                 return map
                     .Values.Where(tsi =>
-                        tsi.ChartType == SeriesChartType.Line
-                        || tsi.ChartType == SeriesChartType.Area
+                        tsi.ChartType is SeriesChartType.Line or SeriesChartType.Area
                     )
                     .Select(
                         (tsi) =>
@@ -112,6 +114,63 @@ public partial class TimeSeriesViewerViewModel
                     .ToSeq();
             })
             .ToProperty(this, x => x.LineSeries, scheduler: RxSchedulers.MainThreadScheduler);
+
+        _stepLineSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
+            .CombineLatest(
+                this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
+                this.WhenAnyValue(x => x.Selection)
+            )
+            .ObserveOn(RxSchedulers.TaskpoolScheduler)
+            .Select(t =>
+            {
+                var (map, palette, selection) = t;
+                return map
+                    .Values.Where(tsi => tsi.ChartType == SeriesChartType.StepLine)
+                    .Select(
+                        (tsi) =>
+                        {
+                            float thickness = selection.IsEmpty
+                                ? 2
+                                : selection.Contains(tsi.Identifier)
+                                    ? 3
+                                    : 1;
+
+                            var stroke =
+                                selection.IsEmpty || selection.Contains(tsi.Identifier)
+                                    ? new SolidColorPaint(
+                                        palette.GetColor(tsi.Index).Convert(),
+                                        thickness
+                                    )
+                                    : new SolidColorPaint(
+                                        palette.GetColor(tsi.Index).Convert(),
+                                        thickness
+                                    )
+                                    {
+                                        PathEffect = new DashEffect([3, 2])
+                                    };
+
+                            return new StepLineSeries<DateTimePoint>()
+                            {
+                                Name = tsi.Label,
+                                Values = new ObservableCollection<DateTimePoint>(
+                                    tsi.Data.OrderBy(x => x.Key)
+                                        .Select(x => new DateTimePoint(
+                                            x.Key.ToDateTime(TimeOnly.MinValue),
+                                            x.Value
+                                        ))
+                                ),
+                                Tag = tsi.Identifier,
+                                Stroke = stroke,
+                                Fill = null,
+                                AnimationsSpeed = TimeSpan.Zero,
+                                GeometrySize = GetGeometrySize(tsi),
+                                IsHoverable = tsi.Level != Level.Tertiary
+                            };
+                        }
+                    )
+                    .ToSeq();
+            })
+            .ToProperty(this, x => x.StepLineSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
         _rangeSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
             .CombineLatest(
@@ -259,6 +318,7 @@ public partial class TimeSeriesViewerViewModel
 
         _allSeriesHelper = this.WhenAnyValue(x => x.LineSeries)
             .CombineLatest(
+                this.WhenAnyValue(x => x.StepLineSeries),
                 this.WhenAnyValue(x => x.RangeSeries),
                 this.WhenAnyValue(x => x.ColumnSeries)
             )
@@ -287,7 +347,7 @@ public partial class TimeSeriesViewerViewModel
     private static double GetGeometrySize(TimeSeriesInfo tsi) =>
         tsi.Level switch
         {
-            Level.Primary => tsi.ChartType == SeriesChartType.Line ? 12d : 6d,
+            Level.Primary => tsi.ChartType == SeriesChartType.Area ? 6d : 12d,
             Level.Secondary => 4d,
             Level.Tertiary => 0d,
             _ => 12d

@@ -4,6 +4,7 @@ using Avalonia.Input;
 using Avalonia.Platform.Storage;
 using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
+using DocumentFormat.OpenXml.Wordprocessing;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -136,6 +137,102 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             })
             .DisposeWith(disposables);
 
+        viewModel
+            .CopyToClipboardInteraction.RegisterHandler(async ctx =>
+            {
+                var clipboard = TopLevel.GetTopLevel(view)?.Clipboard;
+
+                if (clipboard is not null)
+                {
+                    using var dataTransfer = new DataTransfer();
+                    dataTransfer.Add(
+                        DataTransferItem.Create(
+                            DataFormat.CreateBytesApplicationFormat("jedplot.timeseries"),
+                            viewModel.SelectedSeries.ToBytes()
+                        )
+                    );
+
+                    await clipboard.SetDataAsync(dataTransfer);
+                }
+
+                ctx.SetOutput(RxVoid.Default);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .PasteFromClipboardInteraction.RegisterHandler(async ctx =>
+            {
+                var clipboard = TopLevel.GetTopLevel(view)?.Clipboard;
+
+                if (clipboard is null)
+                {
+                    ctx.SetOutput(Seq<TimeSeriesInfo>.Empty);
+                    return;
+                }
+
+                using var data = await clipboard.TryGetDataAsync().ConfigureAwait(false);
+
+                var bytes =
+                    await data?.TryGetValueAsync(
+                        DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                    ) ?? [];
+
+                if (bytes?.Length > 0)
+                {
+                    ctx.SetOutput(bytes.ToTimeSeriesInfo().ToSeq());
+                    return;
+                }
+
+                /* Text format */
+                var text = await data.TryGetTextAsync().ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var series = text.FromCsv();
+                    if (series.Length > 0)
+                    {
+                        ctx.SetOutput(series.ToSeq());
+                        return;
+                    }
+                }
+
+                /* File format */
+                if (await data.TryGetFilesAsync().ConfigureAwait(false) is { } files)
+                {
+                    // TODO: check csv, check xlsx, check open office
+                    foreach (var file in files)
+                    {
+                        var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
+                        switch (extension)
+                        {
+                            case ".txt":
+                            case ".csv":
+                                {
+                                    var series = (
+                                        await File.ReadAllTextAsync(file.Path.LocalPath)
+                                            .ConfigureAwait(false)
+                                    ).FromCsv();
+                                    if (series.Length > 0)
+                                        viewModel.Add(series);
+                                }
+                                break;
+
+                            case ".xlsx":
+                                {
+                                    var series = ExcelTimeSeriesInfoParser.FromExcel(
+                                        file.Path.LocalPath
+                                    );
+                                    if (series.Length > 0)
+                                        viewModel.Add(series);
+                                }
+                                break;
+                        }
+                    }
+                }
+
+                ctx.SetOutput(Seq<TimeSeriesInfo>.Empty);
+            })
+            .DisposeWith(disposables);
+
         HandleDragDrop(view, viewModel, disposables);
 
         /* Mouse click */
@@ -189,6 +286,82 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             })
             .DisposeWith(disposables);
 
+        /* Mouse over chart */
+        Signal
+            .FromEvent<
+                ChartPointHoverHandler,
+                (
+                    IChartView chart,
+                    IEnumerable<ChartPoint>? newItems,
+                    IEnumerable<ChartPoint>? oldItems
+                )
+            >(
+                handler => (chart, newItems, oldItems) => handler((chart, newItems, oldItems)),
+                h => view.CartesianChart.HoveredPointsChanged += h,
+                h => view.CartesianChart.HoveredPointsChanged -= h
+            )
+            .Throttle(TimeSpan.FromMilliseconds(20))
+            .Subscribe(x =>
+            {
+                var (chart, newItems, oldItems) = x;
+                var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
+                if (!nItems.IsEmpty)
+                {
+                    var point = nItems[0];
+                    if (
+                        point.Context is
+                        { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
+                    )
+                    {
+                        viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
+                    }
+                    else
+                    {
+                        viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
+                    }
+                }
+                else
+                {
+                    viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
+                }
+            })
+            .DisposeWith(disposables);
+
+        viewModel.HighlightChartPointInteraction.RegisterHandler(ctx =>
+        {
+            ctx.Input.IfSome(t =>
+            {
+                var (identifier, period) = t;
+                var dateTime = period.ToDateTime(TimeOnly.MinValue);
+
+                var chartPoints =
+                    from s in view.CartesianChart.Series.Find(s =>
+                        s.Tag?.Equals(identifier) == true
+                    )
+                    from pt in s.Fetch(view.CartesianChart.CoreChart)
+                        .Where(p =>
+                            p.Context.DataSource is DateTimePoint op && op.DateTime == dateTime
+                        )
+                    select pt;
+
+                view.CartesianChart.Tooltip?.Show(chartPoints, view.CartesianChart.CoreChart);
+            });
+
+            ctx.Input.IfNone(() =>
+            {
+                view.CartesianChart.Tooltip?.Hide(view.CartesianChart.CoreChart);
+            });
+
+            ctx.SetOutput(RxVoid.Default);
+        });
+    }
+
+    private void HandleDragDrop(
+        TimeSeriesViewer view,
+        TimeSeriesViewerViewModel viewModel,
+        MultipleDisposable disposables
+    )
+    {
         Signal
             .FromEventPattern<EventHandler<PointerEventArgs>, PointerEventArgs>(
                 handler => view.CartesianChart.PointerReleased += handler,
@@ -284,82 +457,6 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             })
             .DisposeWith(disposables);
 
-        /* Mouse over chart */
-        Signal
-            .FromEvent<
-                ChartPointHoverHandler,
-                (
-                    IChartView chart,
-                    IEnumerable<ChartPoint>? newItems,
-                    IEnumerable<ChartPoint>? oldItems
-                )
-            >(
-                handler => (chart, newItems, oldItems) => handler((chart, newItems, oldItems)),
-                h => view.CartesianChart.HoveredPointsChanged += h,
-                h => view.CartesianChart.HoveredPointsChanged -= h
-            )
-            .Throttle(TimeSpan.FromMilliseconds(20))
-            .Subscribe(x =>
-            {
-                var (chart, newItems, oldItems) = x;
-                var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
-                if (!nItems.IsEmpty)
-                {
-                    var point = nItems[0];
-                    if (
-                        point.Context is
-                        { DataSource: DateTimePoint dtp, Series.Tag: Identifier identifier }
-                    )
-                    {
-                        viewModel.HoveredPoint = (identifier, DateOnly.FromDateTime(dtp.DateTime));
-                    }
-                    else
-                    {
-                        viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
-                    }
-                }
-                else
-                {
-                    viewModel.HoveredPoint = Option<(Identifier, DateOnly)>.None;
-                }
-            })
-            .DisposeWith(disposables);
-
-        viewModel.HighlightChartPointInteraction.RegisterHandler(ctx =>
-        {
-            ctx.Input.IfSome(t =>
-            {
-                var (identifier, period) = t;
-                var dateTime = period.ToDateTime(TimeOnly.MinValue);
-
-                var chartPoints =
-                    from s in view.CartesianChart.Series.Find(s =>
-                        s.Tag?.Equals(identifier) == true
-                    )
-                    from pt in s.Fetch(view.CartesianChart.CoreChart)
-                        .Where(p =>
-                            p.Context.DataSource is DateTimePoint op && op.DateTime == dateTime
-                        )
-                    select pt;
-
-                view.CartesianChart.Tooltip?.Show(chartPoints, view.CartesianChart.CoreChart);
-            });
-
-            ctx.Input.IfNone(() =>
-            {
-                view.CartesianChart.Tooltip?.Hide(view.CartesianChart.CoreChart);
-            });
-
-            ctx.SetOutput(RxVoid.Default);
-        });
-    }
-
-    private static void HandleDragDrop(
-        TimeSeriesViewer view,
-        TimeSeriesViewerViewModel viewModel,
-        MultipleDisposable disposables
-    )
-    {
         Signal
             .FromEventPattern<EventHandler<DragEventArgs>, DragEventArgs>(
                 handler => DragDrop.AddDragOverHandler(view.GridMainDisplay, handler),

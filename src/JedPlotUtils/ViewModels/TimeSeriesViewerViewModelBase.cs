@@ -16,6 +16,7 @@ using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
+using Splat;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
 namespace JedPlotUtils.ViewModels;
@@ -113,6 +114,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
     public RxCommand ClearSeriesCommand { get; }
 
+    public RxCommand CopyToClipboardCommand { get; }
+    public Interaction<Seq<TimeSeriesInfo>, RxVoid> CopyToClipboardInteraction { get; } =
+        new(RxSchedulers.MainThreadScheduler);
+    public RxCommand PasteFromClipboardCommand { get; }
+    public Interaction<RxVoid, Seq<TimeSeriesInfo>> PasteFromClipboardInteraction { get; } =
+        new(RxSchedulers.MainThreadScheduler);
+
     protected TimeSeriesViewerViewModelBase()
     {
         ShowSettingsCommand = CreateCommandShowSettingsCommand();
@@ -138,6 +146,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
 
         ChangeSeriesChartTypesCommand = CreateCommandChangeSeriesChartTypesCommand();
+        CopyToClipboardCommand = CreateCommandCopyToClipboardCommand();
+        PasteFromClipboardCommand = CreateCommandPasteFromClipboardCommand();
 
         Configuration = TimeSeriesViewerConfigurationViewModel.Load();
 
@@ -150,7 +160,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .ToProperty(this, x => x.SelectedSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
         _throttledHoveredPointHelper = this.WhenAnyValue(x => x.HoveredPoint)
-            .Throttle(TimeSpan.FromMilliseconds(30))
+            .Throttle(TimeSpan.FromMilliseconds(100))
             .DistinctUntilChanged()
             .ToProperty(
                 this,
@@ -249,6 +259,33 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         });
     }
 
+    private RxCommand CreateCommandPasteFromClipboardCommand()
+    {
+        PasteFromClipboardInteraction.RegisterHandler(ctx =>
+            ctx.SetOutput(Seq<TimeSeriesInfo>.Empty)
+        );
+        var cmd = ReactiveCommand.CreateFromTask(async () =>
+        {
+            var series = await PasteFromClipboardInteraction.Handle(RxVoid.Default);
+            Add(series);
+        });
+        return cmd;
+    }
+
+    private RxCommand CreateCommandCopyToClipboardCommand()
+    {
+        CopyToClipboardInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        var canExecute = this.WhenAnyValue(x => x.SelectedSeries)
+            .Select(sel => !sel.IsEmpty)
+            .ObserveOn(RxSchedulers.MainThreadScheduler);
+        var cmd = ReactiveCommand.CreateFromObservable(
+            () => CopyToClipboardInteraction.Handle(SelectedSeries),
+            canExecute
+        );
+        cmd.ThrownExceptions.Subscribe(ex => this.Log().Error("Failed to copy to clipboard", ex));
+        return cmd;
+    }
+
     private ReactiveCommand<SeriesChartType, RxVoid> CreateCommandChangeSeriesChartTypesCommand()
     {
         var canExecute = this.WhenAnyValue(x => x.Selection)
@@ -261,6 +298,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     ChangeSeriesChartType(id, sct);
             },
             canExecute
+        );
+        cmd.ThrownExceptions.Subscribe(ex =>
+            this.Log().Error("Failed to paste from clipboard", ex)
         );
 
         return cmd;
@@ -401,7 +441,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         hoverObservable
             .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
-            .DistinctUntilChanged()
+            //.DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);

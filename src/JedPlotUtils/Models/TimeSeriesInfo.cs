@@ -9,7 +9,8 @@ public enum SeriesChartType
     Line,
     Area,
     Range,
-    Column
+    Column,
+    StepLine
 }
 
 public enum Level
