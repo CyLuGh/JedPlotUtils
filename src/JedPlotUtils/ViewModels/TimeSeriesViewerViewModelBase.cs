@@ -214,6 +214,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 })
                 .DisposeWith(disposables);
 
+            this.WhenAnyValue(x => x.Configuration)
+                .Throttle(TimeSpan.FromMilliseconds(200))
+                .Subscribe(ApplySettings)
+                .DisposeWith(disposables);
+
             HierarchyGridViewModel
                 .WhenAnyValue(x => x.Producers)
                 .Select(ps =>
@@ -243,7 +248,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     {
                         SelectionMode.Single => Selection.Clear().AddOrUpdate(x),
                         SelectionMode.Multiple => Selection.AddOrUpdate(x),
-                        _ => Selection
+                        _ => Selection,
                     };
                 });
 
@@ -581,40 +586,40 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                x => x,
-                                () => double.NaN
-                            ),
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(x => x, () => double.NaN),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                _ => Qualification.Normal,
-                                () => Qualification.Empty
-                            ),
-                        double dbl
-                            => double.IsNaN(dbl) ? Qualification.Empty : Qualification.Normal,
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
+                        double dbl => double.IsNaN(dbl)
+                            ? Qualification.Empty
+                            : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
                 Formatter = o =>
                     o switch
                     {
-                        double dbl
-                            => double.IsNaN(dbl)
-                                ? string.Empty
-                                : dbl.ToString(CultureInfo.InvariantCulture),
+                        double dbl => double.IsNaN(dbl)
+                            ? string.Empty
+                            : dbl.ToString(CultureInfo.InvariantCulture),
                         _ => string.Empty,
                     },
                 ObservableContextItems = o =>
                     o switch
                     {
                         Identifier _ => [.. BuildContext()],
-                        _ => []
-                    }
+                        _ => [],
+                    },
             })
             .ToSeq();
 
@@ -724,7 +729,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             tsi.Identifier,
             tsi with
             {
-                Index = SeriesCache.Count
+                Index = SeriesCache.Count,
             }
         );
 
