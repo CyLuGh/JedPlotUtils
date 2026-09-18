@@ -2,10 +2,11 @@
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
+using System.Xml;
 using ClosedXML.Excel;
 using CsvHelper;
 using CsvHelper.Configuration;
-using MoreLinq;
+using LanguageExt;
 
 namespace JedPlotUtils.Models;
 
@@ -33,6 +34,22 @@ public static class TimeSeriesInfoExtensions
             }
 
             return sb.ToString();
+        }
+
+        public string ToXmlSpreadSheet()
+        {
+            var seq = infos.ToSeq();
+
+            using var sw = new StringWriter();
+            using var writer = new XmlTextWriter(sw);
+            writer.Formatting = Formatting.Indented;
+
+            WriteXmlHeader(writer);
+            WriteHeadersRow(writer,seq);
+            WriteDataRows(writer,seq);
+            WriteXmlFooter(writer);
+
+            return sw.ToString();
         }
 
         public (string[] headers, object?[][] rows) ToExcelFormat()
@@ -87,6 +104,81 @@ public static class TimeSeriesInfoExtensions
         CultureInfo.GetCultureInfo("nl-BE"),
         CultureInfo.GetCultureInfo("de-DE")
     ];
+
+    private static void WriteDataRows(XmlWriter writer, Seq<TimeSeriesInfo> series)
+    {
+        foreach (var period in series.GetDates().Items.OrderBy(x => x))
+        {
+            writer.WriteStartElement("Row");
+            
+            writer.WriteStartElement("Cell");
+            writer.WriteStartElement("Data");
+            writer.WriteAttributeString("ss:Type", "DateTime");
+            writer.WriteString(period.ToString("yyyy-MM-dd")+"T00:00:00.000");
+            writer.WriteEndElement(); //data
+            writer.WriteEndElement(); //cell
+
+            foreach (var ser in series)
+            {
+                writer.WriteStartElement("Cell");
+                writer.WriteStartElement("Data");
+                writer.WriteAttributeString("ss:Type", "Number");
+                writer.WriteString(ser.Data.Find(period, d=> d.ToString(CultureInfo.InvariantCulture), () => string.Empty));
+                writer.WriteEndElement(); //data
+                writer.WriteEndElement(); //cell
+            }
+
+            writer.WriteEndElement(); //row
+        }
+    }
+
+    private static void WriteHeadersRow(XmlWriter writer, Seq<TimeSeriesInfo> series)
+    {
+        writer.WriteStartElement("Row");
+
+        writer.WriteStartElement("Cell");
+        writer.WriteStartElement("Data");
+        writer.WriteAttributeString("ss:Type", "String");
+        writer.WriteString("Period");
+        writer.WriteEndElement(); //data
+        writer.WriteEndElement(); //cell
+
+        foreach (var ser in series)
+        {
+            writer.WriteStartElement("Cell");
+            writer.WriteStartElement("Data");
+            writer.WriteAttributeString("ss:Type", "String");
+            writer.WriteString("Period");
+            writer.WriteEndElement(); //data
+            writer.WriteEndElement(); //cell
+        }
+
+        writer.WriteEndElement(); //row
+    }
+
+    private static void WriteXmlHeader(XmlWriter writer)
+    {
+        writer.WriteStartDocument(true);
+        writer.WriteProcessingInstruction("mso-application","progid=\"Excel.Sheet\"");
+        writer.WriteStartElement("Workbook");
+        writer.WriteAttributeString("xmlns", "urn:schemas-microsoft-com:office:spreadsheet");
+        writer.WriteAttributeString("xmlns:o", "urn:schemas-microsoft-com:office:office");
+        writer.WriteAttributeString("xmlns:x", "urn:schemas-microsoft-com:office:excel");
+        writer.WriteAttributeString("xmlns:ss", "urn:schemas-microsoft-com:office:spreadsheet");
+        writer.WriteAttributeString("xmlns:html", "http://www.w3.org/TR/REC-html40");
+
+        writer.WriteStartElement("Worksheet");
+        writer.WriteAttributeString("ss:Name", "Sheet1");
+        writer.WriteStartElement("Table");
+    }
+
+    private static void WriteXmlFooter(XmlWriter writer)
+    {
+        writer.WriteEndElement(); //table
+        writer.WriteEndElement(); //worksheet
+        writer.WriteEndElement(); //workbook
+        writer.Flush();
+    }
 
     private static CultureInfo GuessCulture(
         IEnumerable<string[]> rows,

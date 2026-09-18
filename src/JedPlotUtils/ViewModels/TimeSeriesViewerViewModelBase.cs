@@ -92,10 +92,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [ObservableAsProperty]
     private bool _hasConnection;
 
-    public ReactiveCommand<
-        TimeSeriesViewerSettings,
-        Option<CommunicationManager>
-    > GetConnectionCommand { get; }
+    public ReactiveCommand<string?, Option<CommunicationManager>> GetConnectionCommand { get; }
 
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
 
@@ -108,8 +105,18 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         new(RxSchedulers.MainThreadScheduler);
     public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
     public ReactiveCommand<SeriesChartType, RxVoid> ChangeSeriesChartTypesCommand { get; }
-    public RxCommand ShowSettingsCommand { get; }
-    public RxInteraction ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
+    public ReactiveCommand<TimeSeriesViewerSettings, RxVoid> ShowSettingsCommand { get; }
+    public Interaction<
+        TimeSeriesViewerSettings,
+        Option<TimeSeriesViewerSettings>
+    > ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
+    public ReactiveCommand<TimeSeriesViewerSettings, string?> ShowConnectionSettingsCommand { get; }
+    public Interaction<
+        TimeSeriesViewerSettings,
+        Option<TimeSeriesViewerSettings>
+    > ShowConnectionSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
     public RxCommand ClearSeriesCommand { get; }
@@ -124,6 +131,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     protected TimeSeriesViewerViewModelBase()
     {
         ShowSettingsCommand = CreateCommandShowSettingsCommand();
+        ShowConnectionSettingsCommand = CreateCommandShowConnectionSettingsCommand();
         ClearDerivedCommand = ReactiveCommand.Create(() => Clear(true));
         ClearSeriesCommand = ReactiveCommand.Create(() => Clear());
 
@@ -133,7 +141,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         BuildHierarchyGridDefinitions = CreateCommandBuildHierarchyGridDefinitions();
         AdaptXAxisCommand = CreateCommandAdaptXAxisCommand();
 
-        GetConnectionCommand = CreateCommandGetConnection();
+        GetConnectionCommand = CreateCommandGetConnection(ShowConnectionSettingsCommand);
         ToggleHighlightsCommand = CreateCommandToggleHighlights();
 
         DisaggregateCommand = CreateCommandDisaggregateCommand();
@@ -148,8 +156,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ChangeSeriesChartTypesCommand = CreateCommandChangeSeriesChartTypesCommand();
         CopyToClipboardCommand = CreateCommandCopyToClipboardCommand();
         PasteFromClipboardCommand = CreateCommandPasteFromClipboardCommand();
-
-        Configuration = TimeSeriesViewerConfigurationViewModel.Load();
 
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
             .Select(o => o.IsSome)
@@ -198,10 +204,14 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
                 .DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.Configuration)
-                .Delay(TimeSpan.FromMilliseconds(50))
-                .Do(ApplySettings)
-                .InvokeCommand(GetConnectionCommand)
+            Signal
+                .Return(TimeSeriesViewerConfigurationViewModel.Load())
+                .DistinctUntilChanged()
+                .Subscribe(settings =>
+                {
+                    Signal.Return(settings.WebServiceAddress).InvokeCommand(GetConnectionCommand);
+                    Configuration = settings;
+                })
                 .DisposeWith(disposables);
 
             HierarchyGridViewModel
@@ -306,14 +316,44 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private RxCommand CreateCommandShowSettingsCommand()
+    private ReactiveCommand<
+        TimeSeriesViewerSettings,
+        string?
+    > CreateCommandShowConnectionSettingsCommand()
     {
-        ShowSettingsInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        var cmd = ReactiveCommand.CreateFromTask(async () =>
-        {
-            await ShowSettingsInteraction.Handle(RxVoid.Default);
-            Configuration = TimeSeriesViewerConfigurationViewModel.Load();
-        });
+        ShowConnectionSettingsInteraction.RegisterHandler(ctx =>
+            ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
+        );
+        var cmd = ReactiveCommand.CreateFromTask(
+            async (TimeSeriesViewerSettings settings) =>
+            {
+                var config = await ShowConnectionSettingsInteraction.Handle(settings);
+                config.IfSome(c =>
+                {
+                    Configuration = c;
+                });
+
+                return config.Match(s => s.WebServiceAddress, () => string.Empty);
+            }
+        );
+        return cmd;
+    }
+
+    private ReactiveCommand<TimeSeriesViewerSettings, RxVoid> CreateCommandShowSettingsCommand()
+    {
+        ShowSettingsInteraction.RegisterHandler(ctx =>
+            ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
+        );
+        var cmd = ReactiveCommand.CreateFromTask(
+            async (TimeSeriesViewerSettings settings) =>
+            {
+                var config = await ShowSettingsInteraction.Handle(settings);
+                config.IfSome(c =>
+                {
+                    Configuration = c;
+                });
+            }
+        );
         return cmd;
     }
 
@@ -379,23 +419,26 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<
-        TimeSeriesViewerSettings,
-        Option<CommunicationManager>
-    > CreateCommandGetConnection()
+    private ReactiveCommand<string?, Option<CommunicationManager>> CreateCommandGetConnection(
+        ReactiveCommand<TimeSeriesViewerSettings, string?> connectionSettingsCommand
+    )
     {
         var cmd = ReactiveCommand.CreateFromTask(
-            async (TimeSeriesViewerSettings configuration) =>
+            async (string? address) =>
             {
                 var cm = new CommunicationManager(
-                    !string.IsNullOrWhiteSpace(configuration.WebServiceAddress)
-                        ? configuration.WebServiceAddress
+                    !string.IsNullOrWhiteSpace(address)
+                        ? address
                         : TimeSeriesViewerSettings.DefaultWebServiceAddress
                 );
                 await cm.GetVersion();
                 return Option<CommunicationManager>.Some(cm);
             }
         );
+
+        connectionSettingsCommand
+            .Where(address => !string.IsNullOrWhiteSpace(address))
+            .InvokeCommand(cmd);
 
         _isConnectingHelper = cmd.IsExecuting.ToProperty(
             this,

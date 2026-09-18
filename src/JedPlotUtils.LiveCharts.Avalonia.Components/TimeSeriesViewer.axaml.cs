@@ -75,13 +75,27 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel
             .ShowSettingsInteraction.RegisterHandler(async ctx =>
             {
-                var cvm = new TimeSeriesViewerConfigurationViewModel();
+                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
                 OpenDialogAnimation(
                     viewModel,
                     new TimeSeriesViewerConfigurationView() { ViewModel = cvm }
                 );
-                await cvm.Result;
-                ctx.SetOutput(RxVoid.Default);
+                var res = await cvm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .ShowConnectionSettingsInteraction.RegisterHandler(async ctx =>
+            {
+                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                OpenDialogAnimation(
+                    viewModel,
+                    new TimeSeriesViewerConnectionView() { ViewModel = cvm }
+                );
+                var res = await cvm.Result;
+                ctx.SetOutput(res);
                 await CloseDialogAnimation(viewModel).ConfigureAwait(false);
             })
             .DisposeWith(disposables);
@@ -153,6 +167,17 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     );
 
                     await clipboard.SetDataAsync(dataTransfer);
+
+                    var xmlss = viewModel.SelectedSeries.ToXmlSpreadSheet();
+
+                    //
+
+                    dataTransfer.Add(
+                        DataTransferItem.Create(
+                            DataFormat.CreateStringPlatformFormat("application/vnd.ms-excel"),
+                            xmlss
+                        )
+                    );
                 }
 
                 ctx.SetOutput(RxVoid.Default);

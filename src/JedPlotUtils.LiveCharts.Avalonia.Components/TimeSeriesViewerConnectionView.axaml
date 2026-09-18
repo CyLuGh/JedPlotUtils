@@ -1,12 +1,12 @@
 <UserControl
-  x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewerConfigurationView"
+  x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewerConnectionView"
   xmlns="https://github.com/avaloniaui"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
   xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
   d:DesignHeight="450"
+  d:DesignWidth="800"
   x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
   mc:Ignorable="d">
   <StackPanel Spacing="16">
@@ -15,56 +15,20 @@
       VerticalAlignment="Center"
       FontSize="18"
       FontWeight="Bold"
-      Text="Settings" />
+      Text="JD+ Connection" />
 
     <Separator />
 
-    <Grid
-      Margin="10"
-      ColumnDefinitions="Auto,*"
-      ColumnSpacing="5"
-      RowDefinitions="Auto,Auto,Auto"
-      RowSpacing="7">
-      <TextBlock
-        Grid.Row="0"
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        Text="Selection mode:" />
-      <ComboBox
-        Grid.Row="0"
-        Grid.Column="1"
-        MinWidth="300"
-        ItemsSource="{Binding AvailableSeriesSelectionMode}"
-        SelectedItem="{Binding SeriesSelectionMode}" />
-      <TextBlock
-        Grid.Row="1"
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        Text="Display mode:" />
-      <ComboBox
-        Grid.Row="1"
-        Grid.Column="1"
-        MinWidth="300"
-        ItemsSource="{Binding AvailableDisplayMode}"
-        SelectedItem="{Binding DisplayMode}" />
-      <TextBlock
-        Grid.Row="2"
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        Text="Palette:" />
-      <ComboBox
-        Grid.Row="2"
-        Grid.Column="1"
-        MinWidth="300"
-        ItemsSource="{x:Static palette:Palettes.Available}"
-        SelectedItem="{Binding Palette}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate DataType="palette:IPalette">
-            <TextBlock Text="{Binding Name}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
-    </Grid>
+    <UniformGrid
+      HorizontalAlignment="Stretch"
+      VerticalAlignment="Top"
+      Columns="1"
+      RowSpacing="6">
+      <DockPanel HorizontalSpacing="4">
+        <TextBlock VerticalAlignment="Center" Text="JD+ Service:" />
+        <TextBox MinWidth="300" Text="{Binding Path=WebServiceAddress}" />
+      </DockPanel>
+    </UniformGrid>
 
     <UniformGrid Rows="1">
       <CheckBox
@@ -98,7 +62,7 @@
             <!--           StrokeJoin="Round"></Path> -->
             <!--   </Canvas> -->
             <!-- </Viewbox> -->
-            <TextBlock Text="Apply settings" />
+            <TextBlock Text="Connect to service" />
           </StackPanel>
         </Button>
       </StackPanel>

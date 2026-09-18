@@ -1,6 +1,7 @@
 ﻿using System.Text.Json;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
+using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.SourceGenerators;
@@ -10,8 +11,8 @@ namespace JedPlotUtils.ViewModels;
 
 public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
 {
-    private readonly TaskCompletionSource<RxVoid> _result = new();
-    public Task<RxVoid> Result => _result.Task;
+    private readonly TaskCompletionSource<Option<TimeSeriesViewerSettings>> _result = new();
+    public Task<Option<TimeSeriesViewerSettings>> Result => _result.Task;
 
     [Reactive]
     public partial string WebServiceAddress { get; set; } = string.Empty;
@@ -36,15 +37,20 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         "timeSeriesViewerSettings.json"
     );
 
-    public RxCommand SaveCommand { get; }
+    [Reactive]
+    public partial bool PersistSettings { get; set; }
+
+    public ReactiveCommand<bool, RxVoid> SaveCommand { get; }
+    public RxCommand CancelCommand { get; }
     public RxCommand LoadCommand { get; }
 
-    public TimeSeriesViewerConfigurationViewModel()
+    public TimeSeriesViewerConfigurationViewModel(Option<TimeSeriesViewerSettings> settings)
     {
         SaveCommand = CreateCommandSave();
+        CancelCommand = CreateCommandCancel();
         LoadCommand = CreateCommandLoad();
 
-        RestoreSettings(Load());
+        RestoreSettings(settings.Match(s => s, Load));
     }
 
     private void RestoreSettings(TimeSeriesViewerSettings settings)
@@ -57,6 +63,12 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         Palette = settings.Palette.ToPalette();
     }
 
+    private RxCommand CreateCommandCancel() =>
+        ReactiveCommand.Create(() =>
+        {
+            _result.TrySetResult(Option<TimeSeriesViewerSettings>.None);
+        });
+
     private RxCommand CreateCommandLoad()
     {
         var cmd = ReactiveCommand.CreateRunInBackground(() =>
@@ -66,21 +78,25 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         return cmd;
     }
 
-    private RxCommand CreateCommandSave()
+    private ReactiveCommand<bool, RxVoid> CreateCommandSave()
     {
-        var cmd = ReactiveCommand.CreateRunInBackground(() =>
-        {
-            Save(
-                new TimeSeriesViewerSettings()
+        var cmd = ReactiveCommand.CreateRunInBackground(
+            (bool save) =>
+            {
+                var settings = new TimeSeriesViewerSettings()
                 {
                     WebServiceAddress = WebServiceAddress,
                     SeriesSelectionMode = SeriesSelectionMode,
                     DisplayMode = DisplayMode,
                     Palette = Palette?.Name ?? string.Empty
-                }
-            );
-            _result.TrySetResult(RxVoid.Default);
-        });
+                };
+
+                if (save)
+                    Save(settings);
+
+                _result.TrySetResult(settings);
+            }
+        );
         return cmd;
     }
 
