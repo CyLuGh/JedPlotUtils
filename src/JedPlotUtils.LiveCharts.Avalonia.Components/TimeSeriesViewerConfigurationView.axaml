@@ -19,52 +19,100 @@
 
     <Separator />
 
-    <Grid
-      Margin="10"
-      ColumnDefinitions="Auto,*"
-      ColumnSpacing="5"
-      RowDefinitions="Auto,Auto,Auto"
-      RowSpacing="7">
-      <TextBlock
-        Grid.Row="0"
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        Text="Selection mode:" />
-      <ComboBox
-        Grid.Row="0"
-        Grid.Column="1"
-        MinWidth="300"
-        ItemsSource="{Binding AvailableSeriesSelectionMode}"
-        SelectedItem="{Binding SeriesSelectionMode}" />
-      <TextBlock
-        Grid.Row="1"
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        Text="Display mode:" />
-      <ComboBox
-        Grid.Row="1"
-        Grid.Column="1"
-        MinWidth="300"
-        ItemsSource="{Binding AvailableDisplayMode}"
-        SelectedItem="{Binding DisplayMode}" />
-      <TextBlock
-        Grid.Row="2"
-        Grid.Column="0"
-        VerticalAlignment="Center"
-        Text="Palette:" />
-      <ComboBox
-        Grid.Row="2"
-        Grid.Column="1"
-        MinWidth="300"
-        ItemsSource="{x:Static palette:Palettes.Available}"
-        SelectedItem="{Binding Palette}">
-        <ComboBox.ItemTemplate>
-          <DataTemplate DataType="palette:IPalette">
-            <TextBlock Text="{Binding Name}" />
-          </DataTemplate>
-        </ComboBox.ItemTemplate>
-      </ComboBox>
-    </Grid>
+    <UniformGrid Columns="2">
+      <Grid
+        Margin="10"
+        ColumnDefinitions="Auto,*"
+        ColumnSpacing="5"
+        RowDefinitions="Auto,Auto,Auto"
+        RowSpacing="7">
+        <TextBlock
+          Grid.Row="0"
+          Grid.Column="0"
+          VerticalAlignment="Center"
+          Text="Selection mode:" />
+        <ComboBox
+          Grid.Row="0"
+          Grid.Column="1"
+          MinWidth="300"
+          ItemsSource="{Binding AvailableSeriesSelectionMode}"
+          SelectedItem="{Binding SeriesSelectionMode}" />
+        <TextBlock
+          Grid.Row="1"
+          Grid.Column="0"
+          VerticalAlignment="Center"
+          Text="Display mode:" />
+        <ComboBox
+          Grid.Row="1"
+          Grid.Column="1"
+          MinWidth="300"
+          ItemsSource="{Binding AvailableDisplayMode}"
+          SelectedItem="{Binding DisplayMode}" />
+        <TextBlock
+          Grid.Row="2"
+          Grid.Column="0"
+          VerticalAlignment="Center"
+          Text="Palette:" />
+        <ComboBox
+          Grid.Row="2"
+          Grid.Column="1"
+          MinWidth="300"
+          ItemsSource="{x:Static palette:Palettes.Available}"
+          SelectedItem="{Binding Palette}">
+          <ComboBox.ItemTemplate>
+            <DataTemplate DataType="palette:IPalette">
+              <TextBlock Text="{Binding Name}" />
+            </DataTemplate>
+          </ComboBox.ItemTemplate>
+        </ComboBox>
+      </Grid>
+
+      <Grid
+          Margin="10"
+          ColumnDefinitions="Auto,*"
+          ColumnSpacing="5"
+          RowDefinitions="Auto,Auto,Auto"
+          RowSpacing="7">
+        <TextBlock
+            Grid.Row="0"
+            Grid.Column="0"
+            VerticalAlignment="Center"
+            Text="Date format:" />
+        <TextBox
+            Text="{Binding DateFormat}"
+            Grid.Row="0"
+            Grid.Column="1"
+            Width="300"
+            HorizontalAlignment="Left"
+             />
+        <TextBlock
+            Grid.Row="1"
+            Grid.Column="0"
+            VerticalAlignment="Center"
+            Text="Decimals:" />
+        <NumericUpDown
+            Value="{Binding Decimals}"
+            Minimum="0"
+            Maximum="10"
+            Grid.Row="1"
+            Grid.Column="1"
+            HorizontalAlignment="Left"
+            Width="300"
+            FormatString="N0"
+            ParsingNumberStyle="Integer"
+             />
+        <TextBlock
+            Grid.Row="2"
+            Grid.Column="0"
+            VerticalAlignment="Center"
+            Text="Thousands separators:" />
+        <ToggleSwitch
+            IsChecked="{Binding HasThousandsSeparators}"
+            Grid.Row="2"
+            Grid.Column="1"
+            />
+      </Grid>
+    </UniformGrid>
 
     <UniformGrid Rows="1">
       <CheckBox

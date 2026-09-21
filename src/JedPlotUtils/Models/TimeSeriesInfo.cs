@@ -40,6 +40,9 @@ public readonly record struct TimeSeriesInfo
     public bool IsDerived => Level != Level.Primary;
     public int Index { get; init; }
 
+    [JsonConverter(typeof(OptionStringConverter))]
+    public Option<string> NumberFormat { get; init; }
+
     public TimeSeriesInfo(
         string identifier,
         string label,
@@ -256,7 +259,8 @@ public readonly record struct TimeSeriesInfo
         HashMap<DateOnly, double> data,
         SeriesChartType chartType,
         HashMap<DateOnly, double> auxiliaryData,
-        int index
+        int index,
+        Option<string> numberFormat
     )
     {
         Identifier = identifier;
@@ -265,5 +269,6 @@ public readonly record struct TimeSeriesInfo
         ChartType = chartType;
         AuxiliaryData = auxiliaryData;
         Index = index;
+        NumberFormat = numberFormat;
     }
 }

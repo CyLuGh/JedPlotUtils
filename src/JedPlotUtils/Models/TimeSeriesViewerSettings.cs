@@ -10,11 +10,17 @@ public record TimeSeriesViewerSettings
             SeriesSelectionMode = SelectionMode.Single,
             WebServiceAddress = DefaultWebServiceAddress,
             DisplayMode = DisplayMode.BothHorizontal,
-            Palette = "Tango"
+            Palette = "Tango",
+            DateFormat = "yyyy-MM",
+            Decimals = 2,
+            HasThousandsSeparators = false
         };
 
-    public SelectionMode SeriesSelectionMode { get; set; }
-    public string? WebServiceAddress { get; set; }
-    public DisplayMode DisplayMode { get; set; }
-    public string? Palette { get; set; }
+    public SelectionMode SeriesSelectionMode { get; init; }
+    public string? WebServiceAddress { get; init; }
+    public DisplayMode DisplayMode { get; init; }
+    public string? Palette { get; init; }
+    public string? DateFormat { get; init; }
+    public byte Decimals { get; init; }
+    public bool HasThousandsSeparators { get; init; }
 }

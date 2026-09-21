@@ -34,7 +34,8 @@
           FindingStrategy="ExactMatchTakeClosest"
           IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
           Series="{Binding Path=AllSeries}"
-          XAxes="{Binding XAxes}">
+          XAxes="{Binding XAxes}"
+          YAxes="{Binding YAxes}">
           <lvc:CartesianChart.ContextMenu>
             <ContextMenu>
               <MenuItem Command="{Binding CopyToClipboardCommand}" Header="Copy" />

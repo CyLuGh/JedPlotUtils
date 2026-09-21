@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Globalization;
 using JedPlotUtils.Models;
 using LanguageExt;
 using LiveChartsCore;
@@ -34,11 +35,16 @@ public partial class TimeSeriesViewerViewModel
     [ObservableAsProperty(ReadOnly = false)]
     private Seq<DateTimeAxis> _xAxes;
 
+    [ObservableAsProperty(ReadOnly = false)]
+    private Seq<Axis> _yAxes;
+
     public ReactiveCommand<Func<DateOnly, string>, Seq<DateTimeAxis>> CreateXAxisCommand { get; }
+    public ReactiveCommand<Func<double, string>, Seq<Axis>> CreateYAxisCommand { get; }
 
     public TimeSeriesViewerViewModel()
     {
         CreateXAxisCommand = CreateCommandCreateXAxisCommand();
+        CreateYAxisCommand = CreateCommandCreateYAxisCommand();
 
         _lineSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
             .CombineLatest(
@@ -107,7 +113,12 @@ public partial class TimeSeriesViewerViewModel
                                 Fill = fill,
                                 AnimationsSpeed = TimeSpan.Zero,
                                 GeometrySize = GetGeometrySize(tsi),
-                                IsHoverable = tsi.Level != Level.Tertiary
+                                IsHoverable = tsi.Level != Level.Tertiary,
+                                YToolTipLabelFormatter = point =>
+                                    tsi.NumberFormat.Match(
+                                        f => point.Model?.Value?.ToString(f) ?? string.Empty,
+                                        () => point.Model?.Value?.ToString("N2") ?? string.Empty
+                                    )
                             };
                         }
                     )
@@ -164,7 +175,12 @@ public partial class TimeSeriesViewerViewModel
                                 Fill = null,
                                 AnimationsSpeed = TimeSpan.Zero,
                                 GeometrySize = GetGeometrySize(tsi),
-                                IsHoverable = tsi.Level != Level.Tertiary
+                                IsHoverable = tsi.Level != Level.Tertiary,
+                                YToolTipLabelFormatter = point =>
+                                    tsi.NumberFormat.Match(
+                                        f => point.Model?.Value?.ToString(f) ?? string.Empty,
+                                        () => point.Model?.Value?.ToString("N2") ?? string.Empty
+                                    )
                             };
                         }
                     )
@@ -308,7 +324,12 @@ public partial class TimeSeriesViewerViewModel
                                 Stroke = stroke,
                                 Fill = fill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level != Level.Tertiary
+                                IsHoverable = tsi.Level != Level.Tertiary,
+                                YToolTipLabelFormatter = point =>
+                                    tsi.NumberFormat.Match(
+                                        f => point.Model?.Value?.ToString(f) ?? string.Empty,
+                                        () => point.Model?.Value?.ToString("N2") ?? string.Empty
+                                    )
                             };
                         }
                     )
@@ -341,6 +362,15 @@ public partial class TimeSeriesViewerViewModel
                 .Switch()
                 .InvokeCommand(CreateXAxisCommand)
                 .DisposeWith(disposables);
+
+            this.WhenAnyValue(x => x.NumberFormat)
+                .Select<string?, Func<double, string>>(f =>
+                    !string.IsNullOrWhiteSpace(f)
+                        ? d => d.ToString(f)
+                        : d => d.ToString(CultureInfo.InvariantCulture)
+                )
+                .InvokeCommand(CreateYAxisCommand)
+                .DisposeWith(disposables);
         });
     }
 
@@ -365,6 +395,21 @@ public partial class TimeSeriesViewerViewModel
         _xAxesHelper = cmd.ToProperty(
             this,
             x => x.XAxes,
+            scheduler: RxSchedulers.MainThreadScheduler
+        );
+
+        return cmd;
+    }
+
+    private ReactiveCommand<Func<double, string>, Seq<Axis>> CreateCommandCreateYAxisCommand()
+    {
+        var cmd = ReactiveCommand.Create<Func<double, string>, Seq<Axis>>(f =>
+            Seq.create(new Axis() { Labeler = f })
+        );
+
+        _yAxesHelper = cmd.ToProperty(
+            this,
+            x => x.YAxes,
             scheduler: RxSchedulers.MainThreadScheduler
         );
 

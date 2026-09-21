@@ -59,7 +59,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     > HighlightChartPointCommand { get; }
 
     public ReactiveCommand<
-        (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
+        (Seq<TimeSeriesInfo>, Func<DateOnly, string>, Func<double, string>),
         HierarchyDefinitions
     > BuildHierarchyGridDefinitions { get; }
 
@@ -76,6 +76,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     [Reactive]
     public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
+
+    [Reactive]
+    public partial string NumberFormat { get; set; }
+
     public ReactiveCommand<Func<DateOnly, string>, Unit> AdaptXAxisCommand { get; }
     public Interaction<Func<DateOnly, string>, Unit> AdaptXAxisInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
@@ -211,6 +215,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 {
                     Signal.Return(settings.WebServiceAddress).InvokeCommand(GetConnectionCommand);
                     Configuration = settings;
+                    HierarchyGridViewModel.Theme = new LightGridTheme();
                 })
                 .DisposeWith(disposables);
 
@@ -271,6 +276,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 {
                     Selection = Selection.Remove(x);
                 });
+
+            this.WhenAnyValue(x => x.NumberFormat).Subscribe(UpdateFormat).DisposeWith(disposables);
         });
     }
 
@@ -403,6 +410,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         SeriesSelectionMode = settings.SeriesSelectionMode;
         DisplayMode = settings.DisplayMode;
         Palette = settings.Palette.ToPalette();
+        DateFormatter = !string.IsNullOrWhiteSpace(settings.DateFormat)
+            ? Option<Func<DateOnly, string>>.Some(d => d.ToString(settings.DateFormat))
+            : Option<Func<DateOnly, string>>.None;
+        char format = settings.HasThousandsSeparators ? 'N' : 'F';
+        NumberFormat = $"{format}{settings.Decimals}";
     }
 
     private ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> CreateCommandToggleHighlights()
@@ -529,15 +541,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     }
 
     private ReactiveCommand<
-        (Seq<TimeSeriesInfo>, Func<DateOnly, string>),
+        (Seq<TimeSeriesInfo>, Func<DateOnly, string>, Func<double, string>),
         HierarchyDefinitions
     > CreateCommandBuildHierarchyGridDefinitions()
     {
         var cmd = ReactiveCommand.CreateRunInBackground(
-            ((Seq<TimeSeriesInfo>, Func<DateOnly, string>) t) =>
+            ((Seq<TimeSeriesInfo>, Func<DateOnly, string>, Func<double, string>) t) =>
             {
-                var (infos, formatter) = t;
-                return DoBuildHierarchyGridDefinitions(infos, formatter);
+                var (infos, dateFormatter, numberFormatter) = t;
+                return DoBuildHierarchyGridDefinitions(infos, dateFormatter, numberFormatter);
             }
         );
 
@@ -545,7 +557,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Select(hm => hm.Values.ToSeq())
             .CombineLatest(
                 this.WhenAnyValue(x => x.DateFormatter)
-                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM")))
+                    .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM"))),
+                this.WhenAnyValue(x => x.NumberFormat)
+                    .Select<string?, Func<double, string>>(f =>
+                        !string.IsNullOrWhiteSpace(f)
+                            ? d => d.ToString(f)
+                            : d => d.ToString(CultureInfo.InvariantCulture)
+                    )
             )
             .Throttle(TimeSpan.FromMilliseconds(50))
             .InvokeCommand(cmd);
@@ -557,7 +575,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private HierarchyDefinitions DoBuildHierarchyGridDefinitions(
         Seq<TimeSeriesInfo> infos,
-        Func<DateOnly, string> formatter
+        Func<DateOnly, string> formatter,
+        Func<double, string> numberFormatter
     )
     {
         var map = infos
@@ -586,32 +605,29 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(x => x, () => double.NaN),
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                x => x,
+                                () => double.NaN
+                            ),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
-                        double dbl => double.IsNaN(dbl)
-                            ? Qualification.Empty
-                            : Qualification.Normal,
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                _ => Qualification.Normal,
+                                () => Qualification.Empty
+                            ),
+                        double dbl
+                            => double.IsNaN(dbl) ? Qualification.Empty : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
                 Formatter = o =>
                     o switch
                     {
-                        double dbl => double.IsNaN(dbl)
-                            ? string.Empty
-                            : dbl.ToString(CultureInfo.InvariantCulture),
+                        double dbl => double.IsNaN(dbl) ? string.Empty : numberFormatter(dbl),
                         _ => string.Empty,
                     },
                 ObservableContextItems = o =>
@@ -636,7 +652,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             "JD+|Disaggregate",
             _ =>
             {
-                Signal.Return(SelectedSeries.HeadOrNone()).InvokeCommand(DisaggregateCommand);
+                Signal.Return(SelectedSeries).InvokeCommand(DisaggregateCommand);
             },
             this.WhenAnyValue(x => x.HasConnection)
                 .CombineLatest(
@@ -730,6 +746,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             tsi with
             {
                 Index = SeriesCache.Count,
+                NumberFormat = NumberFormat
             }
         );
 
@@ -741,7 +758,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         var temp = SeriesCache.AddOrUpdateRange(series.Select(tsi => (tsi.Identifier, tsi)));
         SeriesCache = temp
             .Values.OrderBy(tsi => tsi.Identifier)
-            .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
+            .Map(
+                (idx, tsi) =>
+                    (tsi.Identifier, tsi with { Index = idx, NumberFormat = NumberFormat })
+            )
             .ToHashMap();
         ClearSelection();
     }
@@ -766,6 +786,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         }
 
         ClearSelection();
+    }
+
+    public void UpdateFormat(string format)
+    {
+        var updates = SeriesCache
+            .Values.Select(s => s with { NumberFormat = format })
+            .ToSeq()
+            .Map(tsi => (tsi.Identifier, tsi));
+        SeriesCache = SeriesCache.AddOrUpdateRange(updates);
     }
 
     public void RenameSeries(TimeSeriesInfo tsi, string? newName)

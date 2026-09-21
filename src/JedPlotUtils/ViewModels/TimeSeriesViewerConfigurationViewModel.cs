@@ -26,6 +26,15 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial SelectionMode SeriesSelectionMode { get; set; }
 
+    [Reactive]
+    public partial string DateFormat { get; set; }
+
+    [Reactive]
+    public partial byte Decimals { get; set; }
+
+    [Reactive]
+    public partial bool HasThousandsSeparators { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
@@ -88,7 +97,10 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     WebServiceAddress = WebServiceAddress,
                     SeriesSelectionMode = SeriesSelectionMode,
                     DisplayMode = DisplayMode,
-                    Palette = Palette?.Name ?? string.Empty
+                    Palette = Palette?.Name ?? string.Empty,
+                    DateFormat = DateFormat,
+                    Decimals = Decimals,
+                    HasThousandsSeparators = HasThousandsSeparators
                 };
 
                 if (save)
