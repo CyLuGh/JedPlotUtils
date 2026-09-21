@@ -1,72 +1,65 @@
-<UserControl xmlns="https://github.com/avaloniaui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
-             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
-             x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesBuilderView"
-             x:DataType="viewModels:TimeSeriesBuilderViewModel">
-  <StackPanel Spacing="16">
-    <TextBlock
-        Margin="20,0"
-        VerticalAlignment="Center"
-        FontSize="18"
-        FontWeight="Bold"
-        Text="Change frequency" />
+<UserControl
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesBuilderView"
+    x:DataType="viewModels:TimeSeriesBuilderViewModel"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Spacing="16">
+        <TextBlock
+            FontSize="18"
+            FontWeight="Bold"
+            Margin="20,0"
+            Text="Change frequency"
+            VerticalAlignment="Center" />
 
-    <Separator />
+        <Separator />
 
-    <Grid
-        Margin="10"
-        ColumnDefinitions="Auto,*"
-        ColumnSpacing="10"
-        RowDefinitions="Auto,Auto,Auto"
-        RowSpacing="4">
-      <TextBlock
-          Grid.Row="0"
-          Grid.Column="0"
-          VerticalAlignment="Center"
-          Text="Frequency:" />
-      <ComboBox
-          SelectedItem="{Binding TargetFrequency}"
-          ItemsSource="{Binding Frequencies}"
-          HorizontalAlignment="Stretch"
-          Grid.Row="0"
-            Grid.Column="1"
-                />
+        <UniformGrid
+            ColumnSpacing="10"
+            Columns="1"
+            Margin="10"
+            RowSpacing="10">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Frequency" />
+                <ComboBox
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding Frequencies}"
+                    SelectedItem="{Binding TargetFrequency}" />
+            </StackPanel>
 
-      <TextBlock
-          Grid.Row="1"
-          Grid.Column="0"
-          VerticalAlignment="Center"
-          Text="Aggregation type:" />
-      <ComboBox
-          SelectedItem="{Binding AggregationType}"
-          ItemsSource="{Binding AggregationTypes}"
-          HorizontalAlignment="Stretch"
-          Grid.Row="1"
-            Grid.Column="1"
-               />
+            <StackPanel Spacing="4">
+                <TextBlock Text="Aggregation type" />
+                <ComboBox
+                    HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding AggregationTypes}"
+                    SelectedItem="{Binding AggregationType}" />
+            </StackPanel>
 
-      <CheckBox Content="Remove original series"
-                IsChecked="{Binding RemoveOriginal}"
-                Grid.Column="1" 
-                Grid.Row="2"/>
-    </Grid>
+            <CheckBox
+                Content="Remove original series"
+                Grid.Column="1"
+                Grid.Row="2"
+                IsChecked="{Binding RemoveOriginal}" />
+        </UniformGrid>
 
-    <UniformGrid HorizontalAlignment="Right" Rows="1">
-      <Button
-          HorizontalAlignment="Stretch"
-          HorizontalContentAlignment="Center"
-          Command="{Binding CancelCommand}"
-          Content="Cancel" 
-          IsCancel="True"/>
-      <Button
-          HorizontalAlignment="Stretch"
-          HorizontalContentAlignment="Center"
-          Command="{Binding ValidateCommand}"
-          Content="Change frequency" 
-          IsDefault="True"/>
-    </UniformGrid>
-  </StackPanel>
+        <UniformGrid HorizontalAlignment="Right" Rows="1">
+            <Button
+                Command="{Binding CancelCommand}"
+                Content="Cancel"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsCancel="True" />
+            <Button
+                Command="{Binding ValidateCommand}"
+                Content="Change frequency"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                IsDefault="True" />
+        </UniformGrid>
+    </StackPanel>
 </UserControl>

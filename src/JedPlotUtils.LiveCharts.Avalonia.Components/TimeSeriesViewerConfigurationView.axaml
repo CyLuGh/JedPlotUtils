@@ -1,155 +1,123 @@
 <UserControl
-  x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewerConfigurationView"
-  xmlns="https://github.com/avaloniaui"
-  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
-  xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
-  d:DesignHeight="450"
-  x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
-  mc:Ignorable="d">
-  <StackPanel Spacing="16">
-    <TextBlock
-      Margin="20,0"
-      VerticalAlignment="Center"
-      FontSize="18"
-      FontWeight="Bold"
-      Text="Settings" />
+    d:DesignHeight="450"
+    mc:Ignorable="d"
+    x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewerConfigurationView"
+    x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
+    xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <StackPanel Spacing="16">
+        <TextBlock
+            FontSize="18"
+            FontWeight="Bold"
+            Margin="20,0"
+            Text="Settings"
+            VerticalAlignment="Center" />
 
-    <Separator />
+        <Separator />
 
-    <UniformGrid Columns="2">
-      <Grid
-        Margin="10"
-        ColumnDefinitions="Auto,*"
-        ColumnSpacing="5"
-        RowDefinitions="Auto,Auto,Auto"
-        RowSpacing="7">
-        <TextBlock
-          Grid.Row="0"
-          Grid.Column="0"
-          VerticalAlignment="Center"
-          Text="Selection mode:" />
-        <ComboBox
-          Grid.Row="0"
-          Grid.Column="1"
-          MinWidth="300"
-          ItemsSource="{Binding AvailableSeriesSelectionMode}"
-          SelectedItem="{Binding SeriesSelectionMode}" />
-        <TextBlock
-          Grid.Row="1"
-          Grid.Column="0"
-          VerticalAlignment="Center"
-          Text="Display mode:" />
-        <ComboBox
-          Grid.Row="1"
-          Grid.Column="1"
-          MinWidth="300"
-          ItemsSource="{Binding AvailableDisplayMode}"
-          SelectedItem="{Binding DisplayMode}" />
-        <TextBlock
-          Grid.Row="2"
-          Grid.Column="0"
-          VerticalAlignment="Center"
-          Text="Palette:" />
-        <ComboBox
-          Grid.Row="2"
-          Grid.Column="1"
-          MinWidth="300"
-          ItemsSource="{x:Static palette:Palettes.Available}"
-          SelectedItem="{Binding Palette}">
-          <ComboBox.ItemTemplate>
-            <DataTemplate DataType="palette:IPalette">
-              <TextBlock Text="{Binding Name}" />
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-      </Grid>
+        <UniformGrid
+            ColumnSpacing="10"
+            Columns="2"
+            Margin="10"
+            RowSpacing="10">
+            <StackPanel Spacing="4">
+                <TextBlock Text="Selection mode" />
+                <ComboBox
+                    HorizontalAlignment="Left"
+                    ItemsSource="{Binding AvailableSeriesSelectionMode}"
+                    SelectedItem="{Binding SeriesSelectionMode}"
+                    Width="300" />
+            </StackPanel>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Date format" />
+                <TextBox
+                    HorizontalAlignment="Left"
+                    Text="{Binding DateFormat}"
+                    Width="300" />
+            </StackPanel>
 
-      <Grid
-          Margin="10"
-          ColumnDefinitions="Auto,*"
-          ColumnSpacing="5"
-          RowDefinitions="Auto,Auto,Auto"
-          RowSpacing="7">
-        <TextBlock
-            Grid.Row="0"
-            Grid.Column="0"
-            VerticalAlignment="Center"
-            Text="Date format:" />
-        <TextBox
-            Text="{Binding DateFormat}"
-            Grid.Row="0"
-            Grid.Column="1"
-            Width="300"
-            HorizontalAlignment="Left"
-             />
-        <TextBlock
-            Grid.Row="1"
-            Grid.Column="0"
-            VerticalAlignment="Center"
-            Text="Decimals:" />
-        <NumericUpDown
-            Value="{Binding Decimals}"
-            Minimum="0"
-            Maximum="10"
-            Grid.Row="1"
-            Grid.Column="1"
-            HorizontalAlignment="Left"
-            Width="300"
-            FormatString="N0"
-            ParsingNumberStyle="Integer"
-             />
-        <TextBlock
-            Grid.Row="2"
-            Grid.Column="0"
-            VerticalAlignment="Center"
-            Text="Thousands separators:" />
-        <ToggleSwitch
-            IsChecked="{Binding HasThousandsSeparators}"
-            Grid.Row="2"
-            Grid.Column="1"
-            />
-      </Grid>
-    </UniformGrid>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Display mode" />
+                <ComboBox
+                    HorizontalAlignment="Left"
+                    ItemsSource="{Binding AvailableDisplayMode}"
+                    SelectedItem="{Binding DisplayMode}"
+                    Width="300" />
+            </StackPanel>
 
-    <UniformGrid Rows="1">
-      <CheckBox
-        Margin="10,0,0,5"
-        Content="Persist settings"
-        IsChecked="{Binding PersistSettings}" />
-      <StackPanel
-        Margin="0,0,5,5"
-        HorizontalAlignment="Right"
-        VerticalAlignment="Bottom"
-        Orientation="Horizontal"
-        Spacing="5">
-        <Button
-          Command="{Binding CancelCommand}"
-          Content="Cancel"
-          IsCancel="True" />
-        <Button
-          Height="30"
-          Command="{Binding SaveCommand}"
-          CommandParameter="{Binding PersistSettings}">
-          <StackPanel Orientation="Horizontal" Spacing="5">
-            <!-- <Viewbox> -->
-            <!--   <Canvas Width="24" Height="24"> -->
-            <!--  <Path Data="M4 6C4 4.89543 4.89543 4 6 4H14.1716C14.702 4 15.2107 4.21071 15.5858 4.58579L19.4142 8.41421C19.7893 8.78929 20 9.29799 20 9.82843V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V6Z"  -->
-            <!--  Fill="Black"  -->
-            <!--  Opacity=".15"/>  -->
-            <!--  <Path Data="M15 20V15H9V20M18 20H6C4.89543 20 4 19.1046 4 18V6C4 4.89543 4.89543 4 6 4H14.1716C14.702 4 15.2107 4.21071 15.5858 4.58579L19.4142 8.41421C19.7893 8.78929 20 9.29799 20 9.82843V18C20 19.1046 19.1046 20 18 20Z"  -->
-            <!--  Stroke="Black"  -->
-            <!--  StrokeThickness="1.5"  -->
-            <!--  StrokeLineCap="Round"  -->
-            <!--           StrokeJoin="Round"></Path> -->
-            <!--   </Canvas> -->
-            <!-- </Viewbox> -->
-            <TextBlock Text="Apply settings" />
-          </StackPanel>
-        </Button>
-      </StackPanel>
-    </UniformGrid>
-  </StackPanel>
+            <StackPanel Spacing="4">
+                <TextBlock Text="Decimals" />
+                <NumericUpDown
+                    FormatString="N0"
+                    HorizontalAlignment="Left"
+                    Maximum="10"
+                    Minimum="0"
+                    ParsingNumberStyle="Integer"
+                    Value="{Binding Decimals}"
+                    Width="300" />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Palette" />
+                <ComboBox
+                    HorizontalAlignment="Left"
+                    ItemsSource="{x:Static palette:Palettes.Available}"
+                    SelectedItem="{Binding Palette}"
+                    Width="300">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="palette:IPalette">
+                            <TextBlock Text="{Binding Name}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+
+            <StackPanel Spacing="4">
+                <TextBlock Text="Thousands separators" VerticalAlignment="Center" />
+                <ToggleSwitch IsChecked="{Binding HasThousandsSeparators}" />
+            </StackPanel>
+        </UniformGrid>
+
+        <UniformGrid Rows="1">
+            <CheckBox
+                Content="Persist settings"
+                IsChecked="{Binding PersistSettings}"
+                Margin="10,0,0,5" />
+            <StackPanel
+                HorizontalAlignment="Right"
+                Margin="0,0,5,5"
+                Orientation="Horizontal"
+                Spacing="5"
+                VerticalAlignment="Bottom">
+                <Button
+                    Command="{Binding CancelCommand}"
+                    Content="Cancel"
+                    IsCancel="True" />
+                <Button
+                    Command="{Binding SaveCommand}"
+                    CommandParameter="{Binding PersistSettings}"
+                    Height="30">
+                    <StackPanel Orientation="Horizontal" Spacing="5">
+                        <!-- <Viewbox> -->
+                        <!--   <Canvas Width="24" Height="24"> -->
+                        <!--  <Path Data="M4 6C4 4.89543 4.89543 4 6 4H14.1716C14.702 4 15.2107 4.21071 15.5858 4.58579L19.4142 8.41421C19.7893 8.78929 20 9.29799 20 9.82843V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V6Z"  -->
+                        <!--  Fill="Black"  -->
+                        <!--  Opacity=".15"/>  -->
+                        <!--  <Path Data="M15 20V15H9V20M18 20H6C4.89543 20 4 19.1046 4 18V6C4 4.89543 4.89543 4 6 4H14.1716C14.702 4 15.2107 4.21071 15.5858 4.58579L19.4142 8.41421C19.7893 8.78929 20 9.29799 20 9.82843V18C20 19.1046 19.1046 20 18 20Z"  -->
+                        <!--  Stroke="Black"  -->
+                        <!--  StrokeThickness="1.5"  -->
+                        <!--  StrokeLineCap="Round"  -->
+                        <!--           StrokeJoin="Round"></Path> -->
+                        <!--   </Canvas> -->
+                        <!-- </Viewbox> -->
+                        <TextBlock Text="Apply settings" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </UniformGrid>
+    </StackPanel>
 </UserControl>

@@ -2,9 +2,6 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
-using ClosedXML.Excel;
-using DocumentFormat.OpenXml.Spreadsheet;
-using DocumentFormat.OpenXml.Wordprocessing;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -21,7 +18,6 @@ using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
 using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
-using SkiaSharp;
 using AV = Avalonia;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
@@ -62,7 +58,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     }
 
     private Option<PointerPressedEventArgs> _dragPointerPressedEventArgs;
-    private bool _dragStarted = false;
+    private bool _dragStarted;
 
     private void PopulateFromViewModel(
         TimeSeriesViewer view,
@@ -200,9 +196,9 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 var bytes =
                     await data?.TryGetValueAsync(
                         DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
-                    ) ?? [];
+                    )! ?? [];
 
-                if (bytes?.Length > 0)
+                if (bytes.Length > 0)
                 {
                     ctx.SetOutput(bytes.ToTimeSeriesInfo().ToSeq());
                     return;
@@ -223,7 +219,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 /* File format */
                 if (await data.TryGetFilesAsync().ConfigureAwait(false) is { } files)
                 {
-                    // TODO: check csv, check xlsx, check open office
+                    // TODO: check csv, check xlsx, check OpenOffice
                     foreach (var file in files)
                     {
                         var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
@@ -294,12 +290,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 viewModel.Selection = viewModel.SeriesSelectionMode switch
                 {
-                    SelectionMode.Single
-                        => viewModel
-                            .Selection.Clear()
-                            .Add((Identifier)found[0].Context.Series.Tag!),
-                    SelectionMode.Multiple
-                        => viewModel.Selection.TryAdd((Identifier)found[0].Context.Series.Tag!),
+                    SelectionMode.Single => viewModel
+                        .Selection.Clear()
+                        .Add((Identifier)found[0].Context.Series.Tag!),
+                    SelectionMode.Multiple => viewModel.Selection.TryAdd(
+                        (Identifier)found[0].Context.Series.Tag!
+                    ),
                     _ => viewModel.Selection,
                 };
 
@@ -328,7 +324,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .Throttle(TimeSpan.FromMilliseconds(20))
             .Subscribe(x =>
             {
-                var (chart, newItems, oldItems) = x;
+                var (_, newItems, _) = x;
                 var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
                 if (!nItems.IsEmpty)
                 {
@@ -392,7 +388,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 handler => view.CartesianChart.PointerReleased += handler,
                 handler => view.CartesianChart.PointerReleased -= handler
             )
-            .Subscribe(t =>
+            .Subscribe(_ =>
             {
                 _dragStarted = false;
                 _dragPointerPressedEventArgs = Option<PointerPressedEventArgs>.None;
@@ -457,7 +453,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                         var storageFile = await (
                             TopLevel
                                 .GetTopLevel(view)
-                                ?.StorageProvider.TryGetFileFromPathAsync(filePath)
+                                ?.StorageProvider.TryGetFileFromPathAsync(filePath)!
                         ).ConfigureAwait(false);
                         if (storageFile is not null)
                             dragData.Add(DataTransferItem.CreateFile(storageFile));
@@ -469,11 +465,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                             )
                         );
 
-                        var result = await DragDrop.DoDragDropAsync(
-                            evt,
-                            dragData,
-                            DragDropEffects.Copy
-                        );
+                        await DragDrop.DoDragDropAsync(evt, dragData, DragDropEffects.Copy);
 
                         _dragStarted = false;
                         _dragPointerPressedEventArgs = Option<PointerPressedEventArgs>.None;
@@ -533,7 +525,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 /* File format */
                 if (e.DataTransfer.TryGetFiles() is { } files)
                 {
-                    // TODO: check csv, check xlsx, check open office
+                    // TODO: check csv, check xlsx, check OpenOffice
                     foreach (var file in files)
                     {
                         var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
