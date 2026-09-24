@@ -1,6 +1,6 @@
 <UserControl
     MinWidth="400"
-    d:DesignHeight="450"
+    d:DesignHeight="250"
     d:DesignWidth="400"
     mc:Ignorable="d"
     x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.RenameSeriesView"
@@ -10,35 +10,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Spacing="16">
-        <TextBlock
-            FontSize="18"
-            FontWeight="Bold"
-            Margin="20,0"
-            Text="Rename series"
-            VerticalAlignment="Center" />
-
-        <Separator />
-
+    <DockPanel VerticalSpacing="16">
         <UniformGrid
-            ColumnSpacing="10"
-            Columns="1"
-            Margin="10"
-            RowSpacing="10">
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="Current label" />
-                <TextBox IsReadOnly="True" Text="{Binding CurrentName}" />
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="New label" />
-                <TextBox Text="{Binding NewName}" />
-            </StackPanel>
-
-        </UniformGrid>
-
-        <UniformGrid HorizontalAlignment="Right" Rows="1">
+            DockPanel.Dock="Bottom"
+            HorizontalAlignment="Right"
+            Rows="1">
             <Button
                 Command="{Binding CancelCommand}"
                 Content="Cancel"
@@ -50,5 +26,33 @@
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center" />
         </UniformGrid>
-    </StackPanel>
+        <StackPanel Spacing="4">
+            <TextBlock
+                FontSize="18"
+                FontWeight="Bold"
+                Margin="20,0"
+                Text="Rename series"
+                VerticalAlignment="Center" />
+
+            <Separator />
+
+            <UniformGrid
+                ColumnSpacing="10"
+                Columns="1"
+                Margin="10"
+                RowSpacing="10">
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Current label" />
+                    <TextBox IsReadOnly="True" Text="{Binding CurrentName}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="New label" />
+                    <TextBox Text="{Binding NewName}" />
+                </StackPanel>
+
+            </UniformGrid>
+        </StackPanel>
+    </DockPanel>
 </UserControl>

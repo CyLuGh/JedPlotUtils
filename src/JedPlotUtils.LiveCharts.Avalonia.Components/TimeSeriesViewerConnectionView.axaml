@@ -1,6 +1,6 @@
 <UserControl
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DesignHeight="200"
+    d:DesignWidth="500"
     mc:Ignorable="d"
     x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewerConnectionView"
     x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
@@ -9,30 +9,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Spacing="16">
-        <TextBlock
-            FontSize="18"
-            FontWeight="Bold"
-            Margin="20,0"
-            Text="JD+ Connection"
-            VerticalAlignment="Center" />
-
-        <Separator />
-
-        <UniformGrid
-            Columns="1"
-            HorizontalAlignment="Stretch"
-            Margin="10"
-            RowSpacing="10"
-            VerticalAlignment="Top">
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="JD+ server address" />
-                <TextBox HorizontalAlignment="Stretch" Text="{Binding WebServiceAddress}" />
-            </StackPanel>
-        </UniformGrid>
-
-        <UniformGrid Rows="1">
+    <DockPanel VerticalSpacing="16">
+        <UniformGrid DockPanel.Dock="Bottom" Rows="1">
             <CheckBox
                 Content="Persist settings"
                 IsChecked="{Binding PersistSettings}"
@@ -69,5 +47,37 @@
                 </Button>
             </StackPanel>
         </UniformGrid>
-    </StackPanel>
+
+        <StackPanel DockPanel.Dock="Top" Spacing="4">
+            <TextBlock
+                FontSize="18"
+                FontWeight="Bold"
+                Margin="20,0"
+                Text="JD+ Connection"
+                VerticalAlignment="Center" />
+
+            <Separator />
+
+            <UniformGrid
+                Columns="1"
+                HorizontalAlignment="Stretch"
+                Margin="10"
+                RowSpacing="10"
+                VerticalAlignment="Top">
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="JD+ server address" />
+                    <TextBox HorizontalAlignment="Stretch" Text="{Binding WebServiceAddress}" />
+                </StackPanel>
+            </UniformGrid>
+        </StackPanel>
+
+
+
+
+
+
+
+
+    </DockPanel>
 </UserControl>

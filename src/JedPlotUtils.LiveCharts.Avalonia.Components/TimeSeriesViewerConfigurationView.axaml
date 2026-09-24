@@ -1,5 +1,6 @@
 <UserControl
-    d:DesignHeight="450"
+    d:DesignHeight="350"
+    d:DesignWidth="650"
     mc:Ignorable="d"
     x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesViewerConfigurationView"
     x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
@@ -9,80 +10,8 @@
     xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
     xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Spacing="16">
-        <TextBlock
-            FontSize="18"
-            FontWeight="Bold"
-            Margin="20,0"
-            Text="Settings"
-            VerticalAlignment="Center" />
-
-        <Separator />
-
-        <UniformGrid
-            ColumnSpacing="10"
-            Columns="2"
-            Margin="10"
-            RowSpacing="10">
-            <StackPanel Spacing="4">
-                <TextBlock Text="Selection mode" />
-                <ComboBox
-                    HorizontalAlignment="Left"
-                    ItemsSource="{Binding AvailableSeriesSelectionMode}"
-                    SelectedItem="{Binding SeriesSelectionMode}"
-                    Width="300" />
-            </StackPanel>
-            <StackPanel Spacing="4">
-                <TextBlock Text="Date format" />
-                <TextBox
-                    HorizontalAlignment="Left"
-                    Text="{Binding DateFormat}"
-                    Width="300" />
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="Display mode" />
-                <ComboBox
-                    HorizontalAlignment="Left"
-                    ItemsSource="{Binding AvailableDisplayMode}"
-                    SelectedItem="{Binding DisplayMode}"
-                    Width="300" />
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="Decimals" />
-                <NumericUpDown
-                    FormatString="N0"
-                    HorizontalAlignment="Left"
-                    Maximum="10"
-                    Minimum="0"
-                    ParsingNumberStyle="Integer"
-                    Value="{Binding Decimals}"
-                    Width="300" />
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="Palette" />
-                <ComboBox
-                    HorizontalAlignment="Left"
-                    ItemsSource="{x:Static palette:Palettes.Available}"
-                    SelectedItem="{Binding Palette}"
-                    Width="300">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate DataType="palette:IPalette">
-                            <TextBlock Text="{Binding Name}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="Thousands separators" VerticalAlignment="Center" />
-                <ToggleSwitch IsChecked="{Binding HasThousandsSeparators}" />
-            </StackPanel>
-        </UniformGrid>
-
-        <UniformGrid Rows="1">
+    <DockPanel VerticalSpacing="16">
+        <UniformGrid DockPanel.Dock="Bottom" Rows="1">
             <CheckBox
                 Content="Persist settings"
                 IsChecked="{Binding PersistSettings}"
@@ -119,5 +48,78 @@
                 </Button>
             </StackPanel>
         </UniformGrid>
-    </StackPanel>
+
+        <StackPanel Spacing="4">
+            <TextBlock
+                FontSize="18"
+                FontWeight="Bold"
+                Margin="20,0"
+                Text="Settings"
+                VerticalAlignment="Center" />
+
+            <Separator />
+
+            <UniformGrid
+                ColumnSpacing="10"
+                Columns="2"
+                Margin="10"
+                RowSpacing="10">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Selection mode" />
+                    <ComboBox
+                        HorizontalAlignment="Left"
+                        ItemsSource="{Binding AvailableSeriesSelectionMode}"
+                        SelectedItem="{Binding SeriesSelectionMode}"
+                        Width="300" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Date format" />
+                    <TextBox
+                        HorizontalAlignment="Left"
+                        Text="{Binding DateFormat}"
+                        Width="300" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Display mode" />
+                    <ComboBox
+                        HorizontalAlignment="Left"
+                        ItemsSource="{Binding AvailableDisplayMode}"
+                        SelectedItem="{Binding DisplayMode}"
+                        Width="300" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Decimals" />
+                    <NumericUpDown
+                        FormatString="N0"
+                        HorizontalAlignment="Left"
+                        Maximum="10"
+                        Minimum="0"
+                        ParsingNumberStyle="Integer"
+                        Value="{Binding Decimals}"
+                        Width="300" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Palette" />
+                    <ComboBox
+                        HorizontalAlignment="Left"
+                        ItemsSource="{x:Static palette:Palettes.Available}"
+                        SelectedItem="{Binding Palette}"
+                        Width="300">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate DataType="palette:IPalette">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Thousands separators" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding HasThousandsSeparators}" />
+                </StackPanel>
+            </UniformGrid>
+        </StackPanel>
+    </DockPanel>
 </UserControl>

@@ -1,6 +1,6 @@
 <UserControl
-    d:DesignHeight="450"
-    d:DesignWidth="800"
+    d:DesignHeight="350"
+    d:DesignWidth="450"
     mc:Ignorable="d"
     x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.TimeSeriesBuilderView"
     x:DataType="viewModels:TimeSeriesBuilderViewModel"
@@ -9,45 +9,11 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <StackPanel Spacing="16">
-        <TextBlock
-            FontSize="18"
-            FontWeight="Bold"
-            Margin="20,0"
-            Text="Change frequency"
-            VerticalAlignment="Center" />
-
-        <Separator />
-
+    <DockPanel VerticalSpacing="16">
         <UniformGrid
-            ColumnSpacing="10"
-            Columns="1"
-            Margin="10"
-            RowSpacing="10">
-            <StackPanel Spacing="4">
-                <TextBlock Text="Frequency" />
-                <ComboBox
-                    HorizontalAlignment="Stretch"
-                    ItemsSource="{Binding Frequencies}"
-                    SelectedItem="{Binding TargetFrequency}" />
-            </StackPanel>
-
-            <StackPanel Spacing="4">
-                <TextBlock Text="Aggregation type" />
-                <ComboBox
-                    HorizontalAlignment="Stretch"
-                    ItemsSource="{Binding AggregationTypes}"
-                    SelectedItem="{Binding AggregationType}" />
-            </StackPanel>
-
-            <CheckBox
-                Content="Remove original series"
-                Grid.Column="1"
-                Grid.Row="2"
-                IsChecked="{Binding RemoveOriginal}" />
-        </UniformGrid>
-
-        <UniformGrid HorizontalAlignment="Right" Rows="1">
+            DockPanel.Dock="Bottom"
+            HorizontalAlignment="Right"
+            Rows="1">
             <Button
                 Command="{Binding CancelCommand}"
                 Content="Cancel"
@@ -61,5 +27,45 @@
                 HorizontalContentAlignment="Center"
                 IsDefault="True" />
         </UniformGrid>
-    </StackPanel>
+        <StackPanel Spacing="4">
+            <TextBlock
+                FontSize="18"
+                FontWeight="Bold"
+                Margin="20,0"
+                Text="Change frequency"
+                VerticalAlignment="Center" />
+
+            <Separator />
+
+            <UniformGrid
+                ColumnSpacing="10"
+                Columns="1"
+                Margin="10"
+                RowSpacing="10">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Frequency" />
+                    <ComboBox
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding Frequencies}"
+                        SelectedItem="{Binding TargetFrequency}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Aggregation type" />
+                    <ComboBox
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding AggregationTypes}"
+                        SelectedItem="{Binding AggregationType}" />
+                </StackPanel>
+
+                <CheckBox
+                    Content="Remove original series"
+                    Grid.Column="1"
+                    Grid.Row="2"
+                    IsChecked="{Binding RemoveOriginal}" />
+            </UniformGrid>
+
+
+        </StackPanel>
+    </DockPanel>
 </UserControl>

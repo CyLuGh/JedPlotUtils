@@ -132,12 +132,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public Interaction<RxVoid, Seq<TimeSeriesInfo>> PasteFromClipboardInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
+    public RxInteraction ClearInfoInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
     protected TimeSeriesViewerViewModelBase()
     {
+        ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+
         ShowSettingsCommand = CreateCommandShowSettingsCommand();
         ShowConnectionSettingsCommand = CreateCommandShowConnectionSettingsCommand();
-        ClearDerivedCommand = ReactiveCommand.Create(() => Clear(true));
-        ClearSeriesCommand = ReactiveCommand.Create(() => Clear());
+        ClearDerivedCommand = ReactiveCommand.CreateFromTask(async () => await Clear(true));
+        ClearSeriesCommand = ReactiveCommand.CreateFromTask(async () => await Clear());
 
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
         HoverCellGridCommand = CreateCommandHoverGridCommand();
@@ -148,10 +152,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         GetConnectionCommand = CreateCommandGetConnection(ShowConnectionSettingsCommand);
         ToggleHighlightsCommand = CreateCommandToggleHighlights();
 
-        DisaggregateCommand = CreateCommandDisaggregateCommand();
-        CreateDisaggregatedSeriesCommand = CreateCommandCreateDisaggregatedSeriesCommand(
-            DisaggregateCommand
+        DisaggregateCommand = CreateCommandDisaggregateCommand(
+            ClearSeriesCommand,
+            ClearDerivedCommand
         );
+        CreateDisaggregatedSeriesCommand = CreateCommandCreateDisaggregatedSeriesCommand();
         ChangeFrequencyCommand = CreateCommandChangeFrequencyCommand();
 
         RenameSeriesCommand = CreateCommandRenameSeriesCommand();
@@ -160,6 +165,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ChangeSeriesChartTypesCommand = CreateCommandChangeSeriesChartTypesCommand();
         CopyToClipboardCommand = CreateCommandCopyToClipboardCommand();
         PasteFromClipboardCommand = CreateCommandPasteFromClipboardCommand();
+
+        ShowDisaggregationInfo = CreateCommandShowDisaggregationInfo();
 
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
             .Select(o => o.IsSome)
@@ -175,6 +182,14 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .ToProperty(
                 this,
                 x => x.ThrottledHoveredPoint,
+                scheduler: RxSchedulers.MainThreadScheduler
+            );
+
+        _hasDisaggregationResultsHelper = this.WhenAnyValue(x => x.DisaggregationResults)
+            .Select(o => o.IsSome)
+            .ToProperty(
+                this,
+                x => x.HasDisaggregationResults,
                 scheduler: RxSchedulers.MainThreadScheduler
             );
 
@@ -766,7 +781,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearSelection();
     }
 
-    public void Clear(bool derivedOnly = false)
+    private async Task Clear(bool derivedOnly = false)
     {
         if (derivedOnly)
         {
@@ -779,6 +794,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .Values.OrderBy(tsi => tsi.Identifier)
                 .Map((idx, tsi) => (tsi.Identifier, tsi with { Index = idx }))
                 .ToHashMap();
+
+            await ClearInfoInteraction.Handle(RxVoid.Default);
         }
         else
         {

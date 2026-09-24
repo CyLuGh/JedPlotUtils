@@ -40,17 +40,26 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         });
     }
 
-    private void OpenDialogAnimation(TimeSeriesViewerViewModel viewModel, object? content)
+    private async Task OpenDialogAnimation(
+        TimeSeriesViewerViewModel viewModel,
+        object? content,
+        double width = 600,
+        double height = 400
+    )
     {
         DialogContent.Content = content;
         viewModel.IsDialogOpen = true;
+        await Task.Delay(50);
+
         viewModel.DialogOpacity = 1;
-        // DialogBorder.RenderTransform = new ScaleTransform(1, 1);
+        DialogBorder.Width = width;
+        DialogBorder.Height = height;
     }
 
     private async Task CloseDialogAnimation(TimeSeriesViewerViewModel viewModel)
     {
-        // DialogBorder.RenderTransform = new ScaleTransform(.8, .8);
+        DialogBorder.Width = 100;
+        DialogBorder.Height = 50;
         viewModel.DialogOpacity = 0;
         await Task.Delay(220);
         viewModel.IsDialogOpen = false;
@@ -68,17 +77,34 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
 
+        viewModel.ClearInfoInteraction.RegisterHandler(ctx =>
+        {
+            view.InfoContent.Content = null;
+            ctx.SetOutput(RxVoid.Default);
+        });
+
+        viewModel.ShowDisaggregationInfoInteraction.RegisterHandler(ctx =>
+        {
+            view.InfoContent.Content = new DisaggregationResultsInfoView()
+            {
+                DataContext = ctx.Input
+            };
+            ctx.SetOutput(RxVoid.Default);
+        });
+
         viewModel
             .ShowSettingsInteraction.RegisterHandler(async ctx =>
             {
                 var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
-                OpenDialogAnimation(
+                await OpenDialogAnimation(
                     viewModel,
-                    new TimeSeriesViewerConfigurationView() { ViewModel = cvm }
+                    new TimeSeriesViewerConfigurationView() { ViewModel = cvm },
+                    700,
+                    380
                 );
                 var res = await cvm.Result;
                 ctx.SetOutput(res);
-                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+                await CloseDialogAnimation(viewModel);
             })
             .DisposeWith(disposables);
 
@@ -86,13 +112,15 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .ShowConnectionSettingsInteraction.RegisterHandler(async ctx =>
             {
                 var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
-                OpenDialogAnimation(
+                await OpenDialogAnimation(
                     viewModel,
-                    new TimeSeriesViewerConnectionView() { ViewModel = cvm }
+                    new TimeSeriesViewerConnectionView() { ViewModel = cvm },
+                    520,
+                    220
                 );
                 var res = await cvm.Result;
                 ctx.SetOutput(res);
-                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+                await CloseDialogAnimation(viewModel);
             })
             .DisposeWith(disposables);
 
@@ -100,13 +128,15 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .GetDisaggregationRequestInteraction.RegisterHandler(async ctx =>
             {
                 var dovm = new DisaggregationOptionsViewModel();
-                OpenDialogAnimation(
+                await OpenDialogAnimation(
                     viewModel,
-                    new DisaggregationOptionsView() { ViewModel = dovm }
+                    new DisaggregationOptionsView() { ViewModel = dovm },
+                    700,
+                    700
                 );
                 var res = await dovm.Result;
                 ctx.SetOutput(res);
-                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+                await CloseDialogAnimation(viewModel);
             })
             .DisposeWith(disposables);
 
@@ -114,10 +144,15 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .RenameSeriesInteraction.RegisterHandler(async ctx =>
             {
                 var rsvm = new RenameSeriesViewModel() { CurrentName = ctx.Input.Label };
-                OpenDialogAnimation(viewModel, new RenameSeriesView() { ViewModel = rsvm });
+                await OpenDialogAnimation(
+                    viewModel,
+                    new RenameSeriesView() { ViewModel = rsvm },
+                    450,
+                    280
+                );
                 var res = await rsvm.Result;
                 ctx.SetOutput(res);
-                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+                await CloseDialogAnimation(viewModel);
             })
             .DisposeWith(disposables);
 
@@ -125,10 +160,15 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .GetFrequencyChangeOptionsInteraction.RegisterHandler(async ctx =>
             {
                 var tsbvm = new TimeSeriesBuilderViewModel();
-                OpenDialogAnimation(viewModel, new TimeSeriesBuilderView() { ViewModel = tsbvm });
+                await OpenDialogAnimation(
+                    viewModel,
+                    new TimeSeriesBuilderView() { ViewModel = tsbvm },
+                    450,
+                    320
+                );
                 var res = await tsbvm.Result;
                 ctx.SetOutput(res);
-                await CloseDialogAnimation(viewModel).ConfigureAwait(false);
+                await CloseDialogAnimation(viewModel);
             })
             .DisposeWith(disposables);
 
@@ -290,12 +330,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 viewModel.Selection = viewModel.SeriesSelectionMode switch
                 {
-                    SelectionMode.Single => viewModel
-                        .Selection.Clear()
-                        .Add((Identifier)found[0].Context.Series.Tag!),
-                    SelectionMode.Multiple => viewModel.Selection.TryAdd(
-                        (Identifier)found[0].Context.Series.Tag!
-                    ),
+                    SelectionMode.Single
+                        => viewModel
+                            .Selection.Clear()
+                            .Add((Identifier)found[0].Context.Series.Tag!),
+                    SelectionMode.Multiple
+                        => viewModel.Selection.TryAdd((Identifier)found[0].Context.Series.Tag!),
                     _ => viewModel.Selection,
                 };
 

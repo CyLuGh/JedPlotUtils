@@ -4,12 +4,47 @@ using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
+using ReactiveUI.SourceGenerators;
 using Splat;
 
 namespace JedPlotUtils.ViewModels;
 
 public partial class TimeSeriesViewerViewModelBase
 {
+    [ObservableAsProperty]
+    private bool _hasDisaggregationResults;
+
+    [ObservableAsProperty(ReadOnly = false)]
+    private Option<TemporalDisaggregationResults> _disaggregationResults;
+
+    private ReactiveCommand<
+        Option<TemporalDisaggregationResults>,
+        RxVoid
+    > ShowDisaggregationInfo { get; }
+
+    public Interaction<
+        TemporalDisaggregationResults,
+        RxVoid
+    > ShowDisaggregationInfoInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
+    private ReactiveCommand<
+        Option<TemporalDisaggregationResults>,
+        RxVoid
+    > CreateCommandShowDisaggregationInfo()
+    {
+        ShowDisaggregationInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        var cmd = ReactiveCommand.CreateFromTask(
+            async (Option<TemporalDisaggregationResults> o) =>
+            {
+                await o.IfSomeAsync(async r => await ShowDisaggregationInfoInteraction.Handle(r));
+            }
+        );
+
+        this.WhenAnyValue(x => x.DisaggregationResults).InvokeCommand(cmd);
+
+        return cmd;
+    }
+
     public ReactiveCommand<
         Seq<TimeSeriesInfo>,
         Option<TemporalDisaggregationResults>
@@ -23,7 +58,7 @@ public partial class TimeSeriesViewerViewModelBase
     private ReactiveCommand<
         Seq<TimeSeriesInfo>,
         Option<TemporalDisaggregationResults>
-    > CreateCommandDisaggregateCommand()
+    > CreateCommandDisaggregateCommand(RxCommand clearSeriesCommand, RxCommand clearDerivedCommand)
     {
         GetDisaggregationRequestInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(
@@ -55,6 +90,19 @@ public partial class TimeSeriesViewerViewModelBase
             },
             canExecute
         );
+
+        _disaggregationResultsHelper = Signal
+            .Merge(
+                cmd,
+                cmd.ThrownExceptions.Select(_ => Option<TemporalDisaggregationResults>.None),
+                clearSeriesCommand.Select(_ => Option<TemporalDisaggregationResults>.None),
+                clearDerivedCommand.Select(_ => Option<TemporalDisaggregationResults>.None)
+            )
+            .ToProperty(
+                this,
+                x => x.DisaggregationResults,
+                scheduler: RxSchedulers.MainThreadScheduler
+            );
 
         cmd.ThrownExceptions.Subscribe(ex => this.Log().Error(ex));
 
@@ -102,17 +150,12 @@ public partial class TimeSeriesViewerViewModelBase
     private ReactiveCommand<
         Option<TemporalDisaggregationResults>,
         RxVoid
-    > CreateCommandCreateDisaggregatedSeriesCommand(
-        ReactiveCommand<
-            Seq<TimeSeriesInfo>,
-            Option<TemporalDisaggregationResults>
-        > disaggregateCommand
-    )
+    > CreateCommandCreateDisaggregatedSeriesCommand()
     {
-        var cmd = ReactiveCommand.CreateRunInBackground(
-            (Option<TemporalDisaggregationResults> o) =>
+        var cmd = ReactiveCommand.CreateFromTask(
+            async (Option<TemporalDisaggregationResults> o) =>
             {
-                Clear(true);
+                await Clear(true).ConfigureAwait(false);
                 o.IfSome(res =>
                 {
                     var disaggregatedSeries = res.DisaggregatedSeries.GetDateValues();
@@ -141,13 +184,7 @@ public partial class TimeSeriesViewerViewModelBase
             }
         );
 
-        disaggregateCommand
-            .Merge(
-                disaggregateCommand.ThrownExceptions.Select(_ =>
-                    Option<TemporalDisaggregationResults>.None
-                )
-            )
-            .InvokeCommand(cmd);
+        this.WhenAnyValue(x => x.DisaggregationResults).InvokeCommand(cmd);
 
         return cmd;
     }

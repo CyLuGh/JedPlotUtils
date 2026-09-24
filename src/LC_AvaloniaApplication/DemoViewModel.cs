@@ -6,6 +6,7 @@ using JedPlotUtils.Palette;
 using JedPlotUtils.ViewModels;
 using ReactiveUI;
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
 using RxCommand = ReactiveUI.ReactiveCommand<
     ReactiveUI.Primitives.RxVoid,
@@ -61,7 +62,12 @@ public partial class DemoViewModel : BaseViewModel
                     )
                 )
         );
-        ClearSeries = ReactiveCommand.Create(() => TimeSeriesViewModel.Clear(false));
+        ClearSeries = ReactiveCommand.Create(() =>
+        {
+            Signal
+                .Return(RxVoid.Default)
+                .InvokeCommand(TimeSeriesViewModel, x => x.ClearSeriesCommand);
+        });
 
         AddChartWindowInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
         AddChartWindow = ReactiveCommand.CreateFromObservable(
