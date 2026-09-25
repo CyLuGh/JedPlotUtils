@@ -6,6 +6,7 @@
     <Project Path="LC_AvaloniaApplication/LC_AvaloniaApplication.csproj" Id="ce43b0cf-80d2-4b66-b78a-a1c178f11fc7" />
   </Folder>
   <Folder Name="/LiveCharts/">
+    <Project Path="JedPlotUtils.LiveCharts.Avalonia.Client/JedPlotUtils.LiveCharts.Avalonia.Client.csproj" />
     <Project Path="JedPlotUtils.LiveCharts.Avalonia.Components/JedPlotUtils.LiveCharts.Avalonia.Components.csproj" Id="5c7195d6-3462-4a2a-826d-d67a769f0c8a" />
   </Folder>
   <Folder Name="/ScottPlot/">

@@ -306,6 +306,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             var series = await PasteFromClipboardInteraction.Handle(RxVoid.Default);
             Add(series);
         });
+        cmd.ThrownExceptions.Subscribe(ex =>
+            this.Log().Error("Failed to paste from clipboard", ex)
+        );
         return cmd;
     }
 

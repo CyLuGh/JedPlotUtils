@@ -1,0 +1,14 @@
+<husk:AppWindow
+    Title="JD+ Light Client"
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    x:Class="JedPlotUtils.LiveCharts.Avalonia.Client.MainWindow"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:client="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Client"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:husk="https://github.com/d3ara1n/Huskui.Avalonia"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <client:ChartView />
+</husk:AppWindow>

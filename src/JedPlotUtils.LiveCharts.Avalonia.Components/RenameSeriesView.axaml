@@ -19,8 +19,10 @@
                 Command="{Binding CancelCommand}"
                 Content="Cancel"
                 HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Center" />
+                HorizontalContentAlignment="Center"
+                Theme="{DynamicResource GhostButtonTheme}" />
             <Button
+                Classes="Primary"
                 Command="{Binding ValidateCommand}"
                 Content="Rename series"
                 HorizontalAlignment="Stretch"

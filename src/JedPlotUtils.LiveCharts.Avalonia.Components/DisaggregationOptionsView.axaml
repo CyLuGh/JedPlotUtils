@@ -12,6 +12,7 @@
     <DockPanel VerticalSpacing="16">
 
         <UniformGrid
+            ColumnSpacing="5"
             DockPanel.Dock="Bottom"
             HorizontalAlignment="Right"
             Rows="1">
@@ -19,8 +20,10 @@
                 Command="{Binding CancelCommand}"
                 Content="Cancel"
                 HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Center" />
+                HorizontalContentAlignment="Center"
+                Theme="{DynamicResource GhostButtonTheme}" />
             <Button
+                Classes="Primary"
                 Command="{Binding ValidateCommand}"
                 Content="OK"
                 HorizontalAlignment="Stretch"
@@ -42,7 +45,7 @@
                 Columns="2"
                 HorizontalAlignment="Stretch"
                 Margin="10"
-                RowSpacing="2">
+                RowSpacing="6">
                 <StackPanel Spacing="4">
                     <TextBlock Text="Algorithm" VerticalAlignment="Center" />
                     <TextBox

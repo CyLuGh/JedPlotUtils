@@ -19,8 +19,10 @@
                 Content="Cancel"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
-                IsCancel="True" />
+                IsCancel="True"
+                Theme="{DynamicResource GhostButtonTheme}" />
             <Button
+                Classes="Primary"
                 Command="{Binding ValidateCommand}"
                 Content="Change frequency"
                 HorizontalAlignment="Stretch"

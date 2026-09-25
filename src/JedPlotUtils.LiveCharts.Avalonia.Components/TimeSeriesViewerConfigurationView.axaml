@@ -25,11 +25,12 @@
                 <Button
                     Command="{Binding CancelCommand}"
                     Content="Cancel"
-                    IsCancel="True" />
+                    IsCancel="True"
+                    Theme="{DynamicResource GhostButtonTheme}" />
                 <Button
+                    Classes="Primary"
                     Command="{Binding SaveCommand}"
-                    CommandParameter="{Binding PersistSettings}"
-                    Height="30">
+                    CommandParameter="{Binding PersistSettings}">
                     <StackPanel Orientation="Horizontal" Spacing="5">
                         <!-- <Viewbox> -->
                         <!--   <Canvas Width="24" Height="24"> -->
