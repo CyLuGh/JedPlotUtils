@@ -70,7 +70,7 @@ public partial class TimeSeriesViewerViewModelBase
                 cmd.ThrownExceptions.Select(_ => Option<(TimeSeriesInfo, Option<Identifier>)>.None)
             )
             .Select(o => o.Match(Signal.Return, Signal.Empty<(TimeSeriesInfo, Option<Identifier>)>))
-            .Switch()
+            .SwitchTo()
             .Subscribe(t =>
             {
                 var (tsi, removed) = t;

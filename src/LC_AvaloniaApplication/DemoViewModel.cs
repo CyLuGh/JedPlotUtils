@@ -12,7 +12,7 @@ using RxCommand = ReactiveUI.ReactiveCommand<
     ReactiveUI.Primitives.RxVoid,
     ReactiveUI.Primitives.RxVoid
 >;
-using RxInteraction = ReactiveUI.Interaction<
+using RxInteraction = ReactiveUI.Binding.Interaction<
     ReactiveUI.Primitives.RxVoid,
     ReactiveUI.Primitives.RxVoid
 >;
@@ -70,7 +70,7 @@ public partial class DemoViewModel : BaseViewModel
         });
 
         AddChartWindowInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        AddChartWindow = ReactiveCommand.CreateFromObservable(
+        AddChartWindow = ReactiveCommand.CreateFromTask(
             () => AddChartWindowInteraction.Handle(RxVoid.Default)
         );
     }

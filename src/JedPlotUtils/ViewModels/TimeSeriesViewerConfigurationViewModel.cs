@@ -40,7 +40,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
 
     public static DisplayMode[] AvailableDisplayMode => Enum.GetValues<DisplayMode>();
 
-    private static readonly string _settingsPath = Path.Combine(
+    private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
         System.Reflection.Assembly.GetEntryAssembly()?.GetName().Name ?? "unknown",
         "timeSeriesViewerSettings.json"
@@ -59,6 +59,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         CancelCommand = CreateCommandCancel();
         LoadCommand = CreateCommandLoad();
 
+        DateFormat = string.Empty;
         RestoreSettings(settings.Match(s => s, Load));
     }
 
@@ -70,6 +71,9 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         SeriesSelectionMode = settings.SeriesSelectionMode;
         DisplayMode = settings.DisplayMode;
         Palette = settings.Palette.ToPalette();
+        DateFormat = settings.DateFormat ?? string.Empty;
+        Decimals = settings.Decimals;
+        HasThousandsSeparators = settings.HasThousandsSeparators;
     }
 
     private RxCommand CreateCommandCancel() =>
@@ -116,10 +120,10 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     {
         try
         {
-            if (!File.Exists(_settingsPath))
+            if (!File.Exists(SettingsPath))
                 return TimeSeriesViewerSettings.Default;
 
-            var json = File.ReadAllText(_settingsPath);
+            var json = File.ReadAllText(SettingsPath);
             return JsonSerializer.Deserialize<TimeSeriesViewerSettings>(json)
                 ?? TimeSeriesViewerSettings.Default;
         }
@@ -129,11 +133,11 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         }
     }
 
-    public void Save(TimeSeriesViewerSettings settings)
+    private void Save(TimeSeriesViewerSettings settings)
     {
         try
         {
-            var directory = Path.GetDirectoryName(_settingsPath);
+            var directory = Path.GetDirectoryName(SettingsPath);
             if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
                 Directory.CreateDirectory(directory);
 
@@ -141,7 +145,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                 settings,
                 new JsonSerializerOptions() { WriteIndented = true }
             );
-            File.WriteAllText(_settingsPath, json);
+            File.WriteAllText(SettingsPath, json);
         }
         catch (Exception ex)
         {

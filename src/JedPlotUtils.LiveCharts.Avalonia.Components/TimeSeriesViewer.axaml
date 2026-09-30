@@ -112,7 +112,10 @@
                                 <MenuItem Command="{Binding ClearDerivedCommand}" Header="Clear derived series" />
                             </MenuItem>
                             <Separator />
-                            <MenuItem Command="{Binding ShowSettingsCommand}" Header="Settings" />
+                            <MenuItem
+                                Command="{Binding ShowSettingsCommand}"
+                                CommandParameter="{Binding Configuration}"
+                                Header="Settings" />
                         </ContextMenu>
                     </lvc:CartesianChart.ContextMenu>
                 </lvc:CartesianChart>

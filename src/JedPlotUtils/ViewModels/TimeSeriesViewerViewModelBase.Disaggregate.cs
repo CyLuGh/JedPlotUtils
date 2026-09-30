@@ -12,10 +12,10 @@ namespace JedPlotUtils.ViewModels;
 public partial class TimeSeriesViewerViewModelBase
 {
     [ObservableAsProperty]
-    private bool _hasDisaggregationResults;
+    public partial bool HasDisaggregationResults { get; }
 
-    [ObservableAsProperty(ReadOnly = false)]
-    private Option<TemporalDisaggregationResults> _disaggregationResults;
+    [ObservableAsProperty]
+    public partial Option<TemporalDisaggregationResults> DisaggregationResults { get; }
 
     private ReactiveCommand<
         Option<TemporalDisaggregationResults>,

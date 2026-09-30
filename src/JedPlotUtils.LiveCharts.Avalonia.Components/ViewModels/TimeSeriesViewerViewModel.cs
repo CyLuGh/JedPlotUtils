@@ -10,7 +10,6 @@ using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.SourceGenerators;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 
@@ -18,25 +17,25 @@ public partial class TimeSeriesViewerViewModel
     : JedPlotUtils.ViewModels.TimeSeriesViewerViewModelBase
 {
     [ObservableAsProperty]
-    private Seq<LineSeries<DateTimePoint>> _lineSeries;
+    public partial Seq<LineSeries<DateTimePoint>> LineSeries { get; }
 
     [ObservableAsProperty]
-    private Seq<StepLineSeries<DateTimePoint>> _stepLineSeries;
+    public partial Seq<StepLineSeries<DateTimePoint>> StepLineSeries { get; }
 
     [ObservableAsProperty]
-    private Seq<RangeLineSeries<DateTimeRangeValue>> _rangeSeries;
+    public partial Seq<RangeLineSeries<DateTimeRangeValue>> RangeSeries { get; }
 
     [ObservableAsProperty]
-    private Seq<ColumnSeries<DateTimePoint>> _columnSeries;
+    public partial Seq<ColumnSeries<DateTimePoint>> ColumnSeries { get; }
 
     [ObservableAsProperty]
-    private Seq<ISeries> _allSeries;
+    public partial Seq<ISeries> AllSeries { get; }
 
     [ObservableAsProperty(ReadOnly = false)]
-    private Seq<DateTimeAxis> _xAxes;
+    public partial Seq<DateTimeAxis> XAxes { get; }
 
     [ObservableAsProperty(ReadOnly = false)]
-    private Seq<Axis> _yAxes;
+    public partial Seq<Axis> YAxes { get; }
 
     public ReactiveCommand<Func<DateOnly, string>, Seq<DateTimeAxis>> CreateXAxisCommand { get; }
     public ReactiveCommand<Func<double, string>, Seq<Axis>> CreateYAxisCommand { get; }
@@ -359,7 +358,7 @@ public partial class TimeSeriesViewerViewModel
                         () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                     )
                 )
-                .Switch()
+                .SwitchTo()
                 .InvokeCommand(CreateXAxisCommand)
                 .DisposeWith(disposables);
 

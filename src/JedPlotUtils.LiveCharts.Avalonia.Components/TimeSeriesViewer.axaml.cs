@@ -339,7 +339,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     _ => viewModel.Selection,
                 };
 
-                if (!viewModel.Selection.IsEmpty)
+                if (!viewModel.Selection.IsEmpty && args.Properties.IsLeftButtonPressed)
                 {
                     _dragPointerPressedEventArgs = args;
                     _dragStarted = false;

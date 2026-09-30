@@ -13,10 +13,6 @@
     <PackageReference Include="JDPlus.WS.Client" />
     <PackageReference Include="ReactiveUI" />
     <PackageReference Include="ReactiveUI.Primitives" />
-    <PackageReference Include="ReactiveUI.SourceGenerators">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
 </Project>

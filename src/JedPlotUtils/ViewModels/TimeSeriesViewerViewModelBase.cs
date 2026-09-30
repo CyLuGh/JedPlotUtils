@@ -1,8 +1,9 @@
-﻿global using RxCommand = ReactiveUI.ReactiveCommand<
+﻿global using ReactiveUI.Binding;
+global using RxCommand = ReactiveUI.ReactiveCommand<
     ReactiveUI.Primitives.RxVoid,
     ReactiveUI.Primitives.RxVoid
 >;
-global using RxInteraction = ReactiveUI.Interaction<
+global using RxInteraction = ReactiveUI.Binding.Interaction<
     ReactiveUI.Primitives.RxVoid,
     ReactiveUI.Primitives.RxVoid
 >;
@@ -30,7 +31,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial double DialogOpacity { get; set; }
 
     [Reactive]
-    protected partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; set; }
+    public partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; protected set; }
 
     public HierarchyGridViewModel HierarchyGridViewModel { get; } = new();
 
@@ -50,7 +51,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial Option<(Identifier, DateOnly)> HoveredPoint { get; set; }
 
     [ObservableAsProperty]
-    private Option<(Identifier, DateOnly)> _throttledHoveredPoint;
+    public partial Option<(Identifier, DateOnly)> ThrottledHoveredPoint { get; }
 
     public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HoverCellGridCommand { get; }
     public ReactiveCommand<
@@ -87,21 +88,21 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [Reactive]
     public partial TimeSeriesViewerSettings Configuration { get; set; }
 
-    [ObservableAsProperty(ReadOnly = false)]
-    private Option<CommunicationManager> _wsManager;
-
-    [ObservableAsProperty(ReadOnly = false)]
-    private bool _isConnecting;
+    [ObservableAsProperty]
+    public partial Option<CommunicationManager> WsManager { get; }
 
     [ObservableAsProperty]
-    private bool _hasConnection;
+    public partial bool IsConnecting { get; }
+
+    [ObservableAsProperty]
+    public partial bool HasConnection { get; }
 
     public ReactiveCommand<string?, Option<CommunicationManager>> GetConnectionCommand { get; }
 
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
 
     [ObservableAsProperty]
-    private Seq<TimeSeriesInfo> _selectedSeries;
+    public partial Seq<TimeSeriesInfo> SelectedSeries { get; }
 
     public RxCommand ClearDerivedCommand { get; }
 
@@ -137,6 +138,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     protected TimeSeriesViewerViewModelBase()
     {
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        NumberFormat = "F0";
+        Configuration = TimeSeriesViewerSettings.Default;
 
         ShowSettingsCommand = CreateCommandShowSettingsCommand();
         ShowConnectionSettingsCommand = CreateCommandShowConnectionSettingsCommand();
@@ -253,7 +256,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
                     return selected;
                 })
-                .Switch()
+                .SwitchTo()
                 .Do(_ =>
                 {
                     if (SeriesSelectionMode != SelectionMode.None)
@@ -286,7 +289,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
                     return selected;
                 })
-                .Switch()
+                .SwitchTo()
                 .Subscribe(x =>
                 {
                     Selection = Selection.Remove(x);
@@ -318,7 +321,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         var canExecute = this.WhenAnyValue(x => x.SelectedSeries)
             .Select(sel => !sel.IsEmpty)
             .ObserveOn(RxSchedulers.MainThreadScheduler);
-        var cmd = ReactiveCommand.CreateFromObservable(
+        var cmd = ReactiveCommand.CreateFromTask(
             () => CopyToClipboardInteraction.Handle(SelectedSeries),
             canExecute
         );
@@ -371,6 +374,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private ReactiveCommand<TimeSeriesViewerSettings, RxVoid> CreateCommandShowSettingsCommand()
     {
+        /* Register default handler */
         ShowSettingsInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
         );
@@ -492,7 +496,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     private ReactiveCommand<Func<DateOnly, string>, Unit> CreateCommandAdaptXAxisCommand()
     {
         AdaptXAxisInteraction.RegisterHandler(ctx => ctx.SetOutput(Unit.Default));
-        var cmd = ReactiveCommand.CreateFromObservable<Func<DateOnly, string>, Unit>(f =>
+        var cmd = ReactiveCommand.CreateFromTask<Func<DateOnly, string>, Unit>(f =>
             AdaptXAxisInteraction.Handle(f)
         );
 
@@ -503,7 +507,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
-            .Switch()
+            .SwitchTo()
             .InvokeCommand(cmd);
 
         return cmd;
@@ -534,7 +538,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     private ReactiveCommand<DisplayMode, RxVoid> CreateCommandAdaptDisplayModeCommand()
     {
         AdaptDisplayModeInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        var cmd = ReactiveCommand.CreateFromObservable(
+        var cmd = ReactiveCommand.CreateFromTask(
             (DisplayMode dm) => AdaptDisplayModeInteraction.Handle(dm)
         );
         this.WhenAnyValue(x => x.DisplayMode)
@@ -546,7 +550,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     private ReactiveCommand<Option<(Identifier, DateOnly)>, RxVoid> CreateHighlightPointCommand()
     {
         HighlightChartPointInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        var cmd = ReactiveCommand.CreateFromObservable<Option<(Identifier, DateOnly)>, RxVoid>(t =>
+        var cmd = ReactiveCommand.CreateFromTask<Option<(Identifier, DateOnly)>, RxVoid>(t =>
             HighlightChartPointInteraction.Handle(t)
         );
 
@@ -648,6 +652,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                         double dbl => double.IsNaN(dbl) ? string.Empty : numberFormatter(dbl),
                         _ => string.Empty,
                     },
+                ContextItems = _ => [.. BuildStaticContext()],
                 ObservableContextItems = o =>
                     o switch
                     {
@@ -658,6 +663,17 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .ToSeq();
 
         return new HierarchyDefinitions(producers, consumers);
+    }
+
+    private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
+    {
+        yield return new(
+            "Settings",
+            _ =>
+            {
+                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+            }
+        );
     }
 
     private IEnumerable<(

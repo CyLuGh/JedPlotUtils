@@ -23,7 +23,7 @@ public partial class TimeSeriesSampleViewModel : ReactiveObject
     )
     {
         DrawChartInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        var cmd = ReactiveCommand.CreateFromObservable(
+        var cmd = ReactiveCommand.CreateFromTask(
             (Seq<ChartTs> seq) => DrawChartInteraction.Handle(seq.Map(x => x.ToPlotSeries()))
         );
         buildSampleCommand.InvokeCommand(cmd);
