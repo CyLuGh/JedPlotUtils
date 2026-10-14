@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.Globalization;
 using JedPlotUtils.Models;
+using JedPlotUtils.Palette;
 using LanguageExt;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
@@ -45,12 +46,16 @@ public partial class TimeSeriesViewerViewModel
         CreateXAxisCommand = CreateCommandCreateXAxisCommand();
         CreateYAxisCommand = CreateCommandCreateYAxisCommand();
 
-        _lineSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
+        var redrawObservable = this.WhenAnyValue(x => x.SeriesCache)
             .CombineLatest(
                 this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
                 this.WhenAnyValue(x => x.Selection)
             )
             .ObserveOn(RxSchedulers.TaskpoolScheduler)
+            .Publish()
+            .RefCount();
+
+        _lineSeriesHelper = redrawObservable
             .Select(t =>
             {
                 var (map, palette, selection) = t;
@@ -61,40 +66,7 @@ public partial class TimeSeriesViewerViewModel
                     .Select(
                         (tsi) =>
                         {
-                            float thickness = selection.IsEmpty
-                                ? 2
-                                : selection.Contains(tsi.Identifier)
-                                    ? 3
-                                    : 1;
-
-                            var stroke =
-                                selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                    ? new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert(),
-                                        thickness
-                                    )
-                                    : new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert(),
-                                        thickness
-                                    )
-                                    {
-                                        PathEffect = new DashEffect([3, 2])
-                                    };
-
-                            var fill =
-                                tsi.ChartType == SeriesChartType.Area
-                                    ? new SolidColorPaint(
-                                        palette
-                                            .GetColor(tsi.Index)
-                                            .Convert()
-                                            .WithAlpha(
-                                                selection.IsEmpty
-                                                || selection.Contains(tsi.Identifier)
-                                                    ? (byte)60
-                                                    : (byte)20
-                                            )
-                                    )
-                                    : null;
+                            var di = ChartUtils.GetInfos(tsi, selection, palette);
 
                             return new LineSeries<DateTimePoint>()
                             {
@@ -108,10 +80,12 @@ public partial class TimeSeriesViewerViewModel
                                 ),
                                 LineSmoothness = 0d,
                                 Tag = tsi.Identifier,
-                                Stroke = stroke,
-                                Fill = fill,
+                                Stroke = di.Stroke,
+                                Fill = di.Fill,
+                                GeometrySize = di.GeometrySize,
+                                GeometryStroke = di.GeometryStroke,
+                                GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                GeometrySize = GetGeometrySize(tsi),
                                 IsHoverable = tsi.Level != Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
@@ -125,12 +99,7 @@ public partial class TimeSeriesViewerViewModel
             })
             .ToProperty(this, x => x.LineSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
-        _stepLineSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
-            .CombineLatest(
-                this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
-                this.WhenAnyValue(x => x.Selection)
-            )
-            .ObserveOn(RxSchedulers.TaskpoolScheduler)
+        _stepLineSeriesHelper = redrawObservable
             .Select(t =>
             {
                 var (map, palette, selection) = t;
@@ -139,25 +108,7 @@ public partial class TimeSeriesViewerViewModel
                     .Select(
                         (tsi) =>
                         {
-                            float thickness = selection.IsEmpty
-                                ? 2
-                                : selection.Contains(tsi.Identifier)
-                                    ? 3
-                                    : 1;
-
-                            var stroke =
-                                selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                    ? new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert(),
-                                        thickness
-                                    )
-                                    : new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert(),
-                                        thickness
-                                    )
-                                    {
-                                        PathEffect = new DashEffect([3, 2])
-                                    };
+                            var di = ChartUtils.GetInfos(tsi, selection, palette);
 
                             return new StepLineSeries<DateTimePoint>()
                             {
@@ -170,10 +121,12 @@ public partial class TimeSeriesViewerViewModel
                                         ))
                                 ),
                                 Tag = tsi.Identifier,
-                                Stroke = stroke,
-                                Fill = null,
+                                Stroke = di.Stroke,
+                                Fill = di.Fill,
+                                GeometrySize = di.GeometrySize,
+                                GeometryStroke = di.GeometryStroke,
+                                GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                GeometrySize = GetGeometrySize(tsi),
                                 IsHoverable = tsi.Level != Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
@@ -187,12 +140,7 @@ public partial class TimeSeriesViewerViewModel
             })
             .ToProperty(this, x => x.StepLineSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
-        _rangeSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
-            .CombineLatest(
-                this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
-                this.WhenAnyValue(x => x.Selection)
-            )
-            .ObserveOn(RxSchedulers.TaskpoolScheduler)
+        _rangeSeriesHelper = redrawObservable
             .Select(t =>
             {
                 var (map, palette, selection) = t;
@@ -203,40 +151,7 @@ public partial class TimeSeriesViewerViewModel
                     .Select(
                         (tsi) =>
                         {
-                            float thickness = selection.IsEmpty
-                                ? 2
-                                : selection.Contains(tsi.Identifier)
-                                    ? 3
-                                    : 1;
-
-                            var stroke =
-                                selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                    ? new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert().WithAlpha(60),
-                                        thickness
-                                    )
-                                    : new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert().WithAlpha(60),
-                                        thickness
-                                    )
-                                    {
-                                        PathEffect = new DashEffect([3, 2])
-                                    };
-
-                            var fill =
-                                tsi.ChartType == SeriesChartType.Range
-                                    ? new SolidColorPaint(
-                                        palette
-                                            .GetColor(tsi.Index)
-                                            .Convert()
-                                            .WithAlpha(
-                                                selection.IsEmpty
-                                                || selection.Contains(tsi.Identifier)
-                                                    ? (byte)40
-                                                    : (byte)20
-                                            )
-                                    )
-                                    : null;
+                            var di = ChartUtils.GetInfos(tsi, selection, palette);
 
                             return new RangeLineSeries<DateTimeRangeValue>()
                             {
@@ -252,11 +167,13 @@ public partial class TimeSeriesViewerViewModel
                                 ),
                                 LineSmoothness = 0d,
                                 Tag = tsi.Identifier,
-                                Stroke = stroke,
-                                Fill = fill,
+                                Stroke = di.Stroke,
+                                Fill = di.Fill,
+                                GeometrySize = di.GeometrySize,
+                                GeometryStroke = di.GeometryStroke,
+                                GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
                                 IsHoverable = tsi.Level != Level.Tertiary,
-                                GeometrySize = GetGeometrySize(tsi)
                             };
                         }
                     )
@@ -264,12 +181,7 @@ public partial class TimeSeriesViewerViewModel
             })
             .ToProperty(this, x => x.RangeSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
-        _columnSeriesHelper = this.WhenAnyValue(x => x.SeriesCache)
-            .CombineLatest(
-                this.WhenAnyValue(x => x.Palette).Where(x => x is not null),
-                this.WhenAnyValue(x => x.Selection)
-            )
-            .ObserveOn(RxSchedulers.TaskpoolScheduler)
+        _columnSeriesHelper = redrawObservable
             .Select(t =>
             {
                 var (map, palette, selection) = t;
@@ -278,36 +190,7 @@ public partial class TimeSeriesViewerViewModel
                     .Select(
                         (tsi) =>
                         {
-                            float thickness = selection.IsEmpty
-                                ? 2
-                                : selection.Contains(tsi.Identifier)
-                                    ? 3
-                                    : 1;
-
-                            var stroke =
-                                selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                    ? new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert(),
-                                        thickness
-                                    )
-                                    : new SolidColorPaint(
-                                        palette.GetColor(tsi.Index).Convert(),
-                                        thickness
-                                    )
-                                    {
-                                        PathEffect = new DashEffect([3, 2])
-                                    };
-
-                            var fill = new SolidColorPaint(
-                                palette
-                                    .GetColor(tsi.Index)
-                                    .Convert()
-                                    .WithAlpha(
-                                        selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                            ? (byte)60
-                                            : (byte)20
-                                    )
-                            );
+                            var di = ChartUtils.GetInfos(tsi, selection, palette);
 
                             return new ColumnSeries<DateTimePoint>()
                             {
@@ -320,8 +203,8 @@ public partial class TimeSeriesViewerViewModel
                                         ))
                                 ),
                                 Tag = tsi.Identifier,
-                                Stroke = stroke,
-                                Fill = fill,
+                                Stroke = di.Stroke,
+                                Fill = di.Fill,
                                 AnimationsSpeed = TimeSpan.Zero,
                                 IsHoverable = tsi.Level != Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
@@ -346,6 +229,7 @@ public partial class TimeSeriesViewerViewModel
                 t.First.Cast<ISeries>()
                     .Concat(t.Second.Cast<ISeries>())
                     .Concat(t.Third.Cast<ISeries>())
+                    .Concat(t.Fourth.Cast<ISeries>())
             )
             .ToProperty(this, x => x.AllSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
@@ -372,15 +256,6 @@ public partial class TimeSeriesViewerViewModel
                 .DisposeWith(disposables);
         });
     }
-
-    private static double GetGeometrySize(TimeSeriesInfo tsi) =>
-        tsi.Level switch
-        {
-            Level.Primary => tsi.ChartType == SeriesChartType.Area ? 6d : 12d,
-            Level.Secondary => 4d,
-            Level.Tertiary => 0d,
-            _ => 12d
-        };
 
     private ReactiveCommand<
         Func<DateOnly, string>,

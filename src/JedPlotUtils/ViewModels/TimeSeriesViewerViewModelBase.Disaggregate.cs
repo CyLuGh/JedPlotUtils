@@ -133,7 +133,6 @@ public partial class TimeSeriesViewerViewModelBase
                 );
 
                 var results = await cm.ProcessTemporalDisaggregation(req with { Y = tsData });
-
                 return Option<TemporalDisaggregationResults>.Some(results);
             },
             () => Task.FromResult(Option<TemporalDisaggregationResults>.None)

@@ -261,34 +261,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 if (await data.TryGetFilesAsync().ConfigureAwait(false) is { } files)
                 {
                     // TODO: check csv, check xlsx, check OpenOffice
-                    foreach (var file in files)
-                    {
-                        var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
-                        switch (extension)
-                        {
-                            case ".txt":
-                            case ".csv":
-                                {
-                                    var series = (
-                                        await File.ReadAllTextAsync(file.Path.LocalPath)
-                                            .ConfigureAwait(false)
-                                    ).FromCsv();
-                                    if (series.Length > 0)
-                                        viewModel.Add(series);
-                                }
-                                break;
-
-                            case ".xlsx":
-                                {
-                                    var series = ExcelTimeSeriesInfoParser.FromExcel(
-                                        file.Path.LocalPath
-                                    );
-                                    if (series.Length > 0)
-                                        viewModel.Add(series);
-                                }
-                                break;
-                        }
-                    }
+                    await ParseIStorageItems(files, viewModel);
                 }
 
                 ctx.SetOutput(Seq<TimeSeriesInfo>.Empty);
@@ -536,7 +509,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 handler => DragDrop.AddDropHandler(view.GridMainDisplay, handler),
                 handler => DragDrop.RemoveDropHandler(view.GridMainDisplay, handler)
             )
-            .Subscribe(t =>
+            .SubscribeAsync(async t =>
             {
                 var e = t.EventArgs;
 
@@ -566,35 +539,56 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 /* File format */
                 if (e.DataTransfer.TryGetFiles() is { } files)
                 {
-                    // TODO: check csv, check xlsx, check OpenOffice
-                    foreach (var file in files)
-                    {
-                        var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
-                        switch (extension)
-                        {
-                            case ".txt":
-                            case ".csv":
-                                {
-                                    var series = File.ReadAllText(file.Path.LocalPath).FromCsv();
-                                    if (series.Length > 0)
-                                        viewModel.Add(series);
-                                }
-                                break;
-
-                            case ".xlsx":
-                                {
-                                    var series = ExcelTimeSeriesInfoParser.FromExcel(
-                                        file.Path.LocalPath
-                                    );
-                                    if (series.Length > 0)
-                                        viewModel.Add(series);
-                                }
-                                break;
-                        }
-                    }
+                    await ParseIStorageItems(files, viewModel);
                 }
             })
             .DisposeWith(disposables);
+    }
+
+    private async Task ParseIStorageItems(IStorageItem[] files, TimeSeriesViewerViewModel viewModel)
+    {
+        // TODO: check OpenOffice
+        await OpenDialogAnimation(
+            viewModel,
+            new TextBlock()
+            {
+                Text = "Parsing file content...",
+                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
+                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
+                FontSize = 18
+            },
+            450,
+            320
+        );
+
+        await Task.Run(() =>
+        {
+            foreach (var file in files)
+            {
+                var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
+                switch (extension)
+                {
+                    case ".txt":
+                    case ".csv":
+                        {
+                            var series = File.ReadAllText(file.Path.LocalPath).FromCsv();
+                            if (series.Length > 0)
+                                viewModel.Add(series);
+                        }
+                        break;
+
+                    case ".xlsx":
+                        {
+                            var series = ExcelTimeSeriesInfoParser.FromExcel(file.Path.LocalPath);
+                            if (series.Length > 0)
+                                viewModel.Add(series);
+                        }
+                        break;
+                }
+            }
+        });
+
+        await CloseDialogAnimation(viewModel);
     }
 
     private static void SetGridSplitterConstraints(GridSplitter splitter, DisplayMode displayMode)

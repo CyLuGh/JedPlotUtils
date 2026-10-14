@@ -168,6 +168,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         CreateDisaggregatedSeriesCommand = CreateCommandCreateDisaggregatedSeriesCommand();
         ChangeFrequencyCommand = CreateCommandChangeFrequencyCommand();
 
+        TramoForecastCommand = CreateCommandTramoForecast();
+
         RenameSeriesCommand = CreateCommandRenameSeriesCommand();
         RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
 

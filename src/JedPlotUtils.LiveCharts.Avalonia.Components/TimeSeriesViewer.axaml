@@ -107,6 +107,10 @@
                                     CommandParameter="{Binding SelectedSeries}"
                                     Header="Disaggregate" />
                                 <MenuItem
+                                    Command="{Binding TramoForecastCommand}"
+                                    CommandParameter="{Binding SelectedSeries}"
+                                    Header="Tramo Forecasts" />
+                                <MenuItem
                                     Command="{Binding ChangeFrequencyCommand}"
                                     CommandParameter="{Binding SelectedSeries}"
                                     Header="Change frequency" />
