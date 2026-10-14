@@ -176,13 +176,17 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel
             .AdaptDisplayModeInteraction.RegisterHandler(ctx =>
             {
-                SetGridDimensions(view.GridMainDisplay, ctx.Input);
+#if DEBUG
+                Console.WriteLine($"Calling AdaptDisplayModeInteraction with {ctx.Input}");
+#endif
                 SetHierarchyGridConstraints(
                     view.HierarchyGrid,
                     ctx.Input,
                     viewModel.HierarchyGridViewModel
                 );
                 SetGridSplitterConstraints(view.Splitter, ctx.Input);
+                SetGridDimensions(view.GridMainDisplay, ctx.Input);
+                viewModel.HasFirstRender = true;
                 ctx.SetOutput(RxVoid.Default);
             })
             .DisposeWith(disposables);
@@ -205,9 +209,6 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     await clipboard.SetDataAsync(dataTransfer);
 
                     var xmlss = viewModel.SelectedSeries.ToXmlSpreadSheet();
-
-                    //
-
                     dataTransfer.Add(
                         DataTransferItem.Create(
                             DataFormat.CreateStringPlatformFormat("application/vnd.ms-excel"),
@@ -670,6 +671,11 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             case DisplayMode.BothHorizontal:
                 grid.ColumnDefinitions = ColumnDefinitions.Parse("2*,Auto,*");
                 grid.RowDefinitions = RowDefinitions.Parse("*");
+                break;
+
+            case DisplayMode.None:
+                grid.ColumnDefinitions = ColumnDefinitions.Parse("0,0,0");
+                grid.RowDefinitions = RowDefinitions.Parse("0,0,0");
                 break;
 
             default:

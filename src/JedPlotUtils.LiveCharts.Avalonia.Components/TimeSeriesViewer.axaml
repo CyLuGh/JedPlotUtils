@@ -54,6 +54,7 @@
             <Grid
                 ColumnSpacing="3"
                 DragDrop.AllowDrop="True"
+                IsVisible="{Binding HasFirstRender}"
                 RelativePanel.AlignBottomWithPanel="True"
                 RelativePanel.AlignLeftWithPanel="True"
                 RelativePanel.AlignRightWithPanel="True"

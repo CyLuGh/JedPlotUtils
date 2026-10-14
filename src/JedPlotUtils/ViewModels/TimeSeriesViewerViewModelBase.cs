@@ -53,6 +53,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [ObservableAsProperty]
     public partial Option<(Identifier, DateOnly)> ThrottledHoveredPoint { get; }
 
+    /// <summary>
+    /// Prevents flickering on the first render.
+    /// </summary>
+    [Reactive]
+    public partial bool HasFirstRender { get; set; }
+
     public ReactiveCommand<Option<(Identifier, DateOnly)>, bool> HoverCellGridCommand { get; }
     public ReactiveCommand<
         Option<(Identifier, DateOnly)>,
@@ -228,7 +234,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
             Signal
                 .Return(TimeSeriesViewerConfigurationViewModel.Load())
-                .DistinctUntilChanged()
+                .DistinctUntilChanged() // Make sure we only update the settings when they change
+                .ObserveOn(RxSchedulers.MainThreadScheduler)
                 .Subscribe(settings =>
                 {
                     Signal.Return(settings.WebServiceAddress).InvokeCommand(GetConnectionCommand);
@@ -239,6 +246,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
             this.WhenAnyValue(x => x.Configuration)
                 .Throttle(TimeSpan.FromMilliseconds(200))
+                .ObserveOn(RxSchedulers.MainThreadScheduler)
                 .Subscribe(ApplySettings)
                 .DisposeWith(disposables);
 
@@ -296,6 +304,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 });
 
             this.WhenAnyValue(x => x.NumberFormat).Subscribe(UpdateFormat).DisposeWith(disposables);
+
+            this.WhenAnyValue(x => x.DisplayMode)
+                .Select(mode => AdaptDisplayModeCommand.Execute(mode))
+                .SwitchTo()
+                .Subscribe()
+                .DisposeWith(disposables);
         });
     }
 
@@ -537,13 +551,18 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private ReactiveCommand<DisplayMode, RxVoid> CreateCommandAdaptDisplayModeCommand()
     {
-        AdaptDisplayModeInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        AdaptDisplayModeInteraction.RegisterHandler(ctx =>
+        {
+#if DEBUG
+            Console.WriteLine($"Calling _DEFAULT_ AdaptDisplayModeInteraction with {ctx.Input}");
+#endif
+            ctx.SetOutput(RxVoid.Default);
+        });
+
         var cmd = ReactiveCommand.CreateFromTask(
             (DisplayMode dm) => AdaptDisplayModeInteraction.Handle(dm)
         );
-        this.WhenAnyValue(x => x.DisplayMode)
-            .Throttle(TimeSpan.FromMilliseconds(20))
-            .InvokeCommand(cmd);
+
         return cmd;
     }
 

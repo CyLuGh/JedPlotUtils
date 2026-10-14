@@ -11,7 +11,6 @@
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
     <PackageReference Include="HierarchyGrid.Avalonia" />
     <PackageReference Include="ReactiveUI.Avalonia" />
-    <PackageReference Include="ReactiveUI.Primitives.Avalonia" />
   </ItemGroup>
 
   <ItemGroup>
