@@ -16,6 +16,7 @@
     <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
     <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
   </Folder>
+  <Project Path="JedPlotUtils.Avalonia.Components/JedPlotUtils.Avalonia.Components.csproj" />
   <Project Path="JedPlotUtils.Tests/JedPlotUtils.Tests.csproj" />
   <Project Path="JedPlotUtils/JedPlotUtils.csproj" Id="e5cf6873-b2ce-467e-b05e-b1a57b911c82" />
 </Solution>

@@ -1,8 +1,6 @@
-﻿using Avalonia;
-using Avalonia.Controls;
-using Avalonia.Markup.Xaml;
+﻿using Avalonia.Controls;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components;
+namespace JedPlotUtils.Avalonia.Components;
 
 public partial class DisaggregationResultsInfoView : UserControl
 {

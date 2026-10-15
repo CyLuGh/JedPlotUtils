@@ -106,10 +106,17 @@
                                     Command="{Binding DisaggregateCommand}"
                                     CommandParameter="{Binding SelectedSeries}"
                                     Header="Disaggregate" />
-                                <MenuItem
-                                    Command="{Binding TramoForecastCommand}"
-                                    CommandParameter="{Binding SelectedSeries}"
-                                    Header="Tramo Forecasts" />
+                                <MenuItem Header="Tramo">
+                                    <MenuItem
+                                        Command="{Binding TramoForecastCommand}"
+                                        CommandParameter="{Binding SelectedSeries}"
+                                        Header="Forecasts" />
+                                    <MenuItem
+                                        Command="{Binding TramoFullProcessCommand}"
+                                        CommandParameter="{Binding SelectedSeries}"
+                                        Header="Full process" />
+                                </MenuItem>
+
                                 <MenuItem
                                     Command="{Binding ChangeFrequencyCommand}"
                                     CommandParameter="{Binding SelectedSeries}"

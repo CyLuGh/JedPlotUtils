@@ -169,6 +169,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ChangeFrequencyCommand = CreateCommandChangeFrequencyCommand();
 
         TramoForecastCommand = CreateCommandTramoForecast();
+        CreateTramoForecastsSeriesCommand = CreateCommandCreateTramoForecastsSeriesCommand();
+        TramoFullProcessCommand = CreateCommandTramoFullProcessCommand();
+        CreateTramoOutputSeriesCommand = CreateCommandCreateTramoOutputSeriesCommand();
 
         RenameSeriesCommand = CreateCommandRenameSeriesCommand();
         RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
@@ -539,7 +542,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         hoverObservable
             .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
-            //.DistinctUntilChanged()
             .Throttle(TimeSpan.FromMilliseconds(50))
             .ObserveOn(RxSchedulers.MainThreadScheduler)
             .InvokeCommand(cmd);

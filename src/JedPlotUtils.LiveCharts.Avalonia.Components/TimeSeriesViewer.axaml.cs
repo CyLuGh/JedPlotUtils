@@ -2,6 +2,7 @@ using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Platform.Storage;
+using JedPlotUtils.Avalonia.Components;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
@@ -135,6 +136,22 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     700
                 );
                 var res = await dovm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .GetTramoRequestInteraction.RegisterHandler(async ctx =>
+            {
+                var tfovm = new TramoForecastOptionsViewModel();
+                await OpenDialogAnimation(
+                    viewModel,
+                    new TramoForecastOptionsView() { ViewModel = tfovm },
+                    700,
+                    700
+                );
+                var res = await tfovm.Result;
                 ctx.SetOutput(res);
                 await CloseDialogAnimation(viewModel);
             })

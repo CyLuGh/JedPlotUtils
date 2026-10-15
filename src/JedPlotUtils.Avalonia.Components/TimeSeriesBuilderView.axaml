@@ -1,10 +1,9 @@
 <UserControl
-    MinWidth="400"
-    d:DesignHeight="250"
-    d:DesignWidth="400"
+    d:DesignHeight="350"
+    d:DesignWidth="450"
     mc:Ignorable="d"
-    x:Class="JedPlotUtils.LiveCharts.Avalonia.Components.RenameSeriesView"
-    x:DataType="viewModels:RenameSeriesViewModel"
+    x:Class="JedPlotUtils.Avalonia.Components.TimeSeriesBuilderView"
+    x:DataType="viewModels:TimeSeriesBuilderViewModel"
     xmlns="https://github.com/avaloniaui"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -20,20 +19,22 @@
                 Content="Cancel"
                 HorizontalAlignment="Stretch"
                 HorizontalContentAlignment="Center"
+                IsCancel="True"
                 Theme="{DynamicResource GhostButtonTheme}" />
             <Button
                 Classes="Primary"
                 Command="{Binding ValidateCommand}"
-                Content="Rename series"
+                Content="Change frequency"
                 HorizontalAlignment="Stretch"
-                HorizontalContentAlignment="Center" />
+                HorizontalContentAlignment="Center"
+                IsDefault="True" />
         </UniformGrid>
         <StackPanel Spacing="4">
             <TextBlock
                 FontSize="18"
                 FontWeight="Bold"
                 Margin="20,0"
-                Text="Rename series"
+                Text="Change frequency"
                 VerticalAlignment="Center" />
 
             <Separator />
@@ -43,18 +44,30 @@
                 Columns="1"
                 Margin="10"
                 RowSpacing="10">
-
                 <StackPanel Spacing="4">
-                    <TextBlock Text="Current label" />
-                    <TextBox IsReadOnly="True" Text="{Binding CurrentName}" />
+                    <TextBlock Text="Frequency" />
+                    <ComboBox
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding Frequencies}"
+                        SelectedItem="{Binding TargetFrequency}" />
                 </StackPanel>
 
                 <StackPanel Spacing="4">
-                    <TextBlock Text="New label" />
-                    <TextBox Text="{Binding NewName}" />
+                    <TextBlock Text="Aggregation type" />
+                    <ComboBox
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{Binding AggregationTypes}"
+                        SelectedItem="{Binding AggregationType}" />
                 </StackPanel>
 
+                <CheckBox
+                    Content="Remove original series"
+                    Grid.Column="1"
+                    Grid.Row="2"
+                    IsChecked="{Binding RemoveOriginal}" />
             </UniformGrid>
+
+
         </StackPanel>
     </DockPanel>
 </UserControl>
