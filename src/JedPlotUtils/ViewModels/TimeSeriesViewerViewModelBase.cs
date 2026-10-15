@@ -635,6 +635,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Map(info => new ProducerDefinition
             {
                 Content = info.Label,
+                Tooltip = info.Label,
                 Tag = info.Identifier,
                 Producer = () => info.Identifier,
             });
@@ -646,6 +647,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             .Map(d => new ConsumerDefinition
             {
                 Content = formatter(d),
+                Tooltip = formatter(d),
                 Tag = d,
                 Consumer = o =>
                     o switch

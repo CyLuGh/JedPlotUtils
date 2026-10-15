@@ -1,6 +1,7 @@
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using JedPlotUtils.Avalonia.Components;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
@@ -565,18 +566,31 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     private async Task ParseIStorageItems(IStorageItem[] files, TimeSeriesViewerViewModel viewModel)
     {
         // TODO: check OpenOffice
-        await OpenDialogAnimation(
-            viewModel,
-            new TextBlock()
+        var stackPanel = new StackPanel()
+        {
+            Orientation = Orientation.Vertical,
+            Spacing = 10d,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
             {
-                Text = "Parsing file content...",
-                VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Center,
-                HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Center,
-                FontSize = 18
-            },
-            450,
-            320
-        );
+                new TextBlock()
+                {
+                    Text = "Parsing file content...",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    FontSize = 18
+                },
+                new ProgressBar()
+                {
+                    IsIndeterminate = true,
+                    Height = 15,
+                    Width = 250,
+                    VerticalAlignment = VerticalAlignment.Center,
+                }
+            }
+        };
+
+        await OpenDialogAnimation(viewModel, stackPanel, 450, 320);
 
         await Task.Run(() =>
         {

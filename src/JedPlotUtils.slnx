@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/Misc/">
+    <File Path="nuget.config" />
+    <File Path="Directory.Packages.props" />
+    <File Path="../readme.md" />
+    <File Path="../LICENSE" />
+    <File Path="../.gitignore" />
+  </Folder>
   <Folder Name="/Demos/">
     <Project Path="Demos/AvaloniaApplication/AvaloniaApplication.csproj" Id="2fb75dd1-a45b-42a9-a48f-91fb3c3f9dfc" />
     <Project Path="Demos/DemoData/DemoData.csproj" Id="c11035ef-c55a-4f62-8bfe-1544a20791f6" />

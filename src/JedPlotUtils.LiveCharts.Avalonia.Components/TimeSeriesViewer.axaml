@@ -68,6 +68,7 @@
                     Series="{Binding Path=AllSeries}"
                     XAxes="{Binding XAxes}"
                     YAxes="{Binding YAxes}"
+                    ZoomMode="Both"
                     x:Name="CartesianChart">
                     <lvc:CartesianChart.ContextMenu>
                         <ContextMenu>
