@@ -3,6 +3,7 @@ using JedPlotUtils.Models;
 using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
 
 namespace JedPlotUtils.ViewModels;
 
@@ -48,11 +49,13 @@ public partial class TimeSeriesViewerViewModelBase
             canExecute
         );
 
-        _tramoForecastHelper = cmd.ToProperty(
-            this,
-            x => x.TramoForecast,
-            scheduler: RxSchedulers.MainThreadScheduler
-        );
+        _tramoForecastHelper = Signal
+            .Merge(
+                cmd,
+                ClearResultsCommand.Select(_ => Option<TramoForecasts>.None),
+                cmd.ThrownExceptions.Select(_ => Option<TramoForecasts>.None)
+            )
+            .ToProperty(this, x => x.TramoForecast, scheduler: RxSchedulers.MainThreadScheduler);
 
         return cmd;
     }
@@ -72,15 +75,13 @@ public partial class TimeSeriesViewerViewModelBase
             async e =>
             {
                 var (cm, tsi, req) = e;
-
+                await Clear(true).ConfigureAwait(false);
                 var data = tsi.Data.ToSeq();
-
                 var tsData = await cm.BuildTsData(
                     data,
                     aggregationType: AggregationType.None,
                     Frequency.Undefined
                 );
-
                 var res = await cm.GetTramoForecasts(
                         tsData,
                         req.Spec,
@@ -109,8 +110,6 @@ public partial class TimeSeriesViewerViewModelBase
         var cmd = ReactiveCommand.CreateFromTask(
             async (Option<TramoForecasts> oForecasts) =>
             {
-                await Clear(true).ConfigureAwait(false);
-
                 oForecasts.IfSome(forecasts =>
                 {
                     var fc = forecasts.Forecasts.Select(x => (x.Key, x.Value.Forecast)).ToHashMap();

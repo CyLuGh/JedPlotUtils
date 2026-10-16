@@ -59,36 +59,37 @@
                         Value="{Binding NForecasts}"
                         Width="300" />
                 </StackPanel>
-                <StackPanel
+                <UniformGrid
+                    ColumnSpacing="4"
                     Grid.Column="1"
                     Grid.Row="0"
-                    Spacing="4">
+                    Rows="1">
                     <RadioButton
                         Content="Simple spec"
                         IsChecked="{Binding UseSimpleSpec}"
                         VerticalAlignment="Center" />
-                    <ComboBox
-                        HorizontalAlignment="Left"
-                        IsEditable="True"
-                        IsEnabled="{Binding UseSimpleSpec}"
-                        ItemsSource="{Binding SimpleSpecs}"
-                        Text="{Binding SimpleSpec}"
-                        VerticalContentAlignment="Center"
-                        Width="300" />
-                </StackPanel>
+                    <RadioButton
+                        Content="Complete spec"
+                        IsChecked="{Binding !UseSimpleSpec}"
+                        VerticalAlignment="Center" />
+                </UniformGrid>
 
                 <StackPanel
                     Grid.Column="0"
                     Grid.ColumnSpan="2"
                     Grid.Row="1"
                     Spacing="4">
-                    <RadioButton
-                        Content="Complete spec"
-                        IsChecked="{Binding !UseSimpleSpec}"
-                        VerticalAlignment="Center" />
+                    <TextBlock Text="Spec" VerticalAlignment="Center" />
+                    <ComboBox
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding UseSimpleSpec}"
+                        IsVisible="{Binding UseSimpleSpec}"
+                        ItemsSource="{Binding SimpleSpecs}"
+                        SelectedItem="{Binding SimpleSpec}"
+                        VerticalContentAlignment="Center"
+                        Width="300" />
                 </StackPanel>
             </Grid>
-
         </StackPanel>
     </DockPanel>
 </UserControl>

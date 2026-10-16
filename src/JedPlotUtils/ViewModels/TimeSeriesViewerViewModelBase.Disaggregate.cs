@@ -95,8 +95,7 @@ public partial class TimeSeriesViewerViewModelBase
             .Merge(
                 cmd,
                 cmd.ThrownExceptions.Select(_ => Option<TemporalDisaggregationResults>.None),
-                clearSeriesCommand.Select(_ => Option<TemporalDisaggregationResults>.None),
-                clearDerivedCommand.Select(_ => Option<TemporalDisaggregationResults>.None)
+                ClearResultsCommand.Select(_ => Option<TemporalDisaggregationResults>.None)
             )
             .ToProperty(
                 this,
@@ -125,7 +124,7 @@ public partial class TimeSeriesViewerViewModelBase
             {
                 var (cm, tsi, req) = t;
                 var data = tsi.Data.ToSeq();
-
+                await Clear(true).ConfigureAwait(false);
                 var tsData = await cm.BuildTsData(
                     data,
                     aggregationType: AggregationType.None,
@@ -154,7 +153,6 @@ public partial class TimeSeriesViewerViewModelBase
         var cmd = ReactiveCommand.CreateFromTask(
             async (Option<TemporalDisaggregationResults> o) =>
             {
-                await Clear(true).ConfigureAwait(false);
                 o.IfSome(res =>
                 {
                     var disaggregatedSeries = res.DisaggregatedSeries.GetDateValues();

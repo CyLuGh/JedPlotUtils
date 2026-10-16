@@ -141,6 +141,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public RxInteraction ClearInfoInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
+    protected RxCommand ClearResultsCommand { get; }
+
     protected TimeSeriesViewerViewModelBase()
     {
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
@@ -151,6 +153,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ShowConnectionSettingsCommand = CreateCommandShowConnectionSettingsCommand();
         ClearDerivedCommand = ReactiveCommand.CreateFromTask(async () => await Clear(true));
         ClearSeriesCommand = ReactiveCommand.CreateFromTask(async () => await Clear());
+        ClearResultsCommand = ReactiveCommand.Create(() => { });
 
         AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
         HoverCellGridCommand = CreateCommandHoverGridCommand();
@@ -846,6 +849,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             SeriesCache = SeriesCache.Clear();
         }
 
+        Signal.Return(RxVoid.Default).InvokeCommand(ClearResultsCommand);
         ClearSelection();
     }
 
@@ -888,4 +892,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             () => SeriesCache
         );
     }
+
+    // TODO: Add info about processed series
 }
