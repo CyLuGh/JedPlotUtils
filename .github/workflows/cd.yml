@@ -1,0 +1,58 @@
+name: Nuget deployment
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  configuration: Release
+  
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    environment: Release
+    
+    permissions:
+      id-token: write # enable GitHub OIDC token issuance for this job
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          fetch-depth: 0
+          path: JedPlotUtils
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v6.0.0
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+        working-directory: JedPlotUtils/src
+          
+      # Get a short-lived NuGet API key
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Build, pack and publish core
+        run: dotnet build --configuration ${{ env.configuration }} --no-restore
+             dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
+             dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+        working-directory: JedPlotUtils/src/JedPlotUtils
+        
+      - name: Build, pack and publish common project
+        run: dotnet build --configuration ${{ env.configuration }} --no-restore
+             dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
+             dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+        working-directory: JedPlotUtils/src/JedPlotUtils.Avalonia.Components
+        
+      - name: Build, pack and publish LiveCharts component
+        run: dotnet build --configuration ${{ env.configuration }} --no-restore
+             dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
+             dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+        working-directory: JedPlotUtils/src/JedPlotUtils.LiveCharts.Avalonia.Components

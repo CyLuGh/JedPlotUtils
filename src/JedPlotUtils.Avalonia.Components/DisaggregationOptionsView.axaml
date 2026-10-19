@@ -1,0 +1,147 @@
+<UserControl
+    d:DesignHeight="650"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    x:Class="JedPlotUtils.Avalonia.Components.DisaggregationOptionsView"
+    x:DataType="viewModels:DisaggregationOptionsViewModel"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel VerticalSpacing="16">
+        <UniformGrid
+            ColumnSpacing="5"
+            DockPanel.Dock="Bottom"
+            HorizontalAlignment="Right"
+            Rows="1">
+            <Button
+                Command="{Binding CancelCommand}"
+                Content="Cancel"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Theme="{DynamicResource GhostButtonTheme}" />
+            <Button
+                Classes="Primary"
+                Command="{Binding ValidateCommand}"
+                Content="OK"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+        </UniformGrid>
+
+        <StackPanel Spacing="4">
+            <TextBlock
+                FontSize="18"
+                FontWeight="Bold"
+                Margin="20,0"
+                Text="Temporal disaggregation options"
+                VerticalAlignment="Center" />
+
+            <Separator />
+
+            <UniformGrid
+                ColumnSpacing="5"
+                Columns="2"
+                HorizontalAlignment="Stretch"
+                Margin="10"
+                RowSpacing="6">
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Algorithm" VerticalAlignment="Center" />
+                    <TextBox
+                        HorizontalAlignment="Left"
+                        Text="{Binding Algorithm}"
+                        Width="300" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Model" VerticalAlignment="Center" />
+                    <TextBox
+                        HorizontalAlignment="Left"
+                        Text="{Binding Model}"
+                        Width="300" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Fixed Rho" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding FixedRho}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Rho" VerticalAlignment="Center" />
+                    <NumericUpDown
+                        HorizontalAlignment="Left"
+                        Value="{Binding Rho}"
+                        Width="300" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Truncated Rho" VerticalAlignment="Center" />
+                    <NumericUpDown
+                        HorizontalAlignment="Left"
+                        Value="{Binding TruncatedRho}"
+                        Width="300" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Constant" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding Constant}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Average" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding Average}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Trend" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding Trend}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Zero Init" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding ZeroInit}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Text="DiffuserEgs" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding DiffuserEgs}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <CheckBox
+                        Content="Frequency"
+                        IsChecked="{Binding HasFrequency}"
+                        VerticalAlignment="Center" />
+                    <ComboBox
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding HasFrequency}"
+                        ItemsSource="{Binding Frequencies}"
+                        SelectedItem="{Binding Frequency}"
+                        Width="300" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <CheckBox
+                        Content="N Backcasts"
+                        IsChecked="{Binding HasBackcast}"
+                        VerticalAlignment="Center" />
+                    <NumericUpDown
+                        FormatString="N0"
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding HasBackcast}"
+                        Minimum="0"
+                        ParsingNumberStyle="Integer"
+                        Value="{Binding NBackcasts}"
+                        Width="300" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <CheckBox
+                        Content="N Forecasts"
+                        IsChecked="{Binding HasForecast}"
+                        VerticalAlignment="Center" />
+                    <NumericUpDown
+                        FormatString="N0"
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding HasForecast}"
+                        Minimum="0"
+                        ParsingNumberStyle="Integer"
+                        Value="{Binding NForecasts}"
+                        Width="300" />
+                </StackPanel>
+
+            </UniformGrid>
+
+
+        </StackPanel>
+    </DockPanel>
+</UserControl>

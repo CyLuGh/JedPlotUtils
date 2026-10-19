@@ -1,4 +1,5 @@
-﻿using LanguageExt;
+﻿using JedPlotUtils.Models;
+using LanguageExt;
 
 namespace JedPlotUtils.Palette;
 
@@ -10,10 +11,20 @@ public abstract record APalette : IPalette
 
     public virtual Color GetColor(int index)
     {
-        int i = index;
-        while (i >= Colors.Count)
-            i -= Colors.Count;
-
-        return Colors[i];
+        var count = Colors.Count;
+        return Colors[Math.Abs(index) % count];
     }
+
+    public virtual Color GetColor(TimeSeriesInfo tsi) =>
+        tsi.Color.Match(c => c, () => GetColor(tsi.Index));
+
+    // public virtual bool Equals(APalette? other)
+    // {
+    //     return Name.Equals(other?.Name);
+    // }
+
+    // public override int GetHashCode()
+    // {
+    //     return Name.GetHashCode();
+    // }
 }

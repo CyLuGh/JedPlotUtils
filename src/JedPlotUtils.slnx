@@ -1,4 +1,14 @@
 <Solution>
+  <Folder Name="/Misc/">
+    <File Path="nuget.config" />
+    <File Path="Directory.Packages.props" />
+    <File Path="../readme.md" />
+    <File Path="../LICENSE" />
+    <File Path="../.gitignore" />
+  </Folder>
+  <Folder Name="/Pipelines/">
+    <File Path="../.github/workflows/cd.yml" />
+  </Folder>
   <Folder Name="/Demos/">
     <Project Path="Demos/AvaloniaApplication/AvaloniaApplication.csproj" Id="2fb75dd1-a45b-42a9-a48f-91fb3c3f9dfc" />
     <Project Path="Demos/DemoData/DemoData.csproj" Id="c11035ef-c55a-4f62-8bfe-1544a20791f6" />
@@ -6,6 +16,7 @@
     <Project Path="LC_AvaloniaApplication/LC_AvaloniaApplication.csproj" Id="ce43b0cf-80d2-4b66-b78a-a1c178f11fc7" />
   </Folder>
   <Folder Name="/LiveCharts/">
+    <Project Path="JedPlotUtils.LiveCharts.Avalonia.Client/JedPlotUtils.LiveCharts.Avalonia.Client.csproj" />
     <Project Path="JedPlotUtils.LiveCharts.Avalonia.Components/JedPlotUtils.LiveCharts.Avalonia.Components.csproj" Id="5c7195d6-3462-4a2a-826d-d67a769f0c8a" />
   </Folder>
   <Folder Name="/ScottPlot/">
@@ -15,6 +26,7 @@
     <Project Path="JedPlotUtils.ScottPlot.WPF/JedPlotUtils.ScottPlot.WPF.csproj" Id="a2790c6e-34ff-4d43-b973-e6efbf268d7b" />
     <Project Path="JedPlotUtils.ScottPlot/JedPlotUtils.ScottPlot.csproj" Id="3c9e8f40-a629-4271-8a4b-cb692aef5ea7" />
   </Folder>
+  <Project Path="JedPlotUtils.Avalonia.Components/JedPlotUtils.Avalonia.Components.csproj" />
   <Project Path="JedPlotUtils.Tests/JedPlotUtils.Tests.csproj" />
   <Project Path="JedPlotUtils/JedPlotUtils.csproj" Id="e5cf6873-b2ce-467e-b05e-b1a57b911c82" />
 </Solution>

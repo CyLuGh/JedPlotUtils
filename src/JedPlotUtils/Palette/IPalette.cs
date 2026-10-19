@@ -1,4 +1,5 @@
-﻿using LanguageExt;
+﻿using JedPlotUtils.Models;
+using LanguageExt;
 
 namespace JedPlotUtils.Palette;
 
@@ -9,4 +10,5 @@ public interface IPalette
     Color BackgroundColor { get; }
 
     Color GetColor(int index);
+    Color GetColor(TimeSeriesInfo tsi);
 }

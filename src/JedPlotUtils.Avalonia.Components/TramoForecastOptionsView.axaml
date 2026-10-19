@@ -1,0 +1,95 @@
+﻿<UserControl
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    mc:Ignorable="d"
+    x:Class="JedPlotUtils.Avalonia.Components.TramoForecastOptionsView"
+    x:DataType="viewModels:TramoForecastOptionsViewModel"
+    xmlns="https://github.com/avaloniaui"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel VerticalSpacing="16">
+        <UniformGrid
+            ColumnSpacing="5"
+            DockPanel.Dock="Bottom"
+            HorizontalAlignment="Right"
+            Rows="1">
+            <Button
+                Command="{Binding CancelCommand}"
+                Content="Cancel"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Theme="{DynamicResource GhostButtonTheme}" />
+            <Button
+                Classes="Primary"
+                Command="{Binding ValidateCommand}"
+                Content="OK"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" />
+        </UniformGrid>
+
+        <StackPanel Spacing="4">
+            <TextBlock
+                FontSize="18"
+                FontWeight="Bold"
+                Margin="20,0"
+                Text="Tramo forecasts options"
+                VerticalAlignment="Center" />
+
+            <Separator />
+
+            <Grid
+                ColumnDefinitions="*,*"
+                ColumnSpacing="5"
+                Margin="10"
+                RowDefinitions="Auto,*"
+                RowSpacing="6">
+                <StackPanel
+                    Grid.Column="0"
+                    Grid.Row="0"
+                    Spacing="4"
+                    VerticalAlignment="Bottom">
+                    <TextBlock Text="Forecasts count" VerticalAlignment="Center" />
+                    <NumericUpDown
+                        FormatString="N0"
+                        HorizontalAlignment="Left"
+                        Minimum="1"
+                        ParsingNumberStyle="Integer"
+                        Value="{Binding NForecasts}"
+                        Width="300" />
+                </StackPanel>
+                <UniformGrid
+                    ColumnSpacing="4"
+                    Grid.Column="1"
+                    Grid.Row="0"
+                    Rows="1">
+                    <RadioButton
+                        Content="Simple spec"
+                        IsChecked="{Binding UseSimpleSpec}"
+                        VerticalAlignment="Center" />
+                    <RadioButton
+                        Content="Complete spec"
+                        IsChecked="{Binding !UseSimpleSpec}"
+                        VerticalAlignment="Center" />
+                </UniformGrid>
+
+                <StackPanel
+                    Grid.Column="0"
+                    Grid.ColumnSpan="2"
+                    Grid.Row="1"
+                    Spacing="4">
+                    <TextBlock Text="Spec" VerticalAlignment="Center" />
+                    <ComboBox
+                        HorizontalAlignment="Left"
+                        IsEnabled="{Binding UseSimpleSpec}"
+                        IsVisible="{Binding UseSimpleSpec}"
+                        ItemsSource="{Binding SimpleSpecs}"
+                        SelectedItem="{Binding SimpleSpec}"
+                        VerticalContentAlignment="Center"
+                        Width="300" />
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </DockPanel>
+</UserControl>

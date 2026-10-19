@@ -1,14 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using JedPlotUtils.ViewModels;
 using ReactiveUI;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
-using RxCommand = ReactiveUI.ReactiveCommand<System.Reactive.Unit, System.Reactive.Unit>;
-using RxUnit = System.Reactive.Unit;
+using RxCommand = ReactiveUI.ReactiveCommand<
+    ReactiveUI.Primitives.RxVoid,
+    ReactiveUI.Primitives.RxVoid
+>;
+using RxInteraction = ReactiveUI.Binding.Interaction<
+    ReactiveUI.Primitives.RxVoid,
+    ReactiveUI.Primitives.RxVoid
+>;
 
 namespace LC_AvaloniaApplication;
 
@@ -27,7 +34,11 @@ public partial class DemoViewModel : BaseViewModel
     private readonly Random _random;
 
     public RxCommand AddSeries { get; }
+    public RxCommand AddSeriesWithAuxiliaryData { get; }
     public RxCommand ClearSeries { get; }
+
+    public RxCommand AddChartWindow { get; }
+    public RxInteraction AddChartWindowInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     public DemoViewModel()
     {
@@ -37,10 +48,31 @@ public partial class DemoViewModel : BaseViewModel
         AddSeries = ReactiveCommand.Create(
             () =>
                 TimeSeriesViewModel.Add(
-                    GenerateTimeSeriesInfo("A", new DateOnly(2000, 1, 1), 24, d => d.AddMonths(1))
+                    GenerateTimeSeriesInfo("A", new DateOnly(2000, 1, 1), 24, d => d.AddMonths(3))
                 )
         );
-        ClearSeries = ReactiveCommand.Create(() => TimeSeriesViewModel.Clear());
+        AddSeriesWithAuxiliaryData = ReactiveCommand.Create(
+            () =>
+                TimeSeriesViewModel.Add(
+                    GenerateTimeSeriesInfoWithAuxiliaryData(
+                        "A",
+                        new DateOnly(2000, 1, 1),
+                        24,
+                        d => d.AddMonths(1)
+                    )
+                )
+        );
+        ClearSeries = ReactiveCommand.Create(() =>
+        {
+            Signal
+                .Return(RxVoid.Default)
+                .InvokeCommand(TimeSeriesViewModel, x => x.ClearSeriesCommand);
+        });
+
+        AddChartWindowInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        AddChartWindow = ReactiveCommand.CreateFromTask(
+            () => AddChartWindowInteraction.Handle(RxVoid.Default)
+        );
     }
 
     private TimeSeriesInfo GenerateTimeSeriesInfo(
@@ -62,5 +94,30 @@ public partial class DemoViewModel : BaseViewModel
         }
 
         return new(label, [.. dates], [.. values]);
+    }
+
+    private TimeSeriesInfo GenerateTimeSeriesInfoWithAuxiliaryData(
+        string label,
+        DateOnly start,
+        int count,
+        Func<DateOnly, DateOnly> increment
+    )
+    {
+        var current = start;
+        var dates = new List<DateOnly>();
+        var values = new List<double>();
+        var auxiliaries = new List<double>();
+
+        while (dates.Count < count)
+        {
+            dates.Add(current);
+            var a = _random.NextDouble() * 1_000_000;
+            var b = _random.NextDouble() * 1_000_000;
+            values.Add(Math.Max(a, b));
+            auxiliaries.Add(Math.Min(a, b));
+            current = increment(current);
+        }
+
+        return new(label, [.. dates], [.. values], [.. auxiliaries]);
     }
 }

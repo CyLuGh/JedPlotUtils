@@ -13,28 +13,22 @@
     <TabItem Header="Simple">
       <DockPanel VerticalSpacing="10">
         <Grid ColumnDefinitions="Auto,*">
-          <StackPanel Spacing="5">
-            <ComboBox x:Name="ComboBoxPalettes"
-                      HorizontalAlignment="Stretch"
-                      SelectedItem="{Binding TimeSeriesViewModel.Palette}">
-              <ComboBox.ItemTemplate>
-                <DataTemplate DataType="palette:IPalette">
-                  <TextBlock Text="{Binding Name}"/>
-                </DataTemplate>
-              </ComboBox.ItemTemplate>
-            </ComboBox>
-            <ComboBox x:Name="ComboBoxDisplayModes"
-                      HorizontalAlignment="Stretch"
-                      SelectedItem="{Binding TimeSeriesViewModel.DisplayMode}">
-
-            </ComboBox>
+          <UniformGrid Columns="1" 
+                       RowSpacing="5"
+                       VerticalAlignment="Top">
             <Button Content="Add series"
                     Command="{Binding AddSeries}"
+                    HorizontalAlignment="Stretch"/>
+            <Button Content="Add series with auxiliary data"
+                    Command="{Binding AddSeriesWithAuxiliaryData}"
                     HorizontalAlignment="Stretch"/>
             <Button Content="Clear"
                     Command="{Binding ClearSeries}"
                     HorizontalAlignment="Stretch"/>
-          </StackPanel>
+            <Button Content="Open new chart"
+                    Command="{Binding AddChartWindow}"
+                    HorizontalAlignment="Stretch"/>
+          </UniformGrid>
 
           <rxui:ViewModelViewHost ViewModel="{Binding TimeSeriesViewModel}"
                                   Grid.Column="1"/>

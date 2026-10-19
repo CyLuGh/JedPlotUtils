@@ -1,10 +1,12 @@
-using System.Reactive.Disposables;
-using System.Reactive.Disposables.Fluent;
-using System.Reactive.Linq;
+using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Layout;
+using Avalonia.Platform.Storage;
+using JedPlotUtils.Avalonia.Components;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
 using JedPlotUtils.Models;
+using JedPlotUtils.ViewModels;
 using LanguageExt;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.Drawing;
@@ -14,8 +16,11 @@ using LiveChartsCore.Kernel.Sketches;
 using LiveChartsCore.SkiaSharpView.Avalonia;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
+using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Extensions;
+using ReactiveUI.Primitives.Signals;
 using AV = Avalonia;
-using RxUnit = System.Reactive.Unit;
 using SelectionMode = JedPlotUtils.Models.SelectionMode;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components;
@@ -29,75 +34,313 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         this.WhenActivated(disposables =>
         {
             this.WhenAnyValue(x => x.ViewModel)
-                .WhereNotNull()
+                .Where(vm => vm is not null)
+                .Select(vm => vm!)
                 .Do(vm => PopulateFromViewModel(this, vm, disposables))
-                .Do(vm => vm.DisplayMode = DisplayMode.BothHorizontal)
                 .Subscribe()
                 .DisposeWith(disposables);
         });
     }
 
-    private static void PopulateFromViewModel(
-        TimeSeriesViewer view,
+    private async Task OpenDialogAnimation(
         TimeSeriesViewerViewModel viewModel,
-        CompositeDisposable disposables
+        object? content,
+        double width = 600,
+        double height = 400
     )
     {
+        DialogContent.Content = content;
+        viewModel.IsDialogOpen = true;
+        await Task.Delay(50);
+
+        viewModel.DialogOpacity = 1;
+        DialogBorder.Width = width;
+        DialogBorder.Height = height;
+    }
+
+    private async Task CloseDialogAnimation(TimeSeriesViewerViewModel viewModel)
+    {
+        DialogBorder.Width = 100;
+        DialogBorder.Height = 50;
+        viewModel.DialogOpacity = 0;
+        await Task.Delay(220);
+        viewModel.IsDialogOpen = false;
+        DialogContent.Content = null;
+    }
+
+    private Option<PointerPressedEventArgs> _dragPointerPressedEventArgs;
+    private bool _dragStarted;
+
+    private void PopulateFromViewModel(
+        TimeSeriesViewer view,
+        TimeSeriesViewerViewModel viewModel,
+        MultipleDisposable disposables
+    )
+    {
+        view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
+
+        viewModel.ClearInfoInteraction.RegisterHandler(ctx =>
+        {
+            view.InfoContent.Content = null;
+            ctx.SetOutput(RxVoid.Default);
+        });
+
+        viewModel.ShowDisaggregationInfoInteraction.RegisterHandler(ctx =>
+        {
+            view.InfoContent.Content = new DisaggregationResultsInfoView()
+            {
+                DataContext = ctx.Input
+            };
+            ctx.SetOutput(RxVoid.Default);
+        });
+
+        viewModel
+            .ShowSettingsInteraction.RegisterHandler(async ctx =>
+            {
+                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                await OpenDialogAnimation(
+                    viewModel,
+                    new TimeSeriesViewerConfigurationView() { ViewModel = cvm },
+                    700,
+                    380
+                );
+                var res = await cvm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .ShowConnectionSettingsInteraction.RegisterHandler(async ctx =>
+            {
+                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                await OpenDialogAnimation(
+                    viewModel,
+                    new TimeSeriesViewerConnectionView() { ViewModel = cvm },
+                    520,
+                    220
+                );
+                var res = await cvm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .GetDisaggregationRequestInteraction.RegisterHandler(async ctx =>
+            {
+                var dovm = new DisaggregationOptionsViewModel();
+                await OpenDialogAnimation(
+                    viewModel,
+                    new DisaggregationOptionsView() { ViewModel = dovm },
+                    700,
+                    700
+                );
+                var res = await dovm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .GetTramoRequestInteraction.RegisterHandler(async ctx =>
+            {
+                var tfovm = new TramoForecastOptionsViewModel();
+                await OpenDialogAnimation(
+                    viewModel,
+                    new TramoForecastOptionsView() { ViewModel = tfovm },
+                    700,
+                    700
+                );
+                var res = await tfovm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .RenameSeriesInteraction.RegisterHandler(async ctx =>
+            {
+                var rsvm = new RenameSeriesViewModel() { CurrentName = ctx.Input.Label };
+                await OpenDialogAnimation(
+                    viewModel,
+                    new RenameSeriesView() { ViewModel = rsvm },
+                    450,
+                    280
+                );
+                var res = await rsvm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .GetFrequencyChangeOptionsInteraction.RegisterHandler(async ctx =>
+            {
+                var tsbvm = new TimeSeriesBuilderViewModel();
+                await OpenDialogAnimation(
+                    viewModel,
+                    new TimeSeriesBuilderView() { ViewModel = tsbvm },
+                    450,
+                    320
+                );
+                var res = await tsbvm.Result;
+                ctx.SetOutput(res);
+                await CloseDialogAnimation(viewModel);
+            })
+            .DisposeWith(disposables);
+
         /* Display Mode */
         viewModel
             .AdaptDisplayModeInteraction.RegisterHandler(ctx =>
             {
-                SetGridDimensions(view.GridMainDisplay, ctx.Input);
+#if DEBUG
+                Console.WriteLine($"Calling AdaptDisplayModeInteraction with {ctx.Input}");
+#endif
                 SetHierarchyGridConstraints(
                     view.HierarchyGrid,
                     ctx.Input,
                     viewModel.HierarchyGridViewModel
                 );
                 SetGridSplitterConstraints(view.Splitter, ctx.Input);
-                ctx.SetOutput(System.Reactive.Unit.Default);
+                SetGridDimensions(view.GridMainDisplay, ctx.Input);
+                viewModel.HasFirstRender = true;
+                ctx.SetOutput(RxVoid.Default);
             })
             .DisposeWith(disposables);
 
-        /* Mouse click */
-        Observable
-            .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
-                o =>
-                    (o, args) =>
+        viewModel
+            .CopyToClipboardInteraction.RegisterHandler(async ctx =>
+            {
+                var clipboard = TopLevel.GetTopLevel(view)?.Clipboard;
+
+                if (clipboard is not null)
+                {
+                    using var dataTransfer = new DataTransfer();
+                    dataTransfer.Add(
+                        DataTransferItem.Create(
+                            DataFormat.CreateBytesApplicationFormat("jedplot.timeseries"),
+                            viewModel.SelectedSeries.ToBytes()
+                        )
+                    );
+
+                    await clipboard.SetDataAsync(dataTransfer);
+
+                    var xmlss = viewModel.SelectedSeries.ToXmlSpreadSheet();
+                    dataTransfer.Add(
+                        DataTransferItem.Create(
+                            DataFormat.CreateStringPlatformFormat("application/vnd.ms-excel"),
+                            xmlss
+                        )
+                    );
+                }
+
+                ctx.SetOutput(RxVoid.Default);
+            })
+            .DisposeWith(disposables);
+
+        viewModel
+            .PasteFromClipboardInteraction.RegisterHandler(async ctx =>
+            {
+                var clipboard = TopLevel.GetTopLevel(view)?.Clipboard;
+
+                if (clipboard is null)
+                {
+                    ctx.SetOutput(Seq<TimeSeriesInfo>.Empty);
+                    return;
+                }
+
+                using var data = await clipboard.TryGetDataAsync().ConfigureAwait(false);
+
+                var bytes =
+                    await data?.TryGetValueAsync(
+                        DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                    )! ?? [];
+
+                if (bytes.Length > 0)
+                {
+                    ctx.SetOutput(bytes.ToTimeSeriesInfo().ToSeq());
+                    return;
+                }
+
+                /* Text format */
+                var text = await data.TryGetTextAsync().ConfigureAwait(false);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var series = text.FromCsv();
+                    if (series.Length > 0)
                     {
-                        if (viewModel.SelectionMode == SelectionMode.None)
-                            return;
+                        ctx.SetOutput(series.ToSeq());
+                        return;
+                    }
+                }
 
-                        var chart = (CartesianChart)o!;
-                        var pos = args.GetPosition(chart);
+                /* File format */
+                if (await data.TryGetFilesAsync().ConfigureAwait(false) is { } files)
+                {
+                    // TODO: check csv, check xlsx, check OpenOffice
+                    await ParseIStorageItems(files, viewModel);
+                }
 
-                        // Convert Avalonia point → LiveCharts point
-                        var lvcPoint = new LvcPoint((float)pos.X, (float)pos.Y);
+                ctx.SetOutput(Seq<TimeSeriesInfo>.Empty);
+            })
+            .DisposeWith(disposables);
 
-                        // Hit test
-                        var found = chart.CoreChart.FindHoveredPointsBy(lvcPoint).ToSeq();
+        HandleDragDrop(view, viewModel, disposables);
 
-                        if (found.IsEmpty)
-                        {
-                            viewModel.Selection = LanguageExt.HashSet<Identifier>.Empty;
-                            return;
-                        }
-
-                        viewModel.Selection = viewModel.SelectionMode switch
-                        {
-                            SelectionMode.Single => new([(Identifier)found[0].Context.Series.Tag]),
-                            SelectionMode.Multiple
-                                => viewModel.Selection.Add((Identifier)found[0].Context.Series.Tag),
-                            _ => viewModel.Selection,
-                        };
-                    },
+        /* Mouse click */
+        Signal
+            .FromEventPattern<EventHandler<PointerPressedEventArgs>, PointerPressedEventArgs>(
                 handler => view.CartesianChart.PointerPressed += handler,
                 handler => view.CartesianChart.PointerPressed -= handler
             )
-            .Subscribe()
+            .Subscribe(t =>
+            {
+                var args = t.EventArgs;
+
+                /* Only update selection from left click (except when selection is empty) and if selection mode allows it */
+                if (
+                    viewModel.SeriesSelectionMode == SelectionMode.None
+                    || (!args.Properties.IsLeftButtonPressed && !viewModel.Selection.IsEmpty)
+                )
+                    return;
+
+                var chart = (CartesianChart)t.Sender!;
+                var pos = args.GetPosition(chart);
+
+                // Convert Avalonia point → LiveCharts point
+                var lvcPoint = new LvcPoint((float)pos.X, (float)pos.Y);
+
+                // Hit test
+                var found = chart.CoreChart.FindHoveredPointsBy(lvcPoint).ToSeq();
+
+                if (found.IsEmpty)
+                {
+                    viewModel.Selection = LanguageExt.HashSet<Identifier>.Empty;
+                    return;
+                }
+
+                viewModel.Selection = viewModel.SeriesSelectionMode switch
+                {
+                    SelectionMode.Single
+                        => viewModel
+                            .Selection.Clear()
+                            .Add((Identifier)found[0].Context.Series.Tag!),
+                    SelectionMode.Multiple
+                        => viewModel.Selection.TryAdd((Identifier)found[0].Context.Series.Tag!),
+                    _ => viewModel.Selection,
+                };
+
+                if (!viewModel.Selection.IsEmpty && args.Properties.IsLeftButtonPressed)
+                {
+                    _dragPointerPressedEventArgs = args;
+                    _dragStarted = false;
+                }
+            })
             .DisposeWith(disposables);
 
         /* Mouse over chart */
-        Observable
+        Signal
             .FromEvent<
                 ChartPointHoverHandler,
                 (
@@ -110,9 +353,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 h => view.CartesianChart.HoveredPointsChanged += h,
                 h => view.CartesianChart.HoveredPointsChanged -= h
             )
+            .Throttle(TimeSpan.FromMilliseconds(20))
             .Subscribe(x =>
             {
-                var (chart, newItems, oldItems) = x;
+                var (_, newItems, _) = x;
                 var nItems = newItems?.ToSeq() ?? Seq<ChartPoint>.Empty;
                 if (!nItems.IsEmpty)
                 {
@@ -161,8 +405,221 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 view.CartesianChart.Tooltip?.Hide(view.CartesianChart.CoreChart);
             });
 
-            ctx.SetOutput(RxUnit.Default);
+            ctx.SetOutput(RxVoid.Default);
         });
+    }
+
+    private void HandleDragDrop(
+        TimeSeriesViewer view,
+        TimeSeriesViewerViewModel viewModel,
+        MultipleDisposable disposables
+    )
+    {
+        Signal
+            .FromEventPattern<EventHandler<PointerEventArgs>, PointerEventArgs>(
+                handler => view.CartesianChart.PointerReleased += handler,
+                handler => view.CartesianChart.PointerReleased -= handler
+            )
+            .Subscribe(_ =>
+            {
+                _dragStarted = false;
+                _dragPointerPressedEventArgs = Option<PointerPressedEventArgs>.None;
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<EventHandler<PointerEventArgs>, PointerEventArgs>(
+                handler => view.CartesianChart.PointerMoved += handler,
+                handler => view.CartesianChart.PointerMoved -= handler
+            )
+            .SubscribeAsync(async t =>
+            {
+                var args = t.EventArgs;
+                if (
+                    args.Properties.IsLeftButtonPressed
+                    && !viewModel.Selection.IsEmpty
+                    && !_dragStarted
+                )
+                {
+                    await _dragPointerPressedEventArgs.IfSomeAsync(async evt =>
+                    {
+                        var delta = args.GetPosition(view) - evt.GetPosition(view);
+                        if (delta is { X: < 5, Y: < 5 })
+                            return;
+
+                        _dragStarted = true;
+
+                        var dragData = new DataTransfer();
+
+                        string filePath;
+
+                        if ((args.KeyModifiers & KeyModifiers.Control) != 0)
+                        {
+                            var csv = viewModel.SelectedSeries.ToCsv(
+                                separator: "\t",
+                                formatProvider: CultureInfo.CurrentCulture
+                            );
+                            dragData.Add(DataTransferItem.CreateText(csv));
+
+                            filePath = Path.Combine(
+                                Path.GetTempPath(),
+                                $"{Guid.CreateVersion7():N}.xlsx"
+                            );
+                            await File.WriteAllBytesAsync(
+                                filePath,
+                                viewModel.SelectedSeries.ToExcelBytes()
+                            );
+                        }
+                        else
+                        {
+                            var csv = viewModel.SelectedSeries.ToCsv();
+                            dragData.Add(DataTransferItem.CreateText(csv));
+
+                            filePath = Path.Combine(
+                                Path.GetTempPath(),
+                                $"{Guid.CreateVersion7():N}.csv"
+                            );
+                            await File.WriteAllTextAsync(filePath, csv);
+                        }
+
+                        var storageFile = await (
+                            TopLevel
+                                .GetTopLevel(view)
+                                ?.StorageProvider.TryGetFileFromPathAsync(filePath)!
+                        ).ConfigureAwait(false);
+                        if (storageFile is not null)
+                            dragData.Add(DataTransferItem.CreateFile(storageFile));
+
+                        dragData.Add(
+                            DataTransferItem.Create(
+                                DataFormat.CreateBytesApplicationFormat("jedplot.timeseries"),
+                                viewModel.SelectedSeries.ToBytes()
+                            )
+                        );
+
+                        await DragDrop.DoDragDropAsync(evt, dragData, DragDropEffects.Copy);
+
+                        _dragStarted = false;
+                        _dragPointerPressedEventArgs = Option<PointerPressedEventArgs>.None;
+                    });
+                }
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<EventHandler<DragEventArgs>, DragEventArgs>(
+                handler => DragDrop.AddDragOverHandler(view.GridMainDisplay, handler),
+                handler => DragDrop.AddDragOverHandler(view.GridMainDisplay, handler)
+            )
+            .Subscribe(t =>
+            {
+                var args = t.EventArgs;
+                args.DragEffects =
+                    args.DataTransfer.Formats.Contains(DataFormat.Text)
+                    || args.DataTransfer.Formats.Contains(DataFormat.File)
+                        ? DragDropEffects.Copy
+                        : DragDropEffects.None;
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<EventHandler<DragEventArgs>, DragEventArgs>(
+                handler => DragDrop.AddDropHandler(view.GridMainDisplay, handler),
+                handler => DragDrop.RemoveDropHandler(view.GridMainDisplay, handler)
+            )
+            .SubscribeAsync(async t =>
+            {
+                var e = t.EventArgs;
+
+                /* Internal binary format */
+                var bytes = e.DataTransfer.TryGetValue(
+                    DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                );
+
+                if (bytes?.Length > 0)
+                {
+                    viewModel.Add(bytes.ToTimeSeriesInfo());
+                    return;
+                }
+
+                /* Text format */
+                var text = e.DataTransfer.TryGetText();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    var series = text.FromCsv();
+                    if (series.Length > 0)
+                    {
+                        viewModel.Add(series);
+                        return;
+                    }
+                }
+
+                /* File format */
+                if (e.DataTransfer.TryGetFiles() is { } files)
+                {
+                    await ParseIStorageItems(files, viewModel);
+                }
+            })
+            .DisposeWith(disposables);
+    }
+
+    private async Task ParseIStorageItems(IStorageItem[] files, TimeSeriesViewerViewModel viewModel)
+    {
+        // TODO: check OpenOffice
+        var stackPanel = new StackPanel()
+        {
+            Orientation = Orientation.Vertical,
+            Spacing = 10d,
+            VerticalAlignment = VerticalAlignment.Center,
+            Children =
+            {
+                new TextBlock()
+                {
+                    Text = "Parsing file content...",
+                    VerticalAlignment = VerticalAlignment.Center,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    FontSize = 18
+                },
+                new ProgressBar()
+                {
+                    IsIndeterminate = true,
+                    Height = 15,
+                    Width = 250,
+                    VerticalAlignment = VerticalAlignment.Center,
+                }
+            }
+        };
+
+        await OpenDialogAnimation(viewModel, stackPanel, 450, 320);
+
+        await Task.Run(() =>
+        {
+            foreach (var file in files)
+            {
+                var extension = Path.GetExtension(file.Path.LocalPath).ToLowerInvariant();
+                switch (extension)
+                {
+                    case ".txt":
+                    case ".csv":
+                        {
+                            var series = File.ReadAllText(file.Path.LocalPath).FromCsv();
+                            if (series.Length > 0)
+                                viewModel.Add(series);
+                        }
+                        break;
+
+                    case ".xlsx":
+                        {
+                            var series = ExcelTimeSeriesInfoParser.FromExcel(file.Path.LocalPath);
+                            if (series.Length > 0)
+                                viewModel.Add(series);
+                        }
+                        break;
+                }
+            }
+        });
+
+        await CloseDialogAnimation(viewModel);
     }
 
     private static void SetGridSplitterConstraints(GridSplitter splitter, DisplayMode displayMode)
@@ -239,6 +696,11 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             case DisplayMode.BothHorizontal:
                 grid.ColumnDefinitions = ColumnDefinitions.Parse("2*,Auto,*");
                 grid.RowDefinitions = RowDefinitions.Parse("*");
+                break;
+
+            case DisplayMode.None:
+                grid.ColumnDefinitions = ColumnDefinitions.Parse("0,0,0");
+                grid.RowDefinitions = RowDefinitions.Parse("0,0,0");
                 break;
 
             default:

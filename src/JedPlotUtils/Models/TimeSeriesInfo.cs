@@ -1,76 +1,279 @@
-﻿using System.Collections.Frozen;
+﻿using System.Text.Json.Serialization;
+using JedPlotUtils.Models.Json;
+using JedPlotUtils.Palette;
 using LanguageExt;
 
 namespace JedPlotUtils.Models;
 
+public enum SeriesChartType
+{
+    Line,
+    Area,
+    Range,
+    Column,
+    StepLine,
+    Scatter,
+}
+
+public enum Level
+{
+    Primary,
+    Secondary,
+    Tertiary,
+    Quaternary,
+}
+
 public readonly record struct TimeSeriesInfo
 {
+    [JsonConverter(typeof(IdentifierConverter))]
     public Identifier Identifier { get; }
-    public string Label { get; }
+    public string Label { get; init; }
+
+    [JsonConverter(typeof(DateOnlyDoubleHashMapConverter))]
     public HashMap<DateOnly, double> Data { get; }
+    public SeriesChartType ChartType { get; init; }
 
-    public TimeSeriesInfo(string identifier, string label, IEnumerable<(DateOnly, double)> data)
+    [JsonConverter(typeof(DateOnlyDoubleHashMapConverter))]
+    public HashMap<DateOnly, double> AuxiliaryData { get; }
+
+    [JsonIgnore]
+    public Level Level => Identifier.Level;
+
+    [JsonIgnore]
+    public bool IsDerived => Level != Level.Primary;
+    public int Index { get; init; }
+
+    [JsonConverter(typeof(OptionStringConverter))]
+    public Option<string> NumberFormat { get; init; }
+
+    public Option<Color> Color { get; init; }
+
+    public TimeSeriesInfo(
+        string identifier,
+        string label,
+        IEnumerable<(DateOnly, double)> data,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Line
+    )
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(identifier, nameof(identifier));
-        ArgumentNullException.ThrowIfNull(label, nameof(label));
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        ArgumentNullException.ThrowIfNull(label);
 
-        Identifier = identifier;
+        Identifier = new(identifier, level);
         Label = label;
         Data = data.ToHashMap();
+        ChartType = chartType;
+    }
+
+    public TimeSeriesInfo(
+        string identifier,
+        string label,
+        IEnumerable<(DateOnly, double)> data,
+        IEnumerable<(DateOnly, double)> auxiliary,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Range
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        ArgumentNullException.ThrowIfNull(label);
+
+        Identifier = new(identifier, level);
+        Label = label;
+        Data = data.ToHashMap();
+        AuxiliaryData = auxiliary.ToHashMap();
+        ChartType = chartType;
     }
 
     public TimeSeriesInfo(
         Option<string> identifier,
         Option<string> label,
-        IEnumerable<(DateOnly, double)> data
+        IEnumerable<(DateOnly, double)> data,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Line
     )
         : this(
-            identifier.Match(i => i, () => Guid.NewGuid().ToString()),
+            identifier.Match(i => i, () => Guid.CreateVersion7().ToString()),
             label.Match(l => l, () => string.Empty),
-            data
+            data,
+            level,
+            chartType
         ) { }
 
-    public TimeSeriesInfo(Option<string> label, IEnumerable<(DateOnly, double)> data)
-        : this(Option<string>.None, label.Match(l => l, () => string.Empty), data) { }
+    public TimeSeriesInfo(
+        Option<string> identifier,
+        Option<string> label,
+        IEnumerable<(DateOnly, double)> data,
+        IEnumerable<(DateOnly, double)> auxiliary,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Range
+    )
+        : this(
+            identifier.Match(i => i, () => Guid.CreateVersion7().ToString()),
+            label.Match(l => l, () => string.Empty),
+            data,
+            auxiliary,
+            level,
+            chartType
+        ) { }
 
-    public TimeSeriesInfo(IEnumerable<(DateOnly, double)> data)
-        : this(Option<string>.None, Option<string>.None, data) { }
+    public TimeSeriesInfo(
+        Option<string> label,
+        IEnumerable<(DateOnly, double)> data,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Line
+    )
+        : this(Option<string>.None, label.Match(l => l, () => string.Empty), data, level, chartType)
+    { }
 
-    public TimeSeriesInfo(string identifier, string label, DateOnly[] dates, double[] values)
+    public TimeSeriesInfo(IEnumerable<(DateOnly, double)> data, Level level = Level.Primary)
+        : this(Option<string>.None, Option<string>.None, data, level) { }
+
+    public TimeSeriesInfo(
+        IEnumerable<(DateOnly, double)> data,
+        IEnumerable<(DateOnly, double)> auxiliary,
+        Level level = Level.Primary
+    )
+        : this(Option<string>.None, Option<string>.None, data, auxiliary, level) { }
+
+    public TimeSeriesInfo(
+        string identifier,
+        string label,
+        DateOnly[] dates,
+        double[] values,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Line
+    )
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(identifier, nameof(identifier));
-        ArgumentNullException.ThrowIfNull(label, nameof(label));
-        ArgumentNullException.ThrowIfNull(dates, nameof(dates));
-        ArgumentNullException.ThrowIfNull(values, nameof(values));
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(dates);
+        ArgumentNullException.ThrowIfNull(values);
         ArgumentOutOfRangeException.ThrowIfNotEqual(dates.Length, values.Length);
 
-        Identifier = identifier;
+        Identifier = new(identifier, level);
         Label = label;
         Data = Enumerable.Range(0, dates.Length).Select(i => (dates[i], values[i])).ToHashMap();
+        ChartType = chartType;
+    }
+
+    public TimeSeriesInfo(
+        string identifier,
+        string label,
+        DateOnly[] dates,
+        double[] values,
+        double[] auxiliaries,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Range
+    )
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(identifier);
+        ArgumentNullException.ThrowIfNull(label);
+        ArgumentNullException.ThrowIfNull(dates);
+        ArgumentNullException.ThrowIfNull(values);
+        ArgumentNullException.ThrowIfNull(auxiliaries);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(dates.Length, values.Length);
+        ArgumentOutOfRangeException.ThrowIfNotEqual(dates.Length, auxiliaries.Length);
+
+        Identifier = new(identifier, level);
+        Label = label;
+        Data = Enumerable.Range(0, dates.Length).Select(i => (dates[i], values[i])).ToHashMap();
+        AuxiliaryData = Enumerable
+            .Range(0, dates.Length)
+            .Select(i => (dates[i], auxiliaries[i]))
+            .ToHashMap();
+        ChartType = chartType;
     }
 
     public TimeSeriesInfo(
         Option<string> identifier,
         Option<string> label,
         DateOnly[] dates,
-        double[] values
+        double[] values,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Line
     )
         : this(
-            identifier.Match(i => i, () => Guid.NewGuid().ToString()),
+            identifier.Match(i => i, () => Guid.CreateVersion7().ToString()),
             label.Match(l => l, () => string.Empty),
             dates,
-            values
+            values,
+            level,
+            chartType
         ) { }
 
-    public TimeSeriesInfo(Option<string> label, DateOnly[] dates, double[] values)
-        : this(Option<string>.None, label.Match(l => l, () => string.Empty), dates, values) { }
+    public TimeSeriesInfo(
+        Option<string> identifier,
+        Option<string> label,
+        DateOnly[] dates,
+        double[] values,
+        double[] auxiliaries,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Range
+    )
+        : this(
+            identifier.Match(i => i, () => Guid.CreateVersion7().ToString()),
+            label.Match(l => l, () => string.Empty),
+            dates,
+            values,
+            auxiliaries,
+            level,
+            chartType
+        ) { }
+
+    public TimeSeriesInfo(
+        Option<string> label,
+        DateOnly[] dates,
+        double[] values,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Line
+    )
+        : this(
+            Option<string>.None,
+            label.Match(l => l, () => string.Empty),
+            dates,
+            values,
+            level,
+            chartType
+        ) { }
+
+    public TimeSeriesInfo(
+        Option<string> label,
+        DateOnly[] dates,
+        double[] values,
+        double[] auxiliaries,
+        Level level = Level.Primary,
+        SeriesChartType chartType = SeriesChartType.Range
+    )
+        : this(
+            Option<string>.None,
+            label.Match(l => l, () => string.Empty),
+            dates,
+            values,
+            auxiliaries,
+            level,
+            chartType
+        ) { }
 
     public TimeSeriesInfo(DateOnly[] dates, double[] values)
         : this(Option<string>.None, Option<string>.None, dates, values) { }
-}
 
-public static class TimeSeriesInfoExtensions
-{
-    public static FrozenSet<DateOnly> GetDates(this IEnumerable<TimeSeriesInfo> infos) =>
-        infos.Map(i => i.Data.Keys).Flatten().Distinct().ToFrozenSet();
+    [JsonConstructor]
+    public TimeSeriesInfo(
+        Identifier identifier,
+        string label,
+        HashMap<DateOnly, double> data,
+        SeriesChartType chartType,
+        HashMap<DateOnly, double> auxiliaryData,
+        int index,
+        Option<string> numberFormat
+    )
+    {
+        Identifier = identifier;
+        Label = label;
+        Data = data;
+        ChartType = chartType;
+        AuxiliaryData = auxiliaryData;
+        Index = index;
+        NumberFormat = numberFormat;
+    }
 }

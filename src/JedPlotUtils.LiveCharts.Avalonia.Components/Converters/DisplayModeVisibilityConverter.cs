@@ -9,20 +9,18 @@ public class DisplayModeVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        if (value is DisplayMode displayMode && parameter is string component)
+        if (value is not DisplayMode displayMode || parameter is not string component)
+            return BindingOperations.DoNothing;
+
+        var res = component switch
         {
-            var res = component switch
-            {
-                "Chart" => GetChartVisibility(displayMode),
-                "Grid" => GetGridVisibility(displayMode),
-                "Splitter" => GetSplitterVisibility(displayMode),
-                _ => false
-            };
+            "Chart" => GetChartVisibility(displayMode),
+            "Grid" => GetGridVisibility(displayMode),
+            "Splitter" => GetSplitterVisibility(displayMode),
+            _ => false
+        };
 
-            return res;
-        }
-
-        return BindingOperations.DoNothing;
+        return res;
     }
 
     public object ConvertBack(

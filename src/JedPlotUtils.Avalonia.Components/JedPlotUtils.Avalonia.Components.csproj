@@ -1,0 +1,49 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Avalonia" />
+        <PackageReference Include="ReactiveUI.Avalonia" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\JedPlotUtils\JedPlotUtils.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Update="RenameSeriesView.axaml.cs">
+        <DependentUpon>RenameSeriesView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="TramoForecastOptionsView.axaml.cs">
+        <DependentUpon>TramoForecastOptionsView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="TimeSeriesViewerConfigurationView.axaml.cs">
+        <DependentUpon>TimeSeriesViewerConfigurationView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="TimeSeriesViewerConnectionView.axaml.cs">
+        <DependentUpon>TimeSeriesViewerConnectionView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="TimeSeriesBuilderView.axaml.cs">
+        <DependentUpon>TimeSeriesBuilderView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="DisaggregationOptionsView.axaml.cs">
+        <DependentUpon>DisaggregationOptionsView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+      <Compile Update="DisaggregationResultsInfoView.axaml.cs">
+        <DependentUpon>DisaggregationResultsInfoView.axaml</DependentUpon>
+        <SubType>Code</SubType>
+      </Compile>
+    </ItemGroup>
+
+</Project>
