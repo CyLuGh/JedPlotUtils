@@ -1,4 +1,5 @@
 ﻿using System.Text;
+using HierarchyGrid.Definitions;
 
 namespace JedPlotUtils.Palette;
 
@@ -112,4 +113,25 @@ public readonly record struct Color
             c = m = y = 0;
         }
     }
+
+    public static Color Parse(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s))
+            return new Color(255, 0, 0, 0);
+
+        try
+        {
+            return new Color(s);
+        }
+        catch
+        {
+            return new Color(255, 0, 0, 0);
+        }
+    }
+}
+
+public static class ThemeColorConverter
+{
+    public static ThemeColor ToThemeColor(this Color color) =>
+        new(color.A, color.R, color.G, color.B);
 }

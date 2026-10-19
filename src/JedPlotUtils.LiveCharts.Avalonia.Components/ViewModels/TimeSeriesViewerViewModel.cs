@@ -89,7 +89,7 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryStroke = di.GeometryStroke,
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level < Level.Quaternary,
+                                IsHoverable = tsi.Level < Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
@@ -130,7 +130,7 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryStroke = di.GeometryStroke,
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level < Level.Quaternary,
+                                IsHoverable = tsi.Level < Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
@@ -176,7 +176,7 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryStroke = di.GeometryStroke,
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level < Level.Quaternary,
+                                IsHoverable = tsi.Level < Level.Tertiary,
                             };
                         }
                     )
@@ -209,7 +209,7 @@ public partial class TimeSeriesViewerViewModel
                                 Stroke = di.Stroke,
                                 Fill = di.Fill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level < Level.Quaternary,
+                                IsHoverable = tsi.Level < Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
@@ -248,7 +248,7 @@ public partial class TimeSeriesViewerViewModel
                                 Fill = di.Fill,
                                 GeometrySize = di.GeometrySize,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level < Level.Quaternary,
+                                IsHoverable = tsi.Level < Level.Tertiary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,

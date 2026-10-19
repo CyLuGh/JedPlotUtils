@@ -63,12 +63,11 @@
                 x:Name="GridMainDisplay">
                 <lvc:CartesianChart
                     DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}"
-                    FindingStrategy="ExactMatchTakeClosest"
+                    FindingStrategy="CompareAll"
                     IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}"
                     Series="{Binding Path=AllSeries}"
                     XAxes="{Binding XAxes}"
                     YAxes="{Binding YAxes}"
-                    ZoomMode="Both"
                     x:Name="CartesianChart">
                     <lvc:CartesianChart.ContextMenu>
                         <ContextMenu>

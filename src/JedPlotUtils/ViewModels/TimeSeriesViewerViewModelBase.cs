@@ -8,12 +8,14 @@ global using RxInteraction = ReactiveUI.Binding.Interaction<
     ReactiveUI.Primitives.RxVoid
 >;
 using System.Globalization;
+using System.Text;
 using HierarchyGrid.Definitions;
 using JDPlus.WS.Client;
 using JDPlus.WS.Models;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using LanguageExt;
+using MoreLinq;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
@@ -67,7 +69,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     > HighlightChartPointCommand { get; }
 
     public ReactiveCommand<
-        (Seq<TimeSeriesInfo>, Func<DateOnly, string>, Func<double, string>),
+        (
+            Seq<TimeSeriesInfo>,
+            HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport>,
+            Func<DateOnly, string>,
+            Func<double, string>
+        ),
         HierarchyDefinitions
     > BuildHierarchyGridDefinitions { get; }
 
@@ -213,11 +220,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         // TODO: Refresh grid on change
         _tramoOutliersHelper = this.WhenAnyValue(x => x.TramoOutput)
-            .Select(o =>
-                o.Match(
-                    t => t.Item2.GetOutliers().Select(o => ((t.Item1, o.Period), o)).ToHashMap(),
-                    () => HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport>.Empty
-                )
+            .Select(map =>
+                map.SelectMany(t => t.Value.GetOutliers().Select(o => ((t.Key, o.Period), o)))
+                    .ToHashMap<(Identifier, DateOnly), TramoOutput.OutlierReport>()
             )
             .ToProperty(this, x => x.TramoOutliers, scheduler: RxSchedulers.MainThreadScheduler);
 
@@ -606,21 +611,40 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     }
 
     private ReactiveCommand<
-        (Seq<TimeSeriesInfo>, Func<DateOnly, string>, Func<double, string>),
+        (
+            Seq<TimeSeriesInfo>,
+            HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport>,
+            Func<DateOnly, string>,
+            Func<double, string>
+        ),
         HierarchyDefinitions
     > CreateCommandBuildHierarchyGridDefinitions()
     {
         var cmd = ReactiveCommand.CreateRunInBackground(
-            ((Seq<TimeSeriesInfo>, Func<DateOnly, string>, Func<double, string>) t) =>
+            (
+                (
+                    Seq<TimeSeriesInfo>,
+                    HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport>,
+                    Func<DateOnly, string>,
+                    Func<double, string>
+                ) t
+            ) =>
             {
-                var (infos, dateFormatter, numberFormatter) = t;
-                return DoBuildHierarchyGridDefinitions(infos, dateFormatter, numberFormatter);
+                var (infos, tramoOutliers, dateFormatter, numberFormatter) = t;
+                return DoBuildHierarchyGridDefinitions(
+                    infos,
+                    tramoOutliers,
+                    dateFormatter,
+                    numberFormatter
+                );
             }
         );
 
         this.WhenAnyValue(x => x.SeriesCache)
-            .Select(hm => hm.Values.ToSeq())
+            .Select(hm => hm.Values.Where(info => info.Level < Level.Tertiary).ToSeq())
+            .DistinctUntilChanged()
             .CombineLatest(
+                this.WhenAnyValue(x => x.TramoOutliers),
                 this.WhenAnyValue(x => x.DateFormatter)
                     .Select(o => o.Match(f => f, () => d => d.ToString("yyyy-MM"))),
                 this.WhenAnyValue(x => x.NumberFormat)
@@ -640,12 +664,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private HierarchyDefinitions DoBuildHierarchyGridDefinitions(
         Seq<TimeSeriesInfo> infos,
+        HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport> tramoOutliers,
         Func<DateOnly, string> formatter,
         Func<double, string> numberFormatter
     )
     {
         var map = infos
-            .Where(info => info.Level < Level.Tertiary)
+            //.Where(info => info.Level < Level.Tertiary)
             .Map(info => (info.Identifier, info.Data))
             .ToHashMap();
 
@@ -672,29 +697,73 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(x => x, () => double.NaN),
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                x =>
+                                    Option<(double, Option<TramoOutput.OutlierReport>)>.Some(
+                                        (x, tramoOutliers.Find((identifier, d)))
+                                    ),
+                                () => Option<(double, Option<TramoOutput.OutlierReport>)>.None
+                            ),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier => (
-                            from s in map.Find(identifier)
-                            from v in s.Find(d)
-                            select v
-                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
-                        double dbl => double.IsNaN(dbl)
-                            ? Qualification.Empty
-                            : Qualification.Normal,
+                        Identifier identifier
+                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
+                                _ =>
+                                    tramoOutliers.Find(
+                                        (identifier, d),
+                                        outlier => Qualification.Error,
+                                        () => Qualification.Normal
+                                    ),
+                                () => Qualification.Empty
+                            ),
+                        Option<(double, Option<TramoOutput.OutlierReport>)> option
+                            => option.Match(
+                                t =>
+                                    t.Item2.Match(
+                                        _ => Qualification.Custom,
+                                        () => Qualification.Normal
+                                    ),
+                                () => Qualification.Empty
+                            ),
+                        double dbl
+                            => double.IsNaN(dbl) ? Qualification.Empty : Qualification.Normal,
                         _ => Qualification.Unset,
+                    },
+                Colorize = o =>
+                    o switch
+                    {
+                        Option<(double, Option<TramoOutput.OutlierReport>)> option
+                            => option.Match(
+                                t =>
+                                    t.Item2.Match(
+                                        outlier =>
+                                            (
+                                                OutliersHighlight
+                                                    .GetOutlierColor(outlier.Code)
+                                                    .ToThemeColor(),
+                                                OutliersHighlight
+                                                    .GetOutlierContrastColor(outlier.Code)
+                                                    .ToThemeColor()
+                                            ),
+                                        () => (ThemeColors.White, ThemeColors.Black)
+                                    ),
+                                () => (ThemeColors.White, ThemeColors.Black)
+                            ),
+                        _ => (ThemeColors.White, ThemeColors.Black)
                     },
                 Formatter = o =>
                     o switch
                     {
+                        Option<(double, Option<TramoOutput.OutlierReport>)> option
+                            => option.Match(
+                                t =>
+                                    double.IsNaN(t.Item1) ? string.Empty : numberFormatter(t.Item1),
+                                () => string.Empty
+                            ),
                         double dbl => double.IsNaN(dbl) ? string.Empty : numberFormatter(dbl),
                         _ => string.Empty,
                     },
@@ -705,10 +774,28 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                         Identifier _ => [.. BuildContext()],
                         _ => [],
                     },
+                TooltipCreator = (p, c) =>
+                    c switch
+                    {
+                        Option<(double, Option<TramoOutput.OutlierReport>)> option
+                            => option.Match(
+                                t => t.Item2.Match(BuildTooltip, () => string.Empty),
+                                () => string.Empty
+                            ),
+                        _ => string.Empty,
+                    }
             })
             .ToSeq();
 
         return new HierarchyDefinitions(producers, consumers);
+
+        string BuildTooltip(TramoOutput.OutlierReport outlier)
+        {
+            StringBuilder sb = new();
+            sb.AppendLine($"Outlier type: {outlier.Code}");
+            sb.Append($"Outlier value: {numberFormatter(outlier.Coefficient.Value)}");
+            return sb.ToString();
+        }
     }
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
@@ -910,6 +997,4 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             () => SeriesCache
         );
     }
-
-    // TODO: Add info about processed series
 }

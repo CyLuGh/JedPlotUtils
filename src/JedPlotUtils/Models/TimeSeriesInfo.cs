@@ -1,5 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 using JedPlotUtils.Models.Json;
+using JedPlotUtils.Palette;
 using LanguageExt;
 
 namespace JedPlotUtils.Models;
@@ -44,6 +45,8 @@ public readonly record struct TimeSeriesInfo
 
     [JsonConverter(typeof(OptionStringConverter))]
     public Option<string> NumberFormat { get; init; }
+
+    public Option<Color> Color { get; init; }
 
     public TimeSeriesInfo(
         string identifier,
