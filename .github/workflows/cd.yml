@@ -27,10 +27,6 @@ jobs:
         uses: actions/setup-dotnet@v6.0.0
         with:
           dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore
-        working-directory: JedPlotUtils/src
           
       # Get a short-lived NuGet API key
       - name: NuGet login (OIDC → temp API key)
@@ -40,19 +36,22 @@ jobs:
           user: ${{ secrets.NUGET_USER }}
 
       - name: Build, pack and publish core
-        run: dotnet build --configuration ${{ env.configuration }} --no-restore
+        run: dotnet restore
+             dotnet build --configuration ${{ env.configuration }} --no-restore
              dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
              dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
         working-directory: JedPlotUtils/src/JedPlotUtils
         
       - name: Build, pack and publish common project
-        run: dotnet build --configuration ${{ env.configuration }} --no-restore
+        run: dotnet restore
+             dotnet build --configuration ${{ env.configuration }} --no-restore
              dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
              dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
         working-directory: JedPlotUtils/src/JedPlotUtils.Avalonia.Components
         
       - name: Build, pack and publish LiveCharts component
-        run: dotnet build --configuration ${{ env.configuration }} --no-restore
+        run: dotnet restore
+             dotnet build --configuration ${{ env.configuration }} --no-restore
              dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
              dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
         working-directory: JedPlotUtils/src/JedPlotUtils.LiveCharts.Avalonia.Components
