@@ -121,7 +121,7 @@ public partial class TimeSeriesViewerViewModelBase
                         new TimeSeriesInfo(
                             stdev.Select(t => (t.Key, fc.Find(t.Key, d => d, () => 0d) + t.Value)),
                             stdev.Select(t => (t.Key, fc.Find(t.Key, d => d, () => 0d) - t.Value)),
-                            level: Level.Tertiary
+                            level: Level.Quaternary
                         )
                     );
 
@@ -136,15 +136,18 @@ public partial class TimeSeriesViewerViewModelBase
 
     public ReactiveCommand<
         Seq<TimeSeriesInfo>,
-        Option<TramoOutput>
+        Option<(Identifier, TramoOutput)>
     > TramoFullProcessCommand { get; }
 
     [ObservableAsProperty]
-    public partial Option<TramoOutput> TramoOutput { get; }
+    public partial Option<(Identifier, TramoOutput)> TramoOutput { get; }
+
+    [ObservableAsProperty]
+    public partial HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport> TramoOutliers { get; }
 
     private ReactiveCommand<
         Seq<TimeSeriesInfo>,
-        Option<TramoOutput>
+        Option<(Identifier, TramoOutput)>
     > CreateCommandTramoFullProcessCommand()
     {
         var canExecute = this.WhenAnyValue(x => x.HasConnection)
@@ -176,7 +179,7 @@ public partial class TimeSeriesViewerViewModelBase
         return cmd;
     }
 
-    private async Task<Option<TramoOutput>> GetTramoFullProcess(
+    private async Task<Option<(Identifier, TramoOutput)>> GetTramoFullProcess(
         Option<TimeSeriesInfo> oSeries,
         Option<TramoRequest> oRequest
     )
@@ -206,35 +209,46 @@ public partial class TimeSeriesViewerViewModelBase
                         Option<ModellingContext>.None
                     )
                     .ConfigureAwait(false);
-                return Option<TramoOutput>.Some(res);
+                return Option<(Identifier, TramoOutput)>.Some((tsi.Identifier, res));
             },
-            () => Task.FromResult(Option<TramoOutput>.None)
+            () => Task.FromResult(Option<(Identifier, TramoOutput)>.None)
         );
 
         return to;
     }
 
-    public ReactiveCommand<Option<TramoOutput>, RxVoid> CreateTramoOutputSeriesCommand { get; }
+    public ReactiveCommand<
+        Option<(Identifier, TramoOutput)>,
+        RxVoid
+    > CreateTramoOutputSeriesCommand { get; }
 
     private ReactiveCommand<
-        Option<TramoOutput>,
+        Option<(Identifier, TramoOutput)>,
         RxVoid
     > CreateCommandCreateTramoOutputSeriesCommand()
     {
         var cmd = ReactiveCommand.CreateFromTask(
-            async (Option<TramoOutput> oTramoOuput) =>
+            async (Option<(Identifier, TramoOutput)> oTramoOuput) =>
             {
                 await Clear(true).ConfigureAwait(false);
 
-                oTramoOuput.IfSome(output =>
+                oTramoOuput.IfSome(t =>
                 {
-                    Add(
-                        new TimeSeriesInfo(
-                            "Regarima",
-                            output.Result.Description.Series.GetDateValues(),
-                            level: Level.Secondary
-                        )
-                    );
+                    var (id, output) = t;
+
+                    var tsis = output
+                        .GetOutliers()
+                        .GroupBy(x => x.Code)
+                        .Select(g => new TimeSeriesInfo(
+                            g.Key,
+                            g.Select(x => (x.Period, x.Value)).ToHashMap(),
+                            level: Level.Tertiary,
+                            chartType: SeriesChartType.Scatter
+                        ))
+                        .ToSeq()
+                        .Strict();
+
+                    Add(tsis);
                 });
             }
         );

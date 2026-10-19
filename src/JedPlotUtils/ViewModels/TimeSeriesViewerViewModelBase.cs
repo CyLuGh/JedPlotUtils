@@ -10,6 +10,7 @@ global using RxInteraction = ReactiveUI.Binding.Interaction<
 using System.Globalization;
 using HierarchyGrid.Definitions;
 using JDPlus.WS.Client;
+using JDPlus.WS.Models;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using LanguageExt;
@@ -209,6 +210,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 x => x.HasDisaggregationResults,
                 scheduler: RxSchedulers.MainThreadScheduler
             );
+
+        // TODO: Refresh grid on change
+        _tramoOutliersHelper = this.WhenAnyValue(x => x.TramoOutput)
+            .Select(o =>
+                o.Match(
+                    t => t.Item2.GetOutliers().Select(o => ((t.Item1, o.Period), o)).ToHashMap(),
+                    () => HashMap<(Identifier, DateOnly), TramoOutput.OutlierReport>.Empty
+                )
+            )
+            .ToProperty(this, x => x.TramoOutliers, scheduler: RxSchedulers.MainThreadScheduler);
 
         this.WhenActivated(disposables =>
         {
@@ -508,7 +519,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         );
 
         _wsManagerHelper = cmd.Merge(
-                cmd.ThrownExceptions.Select(_ => Option<CommunicationManager>.None)
+                cmd.ThrownExceptions.Select(exc =>
+                {
+#if DEBUG
+                    Console.WriteLine(exc);
+#endif
+                    return Option<CommunicationManager>.None;
+                })
             )
             .ToProperty(this, x => x.WsManager, initialValue: Option<CommunicationManager>.None);
 
@@ -655,23 +672,24 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                x => x,
-                                () => double.NaN
-                            ),
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(x => x, () => double.NaN),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                _ => Qualification.Normal,
-                                () => Qualification.Empty
-                            ),
-                        double dbl
-                            => double.IsNaN(dbl) ? Qualification.Empty : Qualification.Normal,
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(_ => Qualification.Normal, () => Qualification.Empty),
+                        double dbl => double.IsNaN(dbl)
+                            ? Qualification.Empty
+                            : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
                 Formatter = o =>
@@ -808,7 +826,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             tsi with
             {
                 Index = SeriesCache.Count,
-                NumberFormat = NumberFormat
+                NumberFormat = NumberFormat,
             }
         );
 

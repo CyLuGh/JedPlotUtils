@@ -52,11 +52,9 @@ internal static class ChartUtils
 
     private static float GetThickness(TimeSeriesInfo tsi, LanguageExt.HashSet<Identifier> selection)
     {
-        return selection.IsEmpty
-            ? 2
-            : selection.Contains(tsi.Identifier)
-                ? 3
-                : 1;
+        return selection.IsEmpty ? 2
+            : selection.Contains(tsi.Identifier) ? 3
+            : 1;
     }
 
     private static SolidColorPaint GetStroke(
@@ -70,7 +68,7 @@ internal static class ChartUtils
             ? new SolidColorPaint(palette.GetColor(tsi.Index).Convert(), thickness)
             : new SolidColorPaint(palette.GetColor(tsi.Index).Convert(), thickness)
             {
-                PathEffect = new DashEffect([3, 2])
+                PathEffect = new DashEffect([3, 2]),
             };
     }
 
@@ -103,40 +101,37 @@ internal static class ChartUtils
     {
         return tsi.ChartType switch
         {
-            SeriesChartType.Area
-                => new SolidColorPaint(
-                    palette
-                        .GetColor(tsi.Index)
-                        .Convert()
-                        .WithAlpha(
-                            selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                ? (byte)60
-                                : (byte)20
-                        )
-                ),
-            SeriesChartType.Column
-                => new SolidColorPaint(
-                    palette
-                        .GetColor(tsi.Index)
-                        .Convert()
-                        .WithAlpha(
-                            selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                ? (byte)60
-                                : (byte)20
-                        )
-                ),
-            SeriesChartType.Range
-                => new SolidColorPaint(
-                    palette
-                        .GetColor(tsi.Index)
-                        .Convert()
-                        .WithAlpha(
-                            selection.IsEmpty || selection.Contains(tsi.Identifier)
-                                ? (byte)40
-                                : (byte)20
-                        )
-                ),
-            _ => null
+            SeriesChartType.Area => new SolidColorPaint(
+                palette
+                    .GetColor(tsi.Index)
+                    .Convert()
+                    .WithAlpha(
+                        selection.IsEmpty || selection.Contains(tsi.Identifier)
+                            ? (byte)60
+                            : (byte)20
+                    )
+            ),
+            SeriesChartType.Column => new SolidColorPaint(
+                palette
+                    .GetColor(tsi.Index)
+                    .Convert()
+                    .WithAlpha(
+                        selection.IsEmpty || selection.Contains(tsi.Identifier)
+                            ? (byte)60
+                            : (byte)20
+                    )
+            ),
+            SeriesChartType.Range => new SolidColorPaint(
+                palette
+                    .GetColor(tsi.Index)
+                    .Convert()
+                    .WithAlpha(
+                        selection.IsEmpty || selection.Contains(tsi.Identifier)
+                            ? (byte)40
+                            : (byte)20
+                    )
+            ),
+            _ => null,
         };
     }
 
@@ -145,7 +140,8 @@ internal static class ChartUtils
         {
             Level.Primary => tsi.ChartType == SeriesChartType.Area ? 4d : 6d,
             Level.Secondary => 3d,
-            Level.Tertiary => 0d,
-            _ => 12d
+            Level.Tertiary => 6d,
+            Level.Quaternary => 0d,
+            _ => 12d,
         };
 }

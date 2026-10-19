@@ -67,7 +67,7 @@ public partial class TimeSeriesViewerViewModelBase
                     Model = "Rw",
                     Algorithm = "SqrtDiffuse",
                     NBackcasts = 0,
-                    NForecasts = 6
+                    NForecasts = 6,
                 }
             )
         );
@@ -166,7 +166,7 @@ public partial class TimeSeriesViewerViewModelBase
                             stDevSeries.Select(t =>
                                 (t.Key, disaggregatedSeries.Find(t.Key, d => d, () => 0d) - t.Value)
                             ),
-                            level: Level.Tertiary
+                            level: Level.Quaternary
                         )
                     );
 

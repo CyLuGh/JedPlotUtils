@@ -10,14 +10,16 @@ public enum SeriesChartType
     Area,
     Range,
     Column,
-    StepLine
+    StepLine,
+    Scatter,
 }
 
 public enum Level
 {
     Primary,
     Secondary,
-    Tertiary
+    Tertiary,
+    Quaternary,
 }
 
 public readonly record struct TimeSeriesInfo

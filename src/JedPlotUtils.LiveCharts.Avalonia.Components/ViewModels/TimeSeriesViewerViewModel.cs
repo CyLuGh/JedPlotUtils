@@ -30,6 +30,9 @@ public partial class TimeSeriesViewerViewModel
     public partial Seq<ColumnSeries<DateTimePoint>> ColumnSeries { get; }
 
     [ObservableAsProperty]
+    public partial Seq<ScatterSeries<DateTimePoint>> ScatterSeries { get; }
+
+    [ObservableAsProperty]
     public partial Seq<ISeries> AllSeries { get; }
 
     [ObservableAsProperty(ReadOnly = false)]
@@ -86,12 +89,12 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryStroke = di.GeometryStroke,
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level != Level.Tertiary,
+                                IsHoverable = tsi.Level < Level.Quaternary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
-                                    )
+                                    ),
                             };
                         }
                     )
@@ -127,12 +130,12 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryStroke = di.GeometryStroke,
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level != Level.Tertiary,
+                                IsHoverable = tsi.Level < Level.Quaternary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
-                                    )
+                                    ),
                             };
                         }
                     )
@@ -173,7 +176,7 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryStroke = di.GeometryStroke,
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level != Level.Tertiary,
+                                IsHoverable = tsi.Level < Level.Quaternary,
                             };
                         }
                     )
@@ -206,12 +209,12 @@ public partial class TimeSeriesViewerViewModel
                                 Stroke = di.Stroke,
                                 Fill = di.Fill,
                                 AnimationsSpeed = TimeSpan.Zero,
-                                IsHoverable = tsi.Level != Level.Tertiary,
+                                IsHoverable = tsi.Level < Level.Quaternary,
                                 YToolTipLabelFormatter = point =>
                                     tsi.NumberFormat.Match(
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
-                                    )
+                                    ),
                             };
                         }
                     )
@@ -219,17 +222,58 @@ public partial class TimeSeriesViewerViewModel
             })
             .ToProperty(this, x => x.ColumnSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
+        _scatterSeriesHelper = redrawObservable
+            .Select(t =>
+            {
+                var (map, palette, selection) = t;
+                return map
+                    .Values.Where(tsi => tsi.ChartType is SeriesChartType.Scatter)
+                    .Select(
+                        (tsi) =>
+                        {
+                            var di = ChartUtils.GetInfos(tsi, selection, palette);
+
+                            return new ScatterSeries<DateTimePoint>()
+                            {
+                                Name = tsi.Label,
+                                Values = new ObservableCollection<DateTimePoint>(
+                                    tsi.Data.OrderBy(x => x.Key)
+                                        .Select(x => new DateTimePoint(
+                                            x.Key.ToDateTime(TimeOnly.MinValue),
+                                            x.Value
+                                        ))
+                                ),
+                                Tag = tsi.Identifier,
+                                Stroke = di.Stroke,
+                                Fill = di.Fill,
+                                GeometrySize = di.GeometrySize,
+                                AnimationsSpeed = TimeSpan.Zero,
+                                IsHoverable = tsi.Level < Level.Quaternary,
+                                YToolTipLabelFormatter = point =>
+                                    tsi.NumberFormat.Match(
+                                        f => point.Model?.Value?.ToString(f) ?? string.Empty,
+                                        () => point.Model?.Value?.ToString("N2") ?? string.Empty
+                                    ),
+                            };
+                        }
+                    )
+                    .ToSeq();
+            })
+            .ToProperty(this, x => x.ScatterSeries, scheduler: RxSchedulers.MainThreadScheduler);
+
         _allSeriesHelper = this.WhenAnyValue(x => x.LineSeries)
             .CombineLatest(
                 this.WhenAnyValue(x => x.StepLineSeries),
                 this.WhenAnyValue(x => x.RangeSeries),
-                this.WhenAnyValue(x => x.ColumnSeries)
+                this.WhenAnyValue(x => x.ColumnSeries),
+                this.WhenAnyValue(x => x.ScatterSeries)
             )
             .Select(t =>
                 t.First.Cast<ISeries>()
                     .Concat(t.Second.Cast<ISeries>())
                     .Concat(t.Third.Cast<ISeries>())
                     .Concat(t.Fourth.Cast<ISeries>())
+                    .Concat(t.Fifth.Cast<ISeries>())
             )
             .ToProperty(this, x => x.AllSeries, scheduler: RxSchedulers.MainThreadScheduler);
 
