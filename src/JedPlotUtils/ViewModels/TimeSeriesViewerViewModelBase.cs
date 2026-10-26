@@ -669,10 +669,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         Func<double, string> numberFormatter
     )
     {
-        var map = infos
-            //.Where(info => info.Level < Level.Tertiary)
-            .Map(info => (info.Identifier, info.Data))
-            .ToHashMap();
+        var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
 
         var producers = infos
             .Where(info => info.Level < Level.Tertiary)
@@ -683,7 +680,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Tooltip = info.Label,
                 Tag = info.Identifier,
                 Producer = () => info.Identifier,
-            });
+            })
+            .ToSeq();
 
         var consumers = infos
             .Where(info => info.Level < Level.Tertiary)
