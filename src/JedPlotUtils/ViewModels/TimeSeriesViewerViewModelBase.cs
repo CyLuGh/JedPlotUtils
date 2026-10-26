@@ -933,7 +933,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearSelection();
     }
 
-    private async Task Clear(bool derivedOnly = false)
+    public async Task Clear(bool derivedOnly = false)
     {
         if (derivedOnly)
         {
