@@ -81,7 +81,7 @@ public partial class TimeSeriesViewerViewModelBase
                 var tsData = await cm.BuildTsData(
                     data,
                     aggregationType: AggregationType.None,
-                    Frequency.Undefined
+                    tsi.Frequency.Match(f => f, () => Frequency.Undefined)
                 );
                 var res = await cm.GetTramoForecasts(
                         tsData,
@@ -193,7 +193,7 @@ public partial class TimeSeriesViewerViewModelBase
                     var tsData = await cm.BuildTsData(
                         data,
                         aggregationType: AggregationType.None,
-                        Frequency.Undefined
+                        tsi.Frequency.Match(f => f, () => Frequency.Undefined)
                     );
 
                     var res = await cm.GetTramoFullProcess(

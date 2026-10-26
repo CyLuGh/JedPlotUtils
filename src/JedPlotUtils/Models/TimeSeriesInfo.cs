@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using JDPlus.WS.Models;
 using JedPlotUtils.Models.Json;
 using JedPlotUtils.Palette;
 using LanguageExt;
@@ -47,6 +48,8 @@ public readonly record struct TimeSeriesInfo
     public Option<string> NumberFormat { get; init; }
 
     public Option<Color> Color { get; init; }
+
+    public Option<Frequency> Frequency { get; init; }
 
     public TimeSeriesInfo(
         string identifier,
