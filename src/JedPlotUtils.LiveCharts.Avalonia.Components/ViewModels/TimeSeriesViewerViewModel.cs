@@ -74,13 +74,7 @@ public partial class TimeSeriesViewerViewModel
                             return new LineSeries<DateTimePoint>()
                             {
                                 Name = tsi.Label,
-                                Values = new ObservableCollection<DateTimePoint>(
-                                    tsi.Data.OrderBy(x => x.Key)
-                                        .Select(x => new DateTimePoint(
-                                            x.Key.ToDateTime(TimeOnly.MinValue),
-                                            x.Value
-                                        ))
-                                ),
+                                Values = tsi.GetPoints(),
                                 LineSmoothness = 0d,
                                 Tag = tsi.Identifier,
                                 Stroke = di.Stroke,
@@ -106,6 +100,7 @@ public partial class TimeSeriesViewerViewModel
             .Select(t =>
             {
                 var (map, palette, selection) = t;
+
                 return map
                     .Values.Where(tsi => tsi.ChartType == SeriesChartType.StepLine)
                     .Select(
@@ -116,13 +111,7 @@ public partial class TimeSeriesViewerViewModel
                             return new StepLineSeries<DateTimePoint>()
                             {
                                 Name = tsi.Label,
-                                Values = new ObservableCollection<DateTimePoint>(
-                                    tsi.Data.OrderBy(x => x.Key)
-                                        .Select(x => new DateTimePoint(
-                                            x.Key.ToDateTime(TimeOnly.MinValue),
-                                            x.Value
-                                        ))
-                                ),
+                                Values = tsi.GetPoints(),
                                 Tag = tsi.Identifier,
                                 Stroke = di.Stroke,
                                 Fill = di.Fill,
@@ -198,13 +187,7 @@ public partial class TimeSeriesViewerViewModel
                             return new ColumnSeries<DateTimePoint>()
                             {
                                 Name = tsi.Label,
-                                Values = new ObservableCollection<DateTimePoint>(
-                                    tsi.Data.OrderBy(x => x.Key)
-                                        .Select(x => new DateTimePoint(
-                                            x.Key.ToDateTime(TimeOnly.MinValue),
-                                            x.Value
-                                        ))
-                                ),
+                                Values = tsi.GetPoints(),
                                 Tag = tsi.Identifier,
                                 Stroke = di.Stroke,
                                 Fill = di.Fill,
@@ -236,13 +219,7 @@ public partial class TimeSeriesViewerViewModel
                             return new ScatterSeries<DateTimePoint>()
                             {
                                 Name = tsi.Label,
-                                Values = new ObservableCollection<DateTimePoint>(
-                                    tsi.Data.OrderBy(x => x.Key)
-                                        .Select(x => new DateTimePoint(
-                                            x.Key.ToDateTime(TimeOnly.MinValue),
-                                            x.Value
-                                        ))
-                                ),
+                                Values = tsi.GetPoints(),
                                 Tag = tsi.Identifier,
                                 Stroke = di.Stroke,
                                 Fill = di.Fill,

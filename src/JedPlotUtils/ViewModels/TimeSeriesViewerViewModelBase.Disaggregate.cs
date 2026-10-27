@@ -131,8 +131,14 @@ public partial class TimeSeriesViewerViewModelBase
                     tsi.Frequency.Match(f => f, () => Frequency.Undefined)
                 );
 
-                var results = await cm.ProcessTemporalDisaggregation(req with { Y = tsData });
-                return Option<TemporalDisaggregationResults>.Some(results);
+                return await tsData.MatchAsync(
+                    async r =>
+                    {
+                        var results = await cm.ProcessTemporalDisaggregation(req with { Y = r });
+                        return Option<TemporalDisaggregationResults>.Some(results);
+                    },
+                    _ => Option<TemporalDisaggregationResults>.None
+                );
             },
             () => Task.FromResult(Option<TemporalDisaggregationResults>.None)
         );

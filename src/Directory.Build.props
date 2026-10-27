@@ -1,0 +1,8 @@
+<Project>
+    <PropertyGroup>
+        <PackageOutputPath>./nupkg</PackageOutputPath>
+        <Authors>Demortier Jeremy</Authors>
+        <Version>1.0.4</Version>
+        <RepositoryUrl>https://github.com/CyLuGh/JedPlotUtils</RepositoryUrl>
+    </PropertyGroup>
+</Project>

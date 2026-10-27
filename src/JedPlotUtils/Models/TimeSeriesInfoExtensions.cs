@@ -1,4 +1,5 @@
 ﻿using System.Collections.Frozen;
+using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -14,8 +15,11 @@ public static class TimeSeriesInfoExtensions
 {
     extension(IEnumerable<TimeSeriesInfo> infos)
     {
-        public FrozenSet<DateOnly> GetDates() =>
+        public FrozenSet<DateOnly> GetDatesFrozenSet() =>
             infos.Map(i => i.Data.Keys).Flatten().Distinct().ToFrozenSet();
+        
+        public Seq<DateOnly> GetDatesSeq() =>
+            infos.Map(i => i.Data.Keys).Flatten().Distinct().Order().ToSeq();
 
         public string ToJson(bool indented = false) =>
             JsonSerializer.Serialize(infos, new JsonSerializerOptions() { WriteIndented = indented });
@@ -27,7 +31,7 @@ public static class TimeSeriesInfoExtensions
 
             formatProvider ??= new CultureInfo("en-US");
             sb.AppendLine("Period" + separator + string.Join(separator, seq.Map(tsi => tsi.Label)));
-            foreach (var period in seq.GetDates().Items.OrderBy(x => x))
+            foreach (var period in seq.GetDatesFrozenSet().Items.OrderBy(x => x))
             {
                 sb.AppendLine(period.ToString("yyyy-MM-dd") + separator + string.Join(separator,
                     seq.Map(tsi => tsi.Data.Find(period, d => d.ToString(formatProvider), () => string.Empty))));
@@ -58,7 +62,7 @@ public static class TimeSeriesInfoExtensions
 
             string[] headers = ["Period", .. seq.Map(x => x.Label)];
             var rows = seq
-                .GetDates()
+                .GetDatesFrozenSet()
                 .Items
                 .OrderBy(x => x)
                 .Select(date => (object?[])
@@ -107,7 +111,7 @@ public static class TimeSeriesInfoExtensions
 
     private static void WriteDataRows(XmlWriter writer, Seq<TimeSeriesInfo> series)
     {
-        foreach (var period in series.GetDates().Items.OrderBy(x => x))
+        foreach (var period in series.GetDatesFrozenSet().Items.OrderBy(x => x))
         {
             writer.WriteStartElement("Row");
             

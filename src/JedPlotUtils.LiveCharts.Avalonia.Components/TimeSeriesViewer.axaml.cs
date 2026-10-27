@@ -387,7 +387,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 var (identifier, period) = t;
                 var dateTime = period.ToDateTime(TimeOnly.MinValue);
 
-                var chartPoints =
+                var chartPoints = (
                     from s in view.CartesianChart.Series.Find(s =>
                         s.Tag?.Equals(identifier) == true
                     )
@@ -395,9 +395,14 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                         .Where(p =>
                             p.Context.DataSource is DateTimePoint op && op.DateTime == dateTime
                         )
-                    select pt;
+                    select pt
+                ).ToSeq();
 
-                view.CartesianChart.Tooltip?.Show(chartPoints, view.CartesianChart.CoreChart);
+                /* Don't show tooltip when hovering any empty cell */
+                if (!chartPoints.IsEmpty && !chartPoints[0].IsEmpty)
+                    view.CartesianChart.Tooltip?.Show(chartPoints, view.CartesianChart.CoreChart);
+                else
+                    view.CartesianChart.Tooltip?.Hide(view.CartesianChart.CoreChart);
             });
 
             ctx.Input.IfNone(() =>

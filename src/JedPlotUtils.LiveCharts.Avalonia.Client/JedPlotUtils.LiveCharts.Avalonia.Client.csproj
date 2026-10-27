@@ -6,7 +6,6 @@
         <ApplicationManifest>app.manifest</ApplicationManifest>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AssemblyVersion>0.1.0</AssemblyVersion>
-        <Authors>Demortier Jeremy</Authors>
         <SatelliteResourceLanguages>en-US;en</SatelliteResourceLanguages>
     </PropertyGroup>
 

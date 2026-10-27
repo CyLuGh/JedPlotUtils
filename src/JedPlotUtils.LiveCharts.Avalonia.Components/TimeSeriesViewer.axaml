@@ -172,13 +172,15 @@
                     </Grid>
                 </Border>
             </Grid>
+
             <StackPanel
                 Height="30"
                 Margin="3"
                 Orientation="Horizontal"
                 RelativePanel.AlignBottomWithPanel="True"
                 RelativePanel.AlignRightWithPanel="True"
-                Spacing="5">
+                Spacing="5"
+                x:Name="ConnectionPanel">
                 <Viewbox
                     Height="24"
                     HorizontalAlignment="Center"
@@ -221,6 +223,19 @@
                     </Viewbox>
                 </Panel>
             </StackPanel>
+
+            <Panel
+                IsVisible="{Binding IsWorking}"
+                RelativePanel.AlignBottomWithPanel="True"
+                RelativePanel.AlignLeftWithPanel="True"
+                RelativePanel.LeftOf="ConnectionPanel">
+                <ProgressBar
+                    Height="10"
+                    IsIndeterminate="True"
+                    Margin="30,10"
+                    Width="400" />
+            </Panel>
+
         </RelativePanel>
 
         <Border

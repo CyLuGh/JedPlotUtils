@@ -47,6 +47,7 @@ public readonly record struct TimeSeriesInfo
     [JsonConverter(typeof(OptionStringConverter))]
     public Option<string> NumberFormat { get; init; }
 
+    [JsonConverter(typeof(OptionColorConverter))]
     public Option<Color> Color { get; init; }
 
     public Option<Frequency> Frequency { get; init; }

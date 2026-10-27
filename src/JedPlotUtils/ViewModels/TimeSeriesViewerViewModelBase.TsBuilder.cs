@@ -95,9 +95,15 @@ public partial class TimeSeriesViewerViewModelBase
             buildOptions.Frequency
         );
 
-        return new TimeSeriesInfo(
-            $"{source.Label} ({buildOptions.Frequency})",
-            tsData.GetDateValues()
+        return tsData.Match(
+            r => new TimeSeriesInfo(
+                $"{source.Label} ({buildOptions.Frequency})",
+                r.GetDateValues()
+            ),
+            _ => new TimeSeriesInfo(
+                $"{source.Label} ({buildOptions.Frequency})",
+                Seq<(DateOnly, double)>.Empty
+            )
         );
     }
 }
