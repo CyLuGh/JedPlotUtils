@@ -102,7 +102,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     viewModel,
                     new TimeSeriesViewerConfigurationView() { ViewModel = cvm },
                     700,
-                    380
+                    400
                 );
                 var res = await cvm.Result;
                 ctx.SetOutput(res);

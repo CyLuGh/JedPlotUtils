@@ -1,9 +1,12 @@
-﻿namespace JedPlotUtils.Models;
+﻿using LanguageExt;
+
+namespace JedPlotUtils.Models;
 
 public readonly record struct Identifier : IComparable<Identifier>
 {
     private readonly string _id;
     private readonly Guid _guid;
+
     public Level Level { get; }
 
     public Identifier(string id, Level level = Level.Primary)

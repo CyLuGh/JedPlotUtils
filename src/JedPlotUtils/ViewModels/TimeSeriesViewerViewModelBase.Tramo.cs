@@ -241,43 +241,56 @@ public partial class TimeSeriesViewerViewModelBase
     }
 
     public ReactiveCommand<
-        HashMap<Identifier, Either<Error, TramoOutput>>,
+        (HashMap<Identifier, TimeSeriesInfo>, HashMap<Identifier, Either<Error, TramoOutput>>),
         RxVoid
     > CreateTramoOutputSeriesCommand { get; }
 
     private ReactiveCommand<
-        HashMap<Identifier, Either<Error, TramoOutput>>,
+        (HashMap<Identifier, TimeSeriesInfo>, HashMap<Identifier, Either<Error, TramoOutput>>),
         RxVoid
     > CreateCommandCreateTramoOutputSeriesCommand()
     {
-        var cmd = ReactiveCommand.CreateFromTask(
-            async (HashMap<Identifier, Either<Error, TramoOutput>> map) =>
+        var cmd = ReactiveCommand.CreateFromTask<
+            (HashMap<Identifier, TimeSeriesInfo>, HashMap<Identifier, Either<Error, TramoOutput>>),
+            RxVoid
+        >(async t =>
+        {
+            var (seriesCache, map) = t;
+            await Clear(true).ConfigureAwait(false);
+
+            // TODO: improve
+            var outliersHighlight = new OutliersHighlight("Bank".ToPalette());
+
+            foreach (var (id, output) in map)
             {
-                await Clear(true).ConfigureAwait(false);
+                /* Make sure we can remove outliers points when removing base series */
+                if (!seriesCache.ContainsKey(id))
+                    continue;
 
-                foreach (var (id, output) in map)
-                {
-                    var tsis = output
-                        .Match(x => x.GetOutliers(), _ => Seq<TramoOutput.OutlierReport>.Empty)
-                        .GroupBy(x => x.Code)
-                        .Select(g => new TimeSeriesInfo(
-                            g.Key,
-                            g.Select(x => (x.Period, x.Value)).ToHashMap(),
-                            level: Level.Tertiary,
-                            chartType: SeriesChartType.Scatter
-                        )
-                        {
-                            Color = OutliersHighlight.GetOutlierColor(g.Key)
-                        })
-                        .ToSeq()
-                        .Strict();
+                var tsis = output
+                    .Match(x => x.GetOutliers(), _ => Seq<TramoOutput.OutlierReport>.Empty)
+                    .GroupBy(x => x.Code)
+                    .Select(g => new TimeSeriesInfo(
+                        g.Key,
+                        g.Select(x => (x.Period, x.Value)).ToHashMap(),
+                        level: Level.Tertiary,
+                        chartType: SeriesChartType.Scatter
+                    )
+                    {
+                        Color = outliersHighlight.GetOutlierColor(g.Key)
+                    })
+                    .ToSeq()
+                    .Strict();
 
-                    Add(tsis);
-                }
+                Add(tsis);
             }
-        );
 
-        this.WhenAnyValue(x => x.TramoOutput).InvokeCommand(cmd);
+            return RxVoid.Default;
+        });
+
+        this.WhenAnyValue(x => x.SeriesCache)
+            .CombineLatest(this.WhenAnyValue(x => x.TramoOutput))
+            .InvokeCommand(cmd);
         return cmd;
     }
 

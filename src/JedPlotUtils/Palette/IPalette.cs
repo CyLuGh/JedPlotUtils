@@ -11,4 +11,5 @@ public interface IPalette
 
     Color GetColor(int index);
     Color GetColor(TimeSeriesInfo tsi);
+    Color GetContrastColor(Color color);
 }

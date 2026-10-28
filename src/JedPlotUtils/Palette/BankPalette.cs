@@ -57,20 +57,7 @@ public record BankPalette : APalette
             LightGreen, // very light green
             BlueGrey // neutral light grey-blue
         );
+
+        DarkColors = [BlueAccent, BlueDark, OliveGreen, Purple, Magenta, Burgundy, Orange, Red,];
     }
-
-    private static readonly FrozenSet<Color> DarkColors =
-    [
-        BlueAccent,
-        BlueDark,
-        OliveGreen,
-        Purple,
-        Magenta,
-        Burgundy,
-        Orange,
-        Red,
-    ];
-
-    public static Color GetContrastColor(Color color) =>
-        DarkColors.Contains(color) ? new Color("#FFFFFF") : new Color("#000000");
 }

@@ -1,8 +1,8 @@
 ﻿namespace JedPlotUtils.Palette;
 
-public static class OutliersHighlight
+public class OutliersHighlight(IPalette Palette)
 {
-    public static Color GetOutlierColor(string code) =>
+    public Color GetOutlierColor(string code) =>
         code switch
         {
             "AO" => BankPalette.Green,
@@ -12,6 +12,6 @@ public static class OutliersHighlight
             _ => BankPalette.BlueAccent
         };
 
-    public static Color GetOutlierContrastColor(string code) =>
-        BankPalette.GetContrastColor(GetOutlierColor(code));
+    public Color GetOutlierContrastColor(string code) =>
+        Palette.GetContrastColor(GetOutlierColor(code));
 }

@@ -35,10 +35,14 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial bool HasThousandsSeparators { get; set; }
 
+    [Reactive]
+    public partial bool ShowStatusBar { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
-    public static DisplayMode[] AvailableDisplayMode => Enum.GetValues<DisplayMode>();
+    public static DisplayMode[] AvailableDisplayMode =>
+        [DisplayMode.Chart, DisplayMode.Grid, DisplayMode.BothHorizontal, DisplayMode.BothVertical];
 
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -74,6 +78,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         DateFormat = settings.DateFormat ?? string.Empty;
         Decimals = settings.Decimals;
         HasThousandsSeparators = settings.HasThousandsSeparators;
+        ShowStatusBar = settings.ShowStatusBar;
     }
 
     private RxCommand CreateCommandCancel() =>
@@ -104,7 +109,8 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     Palette = Palette?.Name ?? string.Empty,
                     DateFormat = DateFormat,
                     Decimals = Decimals,
-                    HasThousandsSeparators = HasThousandsSeparators
+                    HasThousandsSeparators = HasThousandsSeparators,
+                    ShowStatusBar = ShowStatusBar
                 };
 
                 if (save)

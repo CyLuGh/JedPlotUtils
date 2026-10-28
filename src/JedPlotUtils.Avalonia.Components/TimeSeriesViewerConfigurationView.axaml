@@ -1,15 +1,19 @@
 <UserControl
-    d:DesignHeight="350"
+    d:DesignHeight="400"
     d:DesignWidth="650"
     mc:Ignorable="d"
     x:Class="JedPlotUtils.Avalonia.Components.TimeSeriesViewerConfigurationView"
     x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
     xmlns="https://github.com/avaloniaui"
+    xmlns:converters="clr-namespace:JedPlotUtils.Avalonia.Components.Converters"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
     xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <converters:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
+    </UserControl.Resources>
     <DockPanel VerticalSpacing="16">
         <UniformGrid DockPanel.Dock="Bottom" Rows="1">
             <CheckBox
@@ -87,7 +91,13 @@
                         HorizontalAlignment="Left"
                         ItemsSource="{Binding AvailableDisplayMode}"
                         SelectedItem="{Binding DisplayMode}"
-                        Width="300" />
+                        Width="300">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </StackPanel>
 
                 <StackPanel Spacing="4">
@@ -119,6 +129,13 @@
                 <StackPanel Spacing="4">
                     <TextBlock Text="Thousands separators" VerticalAlignment="Center" />
                     <ToggleSwitch IsChecked="{Binding HasThousandsSeparators}" />
+                </StackPanel>
+
+
+
+                <StackPanel Spacing="4">
+                    <TextBlock Text="Show status bar" VerticalAlignment="Center" />
+                    <ToggleSwitch IsChecked="{Binding ShowStatusBar}" />
                 </StackPanel>
             </UniformGrid>
         </StackPanel>

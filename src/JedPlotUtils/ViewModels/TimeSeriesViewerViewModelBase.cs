@@ -36,7 +36,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [Reactive]
     public partial HashMap<Identifier, TimeSeriesInfo> SeriesCache { get; protected set; }
 
-    public HierarchyGridViewModel HierarchyGridViewModel { get; } = new();
+    public HierarchyGridViewModel HierarchyGridViewModel { get; } =
+        new() { StatusMessage = "No data" };
 
     [Reactive]
     public partial IPalette Palette { get; set; } = Palettes.Available[0];
@@ -138,6 +139,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     > ShowConnectionSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveSelectionCommand { get; }
+    public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> RemoveUnselectedCommand { get; }
     public RxCommand ClearSeriesCommand { get; }
 
     public RxCommand CopyToClipboardCommand { get; }
@@ -190,6 +192,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         RenameSeriesCommand = CreateCommandRenameSeriesCommand();
         RemoveSelectionCommand = CreateCommandRemoveSelectionCommand();
+        RemoveUnselectedCommand = CreateCommandRemoveSelectionCommand(true);
 
         ChangeSeriesChartTypesCommand = CreateCommandChangeSeriesChartTypesCommand();
         CopyToClipboardCommand = CreateCommandCopyToClipboardCommand();
@@ -494,13 +497,23 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     private ReactiveCommand<
         LanguageExt.HashSet<Identifier>,
         RxVoid
-    > CreateCommandRemoveSelectionCommand()
+    > CreateCommandRemoveSelectionCommand(bool keepSelected = false)
     {
         var canExecute = this.WhenAnyValue(x => x.Selection)
             .Select(sel => !sel.IsEmpty)
             .ObserveOn(RxSchedulers.MainThreadScheduler);
         var cmd = ReactiveCommand.Create(
-            (LanguageExt.HashSet<Identifier> selection) => Remove(selection),
+            (LanguageExt.HashSet<Identifier> selection) =>
+            {
+                if (keepSelected)
+                {
+                    Remove(SeriesCache.Keys.Except(selection));
+                }
+                else
+                {
+                    Remove(selection);
+                }
+            },
             canExecute
         );
         return cmd;
@@ -732,6 +745,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     )
     {
         var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
+        // TODO: improve
+        var outliersHighlight = new OutliersHighlight("Bank".ToPalette());
 
         var producers = infos
             .Where(info => info.Level < Level.Tertiary)
@@ -781,7 +796,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                                 _ =>
                                     tramoOutliers.Find(
                                         (identifier, d),
-                                        outlier => Qualification.Error,
+                                        _ => Qualification.Error,
                                         () => Qualification.Normal
                                     ),
                                 () => Qualification.Empty
@@ -812,12 +827,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                                     t.Item2.Match(
                                         either =>
                                             (
-                                                OutliersHighlight
+                                                outliersHighlight
                                                     .GetOutlierColor(
                                                         either.Match(r => r.Code, _ => string.Empty)
                                                     )
                                                     .ToThemeColor(),
-                                                OutliersHighlight
+                                                outliersHighlight
                                                     .GetOutlierContrastColor(
                                                         either.Match(r => r.Code, _ => string.Empty)
                                                     )
@@ -848,7 +863,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                         Identifier _ => [.. BuildContext()],
                         _ => [],
                     },
-                TooltipCreator = (p, c) =>
+                TooltipCreator = (_, c) =>
                     c switch
                     {
                         Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option

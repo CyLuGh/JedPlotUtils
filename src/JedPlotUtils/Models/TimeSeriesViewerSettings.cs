@@ -13,7 +13,8 @@ public record TimeSeriesViewerSettings
             Palette = "Tango",
             DateFormat = "yyyy-MM",
             Decimals = 2,
-            HasThousandsSeparators = false
+            HasThousandsSeparators = false,
+            ShowStatusBar = true,
         };
 
     public SelectionMode SeriesSelectionMode { get; init; }
@@ -23,4 +24,5 @@ public record TimeSeriesViewerSettings
     public string? DateFormat { get; init; }
     public byte Decimals { get; init; }
     public bool HasThousandsSeparators { get; init; }
+    public bool ShowStatusBar { get; init; }
 }
