@@ -153,6 +153,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     protected RxCommand ClearResultsCommand { get; }
 
+    public RxCommand CancelCommand { get; }
+
     [ObservableAsProperty]
     public partial bool IsWorking { get; }
 
@@ -161,6 +163,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
         NumberFormat = "F0";
         Configuration = TimeSeriesViewerSettings.Default;
+
+        CancelCommand = ReactiveCommand.Create(() => { });
 
         ShowSettingsCommand = CreateCommandShowSettingsCommand();
         ShowConnectionSettingsCommand = CreateCommandShowConnectionSettingsCommand();
@@ -179,14 +183,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         DisaggregateCommand = CreateCommandDisaggregateCommand(
             ClearSeriesCommand,
-            ClearDerivedCommand
+            ClearDerivedCommand,
+            CancelCommand
         );
         CreateDisaggregatedSeriesCommand = CreateCommandCreateDisaggregatedSeriesCommand();
         ChangeFrequencyCommand = CreateCommandChangeFrequencyCommand();
 
-        TramoForecastCommand = CreateCommandTramoForecast();
+        TramoForecastCommand = CreateCommandTramoForecast(CancelCommand);
         CreateTramoForecastsSeriesCommand = CreateCommandCreateTramoForecastsSeriesCommand();
-        TramoFullProcessCommand = CreateCommandTramoFullProcessCommand();
+        TramoFullProcessCommand = CreateCommandTramoFullProcessCommand(CancelCommand);
         CreateTramoOutputSeriesCommand = CreateCommandCreateTramoOutputSeriesCommand();
         BuildOutliersMap = CreateCommandBuildOutliersMap();
 

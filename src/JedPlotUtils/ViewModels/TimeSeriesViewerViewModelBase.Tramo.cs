@@ -22,10 +22,9 @@ public partial class TimeSeriesViewerViewModelBase
     public Interaction<RxVoid, Option<TramoRequest>> GetTramoRequestInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
-    private ReactiveCommand<
-        Seq<TimeSeriesInfo>,
-        Option<TramoForecasts>
-    > CreateCommandTramoForecast()
+    private ReactiveCommand<Seq<TimeSeriesInfo>, Option<TramoForecasts>> CreateCommandTramoForecast(
+        RxCommand cancelCommand
+    )
     {
         GetTramoRequestInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(new TramoRequest() { Spec = "TRfull", NForecasts = 3 })
@@ -41,13 +40,16 @@ public partial class TimeSeriesViewerViewModelBase
             .Select(t => t is { First: true, Second: true })
             .ObserveOn(RxSchedulers.MainThreadScheduler);
 
-        var cmd = ReactiveCommand.CreateFromTask(
-            async (Seq<TimeSeriesInfo> series) =>
-            {
-                var request = await GetTramoRequestInteraction.Handle(RxVoid.Default);
-                var tf = await GetTramoForecast(series.HeadOrNone(), request);
-                return tf;
-            },
+        var cmd = ReactiveCommand.CreateFromObservable(
+            (Seq<TimeSeriesInfo> series) =>
+                Signal
+                    .FromAsync(async ct =>
+                    {
+                        var request = await GetTramoRequestInteraction.Handle(RxVoid.Default);
+                        var tf = await GetTramoForecast(series.HeadOrNone(), request, ct);
+                        return tf;
+                    })
+                    .TakeUntil(cancelCommand),
             canExecute
         );
 
@@ -64,7 +66,8 @@ public partial class TimeSeriesViewerViewModelBase
 
     private async Task<Option<TramoForecasts>> GetTramoForecast(
         Option<TimeSeriesInfo> oSeries,
-        Option<TramoRequest> oRequest
+        Option<TramoRequest> oRequest,
+        CancellationToken token
     )
     {
         var elements =
@@ -82,7 +85,8 @@ public partial class TimeSeriesViewerViewModelBase
                 var tsData = await cm.BuildTsData(
                     data,
                     aggregationType: AggregationType.None,
-                    tsi.Frequency.Match(f => f, () => Frequency.Undefined)
+                    tsi.Frequency.Match(f => f, () => Frequency.Undefined),
+                    token: token
                 );
 
                 return await tsData
@@ -93,7 +97,8 @@ public partial class TimeSeriesViewerViewModelBase
                                     r,
                                     req.Spec,
                                     req.NForecasts,
-                                    Option<ModellingContext>.None
+                                    Option<ModellingContext>.None,
+                                    token
                                 )
                                 .ConfigureAwait(false);
                             return Option<TramoForecasts>.Some(res);
@@ -162,22 +167,25 @@ public partial class TimeSeriesViewerViewModelBase
     private ReactiveCommand<
         Seq<TimeSeriesInfo>,
         HashMap<Identifier, Either<Error, TramoOutput>>
-    > CreateCommandTramoFullProcessCommand()
+    > CreateCommandTramoFullProcessCommand(RxCommand cancelCommand)
     {
         var canExecute = this.WhenAnyValue(x => x.HasConnection)
             .ObserveOn(RxSchedulers.MainThreadScheduler);
 
-        var cmd = ReactiveCommand.CreateFromTask(
-            async (Seq<TimeSeriesInfo> series) =>
-            {
-                /* Process all series if none are selected */
-                if (series.IsEmpty)
-                    series = SeriesCache.Values.ToSeq();
+        var cmd = ReactiveCommand.CreateFromObservable(
+            (Seq<TimeSeriesInfo> series) =>
+                Signal
+                    .FromAsync(async ct =>
+                    {
+                        /* Process all series if none are selected */
+                        if (series.IsEmpty)
+                            series = SeriesCache.Values.ToSeq();
 
-                var request = await GetTramoRequestInteraction.Handle(RxVoid.Default);
-                var tf = await GetTramoFullProcess(series, request);
-                return tf;
-            },
+                        var request = await GetTramoRequestInteraction.Handle(RxVoid.Default);
+                        var tf = await GetTramoFullProcess(series, request, ct);
+                        return tf;
+                    })
+                    .TakeUntil(cancelCommand),
             canExecute
         );
 
@@ -192,7 +200,8 @@ public partial class TimeSeriesViewerViewModelBase
 
     private async Task<HashMap<Identifier, Either<Error, TramoOutput>>> GetTramoFullProcess(
         Seq<TimeSeriesInfo> series,
-        Option<TramoRequest> oRequest
+        Option<TramoRequest> oRequest,
+        CancellationToken token
     )
     {
         var elements = from cm in WsManager from request in oRequest select (cm, request);
@@ -210,7 +219,8 @@ public partial class TimeSeriesViewerViewModelBase
                     var tsData = await cm.BuildTsData(
                         data,
                         aggregationType: AggregationType.None,
-                        tsi.Frequency.Match(f => f, () => Frequency.Undefined)
+                        tsi.Frequency.Match(f => f, () => Frequency.Undefined),
+                        token: token
                     );
 
                     await tsData.Match(
@@ -219,7 +229,8 @@ public partial class TimeSeriesViewerViewModelBase
                             var res = await cm.GetTramoFullProcess(
                                     r,
                                     req.Spec,
-                                    Option<ModellingContext>.None
+                                    Option<ModellingContext>.None,
+                                    token
                                 )
                                 .ConfigureAwait(false);
 
@@ -289,7 +300,7 @@ public partial class TimeSeriesViewerViewModelBase
         });
 
         this.WhenAnyValue(x => x.SeriesCache)
-            .CombineLatest(this.WhenAnyValue(x => x.TramoOutput))
+            .CombineLatest(this.WhenAnyValue(x => x.TramoOutput).Where(x => !x.IsEmpty))
             .InvokeCommand(cmd);
         return cmd;
     }

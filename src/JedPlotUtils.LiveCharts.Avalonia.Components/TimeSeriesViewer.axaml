@@ -53,16 +53,23 @@
         <DockPanel>
             <DockPanel
                 DockPanel.Dock="Bottom"
-                IsVisible="{Binding Configuration.ShowStatusBar}"
+                Height="{Binding StatusBarHeight, FallbackValue=70}"
                 Margin="10,0"
+                Opacity="{Binding StatusBarOpacity, FallbackValue=1}"
+                VerticalAlignment="Bottom"
                 x:Name="StatusBar">
+                <DockPanel.Transitions>
+                    <Transitions>
+                        <DoubleTransition Duration="0:0:0.2" Property="Height" />
+                        <DoubleTransition Duration="0:0:0.2" Property="Opacity" />
+                    </Transitions>
+                </DockPanel.Transitions>
                 <StackPanel
-                    Height="30"
                     Margin="3"
                     Orientation="Horizontal"
                     Spacing="5"
+                    VerticalAlignment="Center"
                     x:Name="ConnectionPanel">
-
                     <StackPanel
                         IsVisible="{Binding IsConnecting}"
                         Orientation="Horizontal"
@@ -101,12 +108,13 @@
                         <TextBlock Text="Connecting..." VerticalAlignment="Center" />
                     </StackPanel>
 
-                    <Panel IsVisible="{Binding !IsConnecting}">
+                    <Panel IsVisible="{Binding !IsConnecting}" VerticalAlignment="Center">
                         <Button
                             Command="{Binding ShowConnectionSettingsCommand}"
                             CommandParameter="{Binding Configuration}"
                             IsVisible="{Binding !HasConnection}"
-                            Theme="{DynamicResource GhostButtonTheme}">
+                            Theme="{DynamicResource GhostButtonTheme}"
+                            VerticalAlignment="Center">
                             <StackPanel
                                 IsVisible="{Binding !HasConnection}"
                                 Orientation="Horizontal"
@@ -148,7 +156,10 @@
                     </Panel>
                 </StackPanel>
 
-                <Menu DockPanel.Dock="Right">
+                <Menu
+                    DockPanel.Dock="Right"
+                    IsVisible="{Binding !IsWorking}"
+                    VerticalAlignment="Center">
                     <MenuItem Header="Series">
                         <MenuItem Header="Series">
                             <MenuItem
@@ -243,12 +254,18 @@
                         Header="Settings" />
                 </Menu>
 
-                <Panel IsVisible="{Binding IsWorking}">
+                <DockPanel IsVisible="{Binding IsWorking}">
+                    <Button
+                        Command="{Binding CancelCommand}"
+                        DockPanel.Dock="Right"
+                        VerticalAlignment="Center">
+                        <TextBlock Text="Cancel" />
+                    </Button>
                     <ProgressBar
                         Height="10"
                         IsIndeterminate="True"
                         Margin="30,10" />
-                </Panel>
+                </DockPanel>
             </DockPanel>
 
             <Grid
