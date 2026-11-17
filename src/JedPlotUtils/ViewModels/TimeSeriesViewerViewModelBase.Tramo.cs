@@ -16,15 +16,16 @@ public partial class TimeSeriesViewerViewModelBase
 
     public ReactiveCommand<
         Seq<TimeSeriesInfo>,
-        Option<TramoForecasts>
+        Either<Error, TramoForecasts>
     > TramoForecastCommand { get; }
 
     public Interaction<RxVoid, Option<TramoRequest>> GetTramoRequestInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
-    private ReactiveCommand<Seq<TimeSeriesInfo>, Option<TramoForecasts>> CreateCommandTramoForecast(
-        RxCommand cancelCommand
-    )
+    private ReactiveCommand<
+        Seq<TimeSeriesInfo>,
+        Either<Error, TramoForecasts>
+    > CreateCommandTramoForecast(RxCommand cancelCommand)
     {
         GetTramoRequestInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(new TramoRequest() { Spec = "TRfull", NForecasts = 3 })
@@ -55,16 +56,26 @@ public partial class TimeSeriesViewerViewModelBase
 
         _tramoForecastHelper = Signal
             .Merge(
-                cmd,
+                cmd.Select(ei => ei.Match(f => f, _ => Option<TramoForecasts>.None)),
                 ClearResultsCommand.Select(_ => Option<TramoForecasts>.None),
                 cmd.ThrownExceptions.Select(_ => Option<TramoForecasts>.None)
             )
             .ToProperty(this, x => x.TramoForecast, scheduler: RxSchedulers.MainThreadScheduler);
 
+        cmd.Select(ei =>
+                ei.Match(
+                    _ => Signal.Empty<Message>(),
+                    err => Signal.Return(new Message("Forecasts", err.Message))
+                )
+            )
+            .SwitchTo()
+            .InvokeCommand(Warn);
+        cmd.ThrownExceptions.Select(exc => new Message("Forecasts", exc)).InvokeCommand(Panic);
+
         return cmd;
     }
 
-    private async Task<Option<TramoForecasts>> GetTramoForecast(
+    private async Task<Either<Error, TramoForecasts>> GetTramoForecast(
         Option<TimeSeriesInfo> oSeries,
         Option<TramoRequest> oRequest,
         CancellationToken token
@@ -76,12 +87,16 @@ public partial class TimeSeriesViewerViewModelBase
             from request in oRequest
             select (cm, tsi, request);
 
-        var tf = await elements.MatchAsync(
-            async e =>
+        var tf = await elements
+            .ToEither(
+                Error.New("Couldn't compute forecasts: either connection or request is missing.")
+            )
+            .BindAsync(async e =>
             {
                 var (cm, tsi, req) = e;
                 await Clear(true).ConfigureAwait(false);
                 var data = tsi.Data.ToSeq();
+
                 var tsData = await cm.BuildTsData(
                     data,
                     aggregationType: AggregationType.None,
@@ -89,26 +104,17 @@ public partial class TimeSeriesViewerViewModelBase
                     token: token
                 );
 
-                return await tsData
-                    .MatchAsync(
-                        async r =>
-                        {
-                            var res = await cm.GetTramoForecasts(
-                                    r,
-                                    req.Spec,
-                                    req.NForecasts,
-                                    Option<ModellingContext>.None,
-                                    token
-                                )
-                                .ConfigureAwait(false);
-                            return Option<TramoForecasts>.Some(res);
-                        },
-                        error => Option<TramoForecasts>.None
-                    )
-                    .ConfigureAwait(false);
-            },
-            () => Task.FromResult(Option<TramoForecasts>.None)
-        );
+                return await tsData.BindAsync(async td =>
+                    await cm.GetTramoForecasts(
+                            td,
+                            req.Spec,
+                            req.NForecasts,
+                            Option<ModellingContext>.None,
+                            token
+                        )
+                        .ConfigureAwait(false)
+                );
+            });
 
         return tf;
     }

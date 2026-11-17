@@ -160,6 +160,22 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     protected TimeSeriesViewerViewModelBase()
     {
+        CelebrateInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        InformInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        WarnInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+        PanicInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
+
+        Celebrate = ReactiveCommand.CreateFromTask(
+            (Message message) => CelebrateInteraction.Handle(message)
+        );
+        Inform = ReactiveCommand.CreateFromTask(
+            (Message message) => InformInteraction.Handle(message)
+        );
+        Warn = ReactiveCommand.CreateFromTask((Message message) => WarnInteraction.Handle(message));
+        Panic = ReactiveCommand.CreateFromTask(
+            (Message message) => PanicInteraction.Handle(message)
+        );
+
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
         NumberFormat = "F0";
         Configuration = TimeSeriesViewerSettings.Default;

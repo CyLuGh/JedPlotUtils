@@ -1,8 +1,5 @@
-using System;
 using Avalonia.Controls;
 using JedPlotUtils.LiveCharts.Avalonia.Components;
-using JedPlotUtils.Models;
-using JedPlotUtils.Palette;
 using ReactiveUI;
 using ReactiveUI.Avalonia;
 using ReactiveUI.Primitives;

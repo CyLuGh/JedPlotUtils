@@ -6,7 +6,6 @@ using System.Text.Json;
 using System.Xml;
 using ClosedXML.Excel;
 using CsvHelper;
-using CsvHelper.Configuration;
 using LanguageExt;
 
 namespace JedPlotUtils.Models;
@@ -235,39 +234,44 @@ public static class TimeSeriesInfoExtensions
         public TimeSeriesInfo[] FromCsv()
         {
             // First pass: detect delimiter and read raw strings
-            using var delimiterReader = new StringReader(text);
+            // using var delimiterReader = new StringReader(text);
+            //
+            // var detectConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
+            // {
+            //     DetectDelimiter = true,
+            //     DetectDelimiterValues = [",", ";", "\t", "|"],
+            //     HasHeaderRecord = true
+            // };
+            //
+            // using var detectCsv = new CsvReader(delimiterReader, detectConfig);
+            //
+            // detectCsv.Read();
+            // detectCsv.ReadHeader();
+            //
+            // var delimiter = detectCsv.Context.Parser?.Delimiter ?? ",";
+            //
+            // // Second pass: read all rows as strings
+            // using var reader = new StringReader(text);
+            //
+            // var config = new CsvConfiguration(CultureInfo.InvariantCulture)
+            // {
+            //     Delimiter = delimiter,
+            //     HasHeaderRecord = true
+            // };
+            //
+            // using var csv = new CsvReader(reader, config);
 
-            var detectConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                DetectDelimiter = true,
-                DetectDelimiterValues = [",", ";", "\t", "|"],
-                HasHeaderRecord = true
-            };
-
-            using var detectCsv = new CsvReader(delimiterReader, detectConfig);
-
-            detectCsv.Read();
-            detectCsv.ReadHeader();
-
-            var delimiter = detectCsv.Context.Parser?.Delimiter ?? ",";
-
-            // Second pass: read all rows as strings
-            using var reader = new StringReader(text);
-
-            var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            {
-                Delimiter = delimiter,
-                HasHeaderRecord = true
-            };
-
-            using var csv = new CsvReader(reader, config);
+            using var csv = CsvReader.FromText(text, new CsvReaderOptions()
+            {HasHeader = true
+            });
 
             csv.Read();
-            csv.ReadHeader();
+            
+            var header = Enumerable.Range(0, csv.Current.FieldCount)
+                .Select(csv.GetString)
+                .ToSeq();
 
-            var header = csv.HeaderRecord;
-
-            if (header is null || header.Length < 2)
+            if (header.Length < 2)
                 return [];
 
             var rows = new List<string[]>();
@@ -277,7 +281,7 @@ public static class TimeSeriesInfoExtensions
                 rows.Add(
                     Enumerable
                         .Range(0, header.Length)
-                        .Select(i => csv.GetField(i) ?? string.Empty)
+                        .Select(csv.GetString )
                         .ToArray()
                 );
             }

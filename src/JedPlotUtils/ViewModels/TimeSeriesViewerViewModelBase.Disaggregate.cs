@@ -1,6 +1,7 @@
 using JDPlus.WS.Models;
 using JedPlotUtils.Models;
 using LanguageExt;
+using LanguageExt.Common;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Signals;
@@ -47,7 +48,7 @@ public partial class TimeSeriesViewerViewModelBase
 
     public ReactiveCommand<
         Seq<TimeSeriesInfo>,
-        Option<TemporalDisaggregationResults>
+        Either<Error, TemporalDisaggregationResults>
     > DisaggregateCommand { get; }
 
     public Interaction<
@@ -57,7 +58,7 @@ public partial class TimeSeriesViewerViewModelBase
 
     private ReactiveCommand<
         Seq<TimeSeriesInfo>,
-        Option<TemporalDisaggregationResults>
+        Either<Error, TemporalDisaggregationResults>
     > CreateCommandDisaggregateCommand(
         RxCommand clearSeriesCommand,
         RxCommand clearDerivedCommand,
@@ -100,7 +101,7 @@ public partial class TimeSeriesViewerViewModelBase
 
         _disaggregationResultsHelper = Signal
             .Merge(
-                cmd,
+                cmd.Select(e => e.Match(r => r, _ => Option<TemporalDisaggregationResults>.None)),
                 cmd.ThrownExceptions.Select(_ => Option<TemporalDisaggregationResults>.None),
                 ClearResultsCommand.Select(_ => Option<TemporalDisaggregationResults>.None)
             )
@@ -110,12 +111,20 @@ public partial class TimeSeriesViewerViewModelBase
                 scheduler: RxSchedulers.MainThreadScheduler
             );
 
-        cmd.ThrownExceptions.Subscribe(ex => this.Log().Error(ex));
+        cmd.Select(ei =>
+                ei.Match(
+                    _ => Signal.Empty<Message>(),
+                    err => Signal.Return(new Message("Disaggregate", err.Message))
+                )
+            )
+            .SwitchTo()
+            .InvokeCommand(Warn);
+        cmd.ThrownExceptions.Select(exc => new Message("Disaggregate", exc)).InvokeCommand(Panic);
 
         return cmd;
     }
 
-    private async Task<Option<TemporalDisaggregationResults>> Disaggregate(
+    private async Task<Either<Error, TemporalDisaggregationResults>> Disaggregate(
         Option<TimeSeriesInfo> oSeries,
         Option<TemporalDisaggregationRequest> oRequest,
         CancellationToken token
@@ -127,35 +136,32 @@ public partial class TimeSeriesViewerViewModelBase
             from req in oRequest
             select (cm, tsi, req);
 
-        var derived = await elements.MatchAsync(
-            async t =>
-            {
-                var (cm, tsi, req) = t;
-                var data = tsi.Data.ToSeq();
-                await Clear(true).ConfigureAwait(false);
-                var tsData = await cm.BuildTsData(
-                    data,
-                    aggregationType: AggregationType.None,
-                    tsi.Frequency.Match(f => f, () => Frequency.Undefined),
-                    token: token
-                );
+        var derived = (
+            await elements
+                .ToEither(
+                    Error.New(
+                        "Couldn't process disaggregation: either connection or request is missing."
+                    )
+                )
+                .BindAsync(async t =>
+                {
+                    var (cm, tsi, req) = t;
+                    var data = tsi.Data.ToSeq();
+                    await Clear(true).ConfigureAwait(false);
 
-                return await tsData.MatchAsync(
-                    async r =>
-                    {
-                        var results = await cm.ProcessTemporalDisaggregation(
-                            req with
-                            {
-                                Y = r
-                            },
-                            token
-                        );
-                        return Option<TemporalDisaggregationResults>.Some(results);
-                    },
-                    _ => Option<TemporalDisaggregationResults>.None
-                );
-            },
-            () => Task.FromResult(Option<TemporalDisaggregationResults>.None)
+                    var tsData = await cm.BuildTsData(
+                        data,
+                        aggregationType: AggregationType.None,
+                        tsi.Frequency.Match(f => f, () => Frequency.Undefined),
+                        token: token
+                    );
+
+                    var disaggregated = await tsData.BindAsync(async td =>
+                        await cm.ProcessTemporalDisaggregation(req with { Y = td }, token)
+                    );
+
+                    return disaggregated;
+                })
         );
 
         return derived;
