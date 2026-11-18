@@ -9,6 +9,7 @@ global using RxInteraction = ReactiveUI.Binding.Interaction<
 >;
 using System.Globalization;
 using System.Text;
+using Grpc.Core;
 using HierarchyGrid.Definitions;
 using JDPlus.WS.Client;
 using JDPlus.WS.Models;
@@ -104,7 +105,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial TimeSeriesViewerSettings Configuration { get; set; }
 
     [ObservableAsProperty]
-    public partial Option<CommunicationManager> WsManager { get; }
+    public partial Either<Error, CommunicationManager> WsManager { get; }
 
     [ObservableAsProperty]
     public partial bool IsConnecting { get; }
@@ -112,7 +113,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     [ObservableAsProperty]
     public partial bool HasConnection { get; }
 
-    public ReactiveCommand<string?, Option<CommunicationManager>> GetConnectionCommand { get; }
+    public ReactiveCommand<
+        string?,
+        Either<Error, CommunicationManager>
+    > GetConnectionCommand { get; }
 
     public ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> ToggleHighlightsCommand { get; }
 
@@ -222,7 +226,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ShowDisaggregationInfo = CreateCommandShowDisaggregationInfo();
 
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
-            .Select(o => o.IsSome)
+            .Select(o => o.IsRight)
             .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
 
         _selectedSeriesHelper = this.WhenAnyValue(x => x.Selection)
@@ -592,26 +596,45 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<string?, Option<CommunicationManager>> CreateCommandGetConnection(
+    private ReactiveCommand<
+        string?,
+        Either<Error, CommunicationManager>
+    > CreateCommandGetConnection(
         ReactiveCommand<TimeSeriesViewerSettings, string?> connectionSettingsCommand
     )
     {
-        var cmd = ReactiveCommand.CreateFromTask(
-            async (string? address) =>
+        var cmd = ReactiveCommand.CreateFromTask<string?, Either<Error, CommunicationManager>>(
+            async (address, ct) =>
             {
                 var cm = new CommunicationManager(
                     !string.IsNullOrWhiteSpace(address)
                         ? address
                         : TimeSeriesViewerSettings.DefaultWebServiceAddress
                 );
-                await cm.GetVersion();
-                return Option<CommunicationManager>.Some(cm);
+
+                using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+                timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
+                await cm.GetVersion(timeoutCts.Token);
+                return cm;
             }
         );
 
         connectionSettingsCommand
             .Where(address => !string.IsNullOrWhiteSpace(address))
             .InvokeCommand(cmd);
+
+        cmd.ThrownExceptions.OfType<RpcException>()
+            .Where(rpc => rpc.StatusCode == StatusCode.Cancelled)
+            .Map(ex => new Message(
+                "Failed connection",
+                "Connection attempt has timed out! Another service may be running at that address."
+            ))
+            .InvokeCommand(Panic);
+
+        cmd.ThrownExceptions.OfType<RpcException>()
+            .Where(rpc => rpc.StatusCode == StatusCode.Unavailable)
+            .Map(ex => new Message("Failed connection", "No server is listening."))
+            .InvokeCommand(Warn);
 
         _isConnectingHelper = cmd.IsExecuting.ToProperty(
             this,
@@ -620,15 +643,26 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         );
 
         _wsManagerHelper = cmd.Merge(
-                cmd.ThrownExceptions.Select(exc =>
-                {
-#if DEBUG
-                    Console.WriteLine(exc);
-#endif
-                    return Option<CommunicationManager>.None;
-                })
+                cmd.ThrownExceptions.Map<Exception, Either<Error, CommunicationManager>>(exc =>
+                    exc switch
+                    {
+                        RpcException rpc => rpc.StatusCode switch
+                        {
+                            StatusCode.Cancelled => Error.New(
+                                (int)ErrorCode.TimeOut,
+                                "Connection timeout"
+                            ),
+                            StatusCode.Unavailable => Error.New(
+                                (int)ErrorCode.Unavailable,
+                                "Unavailable service"
+                            ),
+                            _ => Error.New(exc),
+                        },
+                        _ => Error.New(exc),
+                    }
+                )
             )
-            .ToProperty(this, x => x.WsManager, initialValue: Option<CommunicationManager>.None);
+            .ToProperty(this, x => x.WsManager, initialValue: Error.New("Not initialized"));
 
         return cmd;
     }
@@ -642,9 +676,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(
-                    Signal.Return,
-                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(Signal.Return, () =>
+                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -794,36 +827,42 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 Consumer = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                x =>
-                                    Option<(
-                                        double,
-                                        Option<Either<Error, TramoOutput.OutlierReport>>
-                                    )>.Some((x, tramoOutliers.Find((identifier, d)))),
-                                () =>
-                                    Option<(
-                                        double,
-                                        Option<Either<Error, TramoOutput.OutlierReport>>
-                                    )>.None
-                            ),
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(
+                            x =>
+                                Option<(
+                                    double,
+                                    Option<Either<Error, TramoOutput.OutlierReport>>
+                                )>.Some((x, tramoOutliers.Find((identifier, d)))),
+                            () =>
+                                Option<(
+                                    double,
+                                    Option<Either<Error, TramoOutput.OutlierReport>>
+                                )>.None
+                        ),
                         _ => string.Empty,
                     },
                 Qualify = o =>
                     o switch
                     {
-                        Identifier identifier
-                            => (from s in map.Find(identifier) from v in s.Find(d) select v).Match(
-                                _ =>
-                                    tramoOutliers.Find(
-                                        (identifier, d),
-                                        _ => Qualification.Error,
-                                        () => Qualification.Normal
-                                    ),
-                                () => Qualification.Empty
-                            ),
-                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option
-                            => option.Match(
+                        Identifier identifier => (
+                            from s in map.Find(identifier)
+                            from v in s.Find(d)
+                            select v
+                        ).Match(
+                            _ =>
+                                tramoOutliers.Find(
+                                    (identifier, d),
+                                    _ => Qualification.Error,
+                                    () => Qualification.Normal
+                                ),
+                            () => Qualification.Empty
+                        ),
+                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option =>
+                            option.Match(
                                 t =>
                                     t.Item2.Match(
                                         either =>
@@ -835,15 +874,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                                     ),
                                 () => Qualification.Empty
                             ),
-                        double dbl
-                            => double.IsNaN(dbl) ? Qualification.Empty : Qualification.Normal,
+                        double dbl => double.IsNaN(dbl)
+                            ? Qualification.Empty
+                            : Qualification.Normal,
                         _ => Qualification.Unset,
                     },
                 Colorize = o =>
                     o switch
                     {
-                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option
-                            => option.Match(
+                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option =>
+                            option.Match(
                                 t =>
                                     t.Item2.Match(
                                         either =>
@@ -863,13 +903,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                                     ),
                                 () => (ThemeColors.White, ThemeColors.Black)
                             ),
-                        _ => (ThemeColors.White, ThemeColors.Black)
+                        _ => (ThemeColors.White, ThemeColors.Black),
                     },
                 Formatter = o =>
                     o switch
                     {
-                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option
-                            => option.Match(
+                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option =>
+                            option.Match(
                                 t =>
                                     double.IsNaN(t.Item1) ? string.Empty : numberFormatter(t.Item1),
                                 () => string.Empty
@@ -887,13 +927,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 TooltipCreator = (_, c) =>
                     c switch
                     {
-                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option
-                            => option.Match(
+                        Option<(double, Option<Either<Error, TramoOutput.OutlierReport>>)> option =>
+                            option.Match(
                                 t => t.Item2.Match(BuildTooltip, () => string.Empty),
                                 () => string.Empty
                             ),
                         _ => string.Empty,
-                    }
+                    },
             })
             .ToSeq();
 
@@ -921,13 +961,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new(
-            "Settings",
-            _ =>
-            {
-                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-            }
-        );
+        yield return new("Settings", _ =>
+        {
+            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+        });
     }
 
     private IEnumerable<(

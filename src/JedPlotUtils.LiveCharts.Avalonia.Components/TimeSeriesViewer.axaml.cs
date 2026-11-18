@@ -89,7 +89,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         {
             view.InfoContent.Content = new DisaggregationResultsInfoView()
             {
-                DataContext = ctx.Input
+                DataContext = ctx.Input,
             };
             ctx.SetOutput(RxVoid.Default);
         });
@@ -252,10 +252,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 using var data = await clipboard.TryGetDataAsync().ConfigureAwait(false);
 
-                var bytes =
-                    await data?.TryGetValueAsync(
-                        DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
-                    )! ?? [];
+                var bytes = await data?.TryGetValueAsync(
+                    DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                )!
+                    ?? [];
 
                 if (bytes.Length > 0)
                 {
@@ -322,12 +322,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 viewModel.Selection = viewModel.SeriesSelectionMode switch
                 {
-                    SelectionMode.Single
-                        => viewModel
-                            .Selection.Clear()
-                            .Add((Identifier)found[0].Context.Series.Tag!),
-                    SelectionMode.Multiple
-                        => viewModel.Selection.TryAdd((Identifier)found[0].Context.Series.Tag!),
+                    SelectionMode.Single => viewModel
+                        .Selection.Clear()
+                        .Add((Identifier)found[0].Context.Series.Tag!),
+                    SelectionMode.Multiple => viewModel.Selection.TryAdd(
+                        (Identifier)found[0].Context.Series.Tag!
+                    ),
                     _ => viewModel.Selection,
                 };
 
@@ -583,7 +583,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     Text = "Parsing file content...",
                     VerticalAlignment = VerticalAlignment.Center,
                     HorizontalAlignment = HorizontalAlignment.Center,
-                    FontSize = 18
+                    FontSize = 18,
                 },
                 new ProgressBar()
                 {
@@ -591,8 +591,8 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                     Height = 15,
                     Width = 250,
                     VerticalAlignment = VerticalAlignment.Center,
-                }
-            }
+                },
+            },
         };
 
         await OpenDialogAnimation(viewModel, stackPanel, 450, 320);

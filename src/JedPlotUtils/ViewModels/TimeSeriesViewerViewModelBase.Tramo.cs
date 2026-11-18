@@ -82,7 +82,7 @@ public partial class TimeSeriesViewerViewModelBase
     )
     {
         var elements =
-            from cm in WsManager
+            from cm in WsManager.ToOption()
             from tsi in oSeries
             from request in oRequest
             select (cm, tsi, request);
@@ -210,7 +210,10 @@ public partial class TimeSeriesViewerViewModelBase
         CancellationToken token
     )
     {
-        var elements = from cm in WsManager from request in oRequest select (cm, request);
+        var elements =
+            from cm in WsManager.ToOption()
+            from request in oRequest
+            select (cm, request);
 
         var to = await elements.MatchAsync(
             async e =>
@@ -294,7 +297,7 @@ public partial class TimeSeriesViewerViewModelBase
                         chartType: SeriesChartType.Scatter
                     )
                     {
-                        Color = outliersHighlight.GetOutlierColor(g.Key)
+                        Color = outliersHighlight.GetOutlierColor(g.Key),
                     })
                     .ToSeq()
                     .Strict();

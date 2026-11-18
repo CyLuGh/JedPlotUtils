@@ -1,3 +1,4 @@
+using JDPlus.WS.Client;
 using JDPlus.WS.Models;
 using JedPlotUtils.Models;
 using LanguageExt;
@@ -131,7 +132,7 @@ public partial class TimeSeriesViewerViewModelBase
     )
     {
         var elements =
-            from cm in WsManager
+            from cm in WsManager.ToOption()
             from tsi in oSeries
             from req in oRequest
             select (cm, tsi, req);

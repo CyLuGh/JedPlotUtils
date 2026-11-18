@@ -44,7 +44,7 @@ public partial class TimeSeriesViewerViewModelBase
                 var buildOptions = await GetFrequencyChangeOptionsInteraction.Handle(seq[0]);
 
                 var elements =
-                    from cm in WsManager
+                    from cm in WsManager.ToOption()
                     from options in buildOptions
                     select (cm, options);
 
