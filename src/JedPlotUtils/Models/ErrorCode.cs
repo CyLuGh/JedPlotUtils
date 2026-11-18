@@ -2,6 +2,6 @@
 
 public enum ErrorCode
 {
-    TimeOut,
-    Unavailable,
+    TimeOut = 408,
+    Unavailable = 503,
 }

@@ -2,6 +2,7 @@
 using Huskui.Avalonia.Controls;
 using Huskui.Avalonia.Models;
 using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
 using ReactiveUI.Primitives;
 
@@ -60,14 +61,11 @@ public partial class ChartView : UserControl
 
 public static class MessageExtensions
 {
-    public static GrowlItem ToItem(
-        this TimeSeriesViewerViewModelBase.Message message,
-        GrowlLevel level
-    ) =>
+    public static GrowlItem ToItem(this Message message, GrowlLevel level) =>
         new()
         {
             Title = message.Title,
             Content = message.Content,
-            Level = level
+            Level = level,
         };
 }
