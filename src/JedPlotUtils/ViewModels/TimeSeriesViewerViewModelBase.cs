@@ -79,24 +79,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         RxVoid
     > HighlightChartPointInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
-    [ObservableAsProperty]
-    public partial DisplayMode DisplayMode { get; }
-
-    [ObservableAsProperty]
-    public partial Option<Func<DateOnly, string>> DateFormatter { get; }
-
-    [ObservableAsProperty]
-    public partial string NumberFormat { get; }
-
-    [ObservableAsProperty]
-    public partial IPalette Palette { get; }
-
-    [ObservableAsProperty]
-    public partial SelectionMode SeriesSelectionMode { get; }
-
-    [ObservableAsProperty]
-    public partial bool SwitchPositions { get; }
-
     public ReactiveCommand<(DisplayMode, bool), RxVoid> AdaptLayoutCommand { get; }
     public Interaction<(DisplayMode, bool), RxVoid> AdaptLayoutInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
@@ -284,6 +266,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 })
                 .DisposeWith(disposables);
 
+            // Reset selection when changing selection mode
             this.WhenAnyValue(x => x.SeriesSelectionMode)
                 .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
                 .DisposeWith(disposables);
@@ -294,68 +277,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .ObserveOn(RxSchedulers.MainThreadScheduler)
                 .Subscribe(settings =>
                 {
-                    Signal.Return(settings.WebServiceAddress).InvokeCommand(GetConnectionCommand);
+                    if (settings.AutoConnect)
+                        Signal
+                            .Return(settings.WebServiceAddress)
+                            .InvokeCommand(GetConnectionCommand);
                     Configuration = settings;
                     HierarchyGridViewModel.Theme = new LightGridTheme();
                 })
                 .DisposeWith(disposables);
 
-            _seriesSelectionModeHelper = settingsChange
-                .Map(x => x.SeriesSelectionMode)
-                .ToProperty(
-                    this,
-                    x => x.SeriesSelectionMode,
-                    initialValue: SelectionMode.Single,
-                    scheduler: RxSchedulers.MainThreadScheduler
-                )
-                .DisposeWith(disposables);
-
-            _displayModeHelper = settingsChange
-                .Map(x => x.DisplayMode)
-                .ToProperty(this, x => x.DisplayMode, scheduler: RxSchedulers.MainThreadScheduler)
-                .DisposeWith(disposables);
-
-            _paletteHelper = settingsChange
-                .Map(x => x.Palette.ToPalette())
-                .ToProperty(
-                    this,
-                    x => x.Palette,
-                    initialValue: Palettes.Available[0],
-                    scheduler: RxSchedulers.MainThreadScheduler
-                )
-                .DisposeWith(disposables);
-
-            _dateFormatterHelper = settingsChange
-                .Map(settings =>
-                    !string.IsNullOrWhiteSpace(settings.DateFormat)
-                        ? Option<Func<DateOnly, string>>.Some(d => d.ToString(settings.DateFormat))
-                        : Option<Func<DateOnly, string>>.None
-                )
-                .ToProperty(this, x => x.DateFormatter, scheduler: RxSchedulers.MainThreadScheduler)
-                .DisposeWith(disposables);
-
-            _numberFormatHelper = settingsChange
-                .Map(settings =>
-                {
-                    char format = settings.HasThousandsSeparators ? 'N' : 'F';
-                    return $"{format}{settings.Decimals}";
-                })
-                .ToProperty(
-                    this,
-                    x => x.NumberFormat,
-                    initialValue: "F0",
-                    scheduler: RxSchedulers.MainThreadScheduler
-                )
-                .DisposeWith(disposables);
-
-            _switchPositionsHelper = settingsChange
-                .Map(settings => settings.SwitchGridAndChart)
-                .ToProperty(
-                    this,
-                    x => x.SwitchPositions,
-                    scheduler: RxSchedulers.MainThreadScheduler
-                )
-                .DisposeWith(disposables);
+            HandleSettingsObservableAsProperties(settingsChange, disposables);
 
             HierarchyGridViewModel
                 .WhenAnyValue(x => x.Producers)
@@ -685,7 +616,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         cmd.ThrownExceptions.OfType<RpcException>()
             .Where(rpc => rpc.StatusCode == StatusCode.Unavailable)
             .Map(ex => new Message("Failed connection", "No server is listening."))
-            .InvokeCommand(Warn);
+            .InvokeCommand(Inform);
 
         _isConnectingHelper = cmd.IsExecuting.ToProperty(
             this,
@@ -727,8 +658,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(Signal.Return, () =>
-                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(
+                    Signal.Return,
+                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -743,7 +675,15 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
            an element that is not yet drawn */
         var cmd = ReactiveCommand.Create((Option<(Identifier, DateOnly)> si) => DoHoverGrid(si));
 
-        var hoverObservable = this.WhenAnyValue(x => x.ThrottledHoveredPoint).Publish().RefCount();
+        var hoverObservable = this.WhenAnyValue(x => x.ThrottledHoveredPoint, x => x.AutoScrollGrid)
+            .Select(t =>
+            {
+                var (hover, autoScroll) = t;
+                // TODO: this causes problem with chart link
+                return autoScroll ? hover : Option<(Identifier, DateOnly)>.None;
+            })
+            .Publish()
+            .RefCount();
 
         hoverObservable
             .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
@@ -1012,10 +952,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new("Settings", _ =>
-        {
-            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-        });
+        yield return new(
+            "Settings",
+            _ =>
+            {
+                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+            }
+        );
     }
 
     private IEnumerable<(

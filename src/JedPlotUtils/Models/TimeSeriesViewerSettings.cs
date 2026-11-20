@@ -1,3 +1,5 @@
+using JedPlotUtils.Palette;
+
 namespace JedPlotUtils.Models;
 
 public record TimeSeriesViewerSettings
@@ -16,6 +18,8 @@ public record TimeSeriesViewerSettings
             HasThousandsSeparators = false,
             ShowStatusBar = true,
             SwitchGridAndChart = false,
+            AutoScrollGrid = true,
+            AutoConnect = false,
         };
 
     public SelectionMode SeriesSelectionMode { get; init; }
@@ -27,4 +31,10 @@ public record TimeSeriesViewerSettings
     public bool HasThousandsSeparators { get; init; }
     public bool ShowStatusBar { get; init; }
     public bool SwitchGridAndChart { get; init; }
+    public bool AutoConnect { get; init; }
+    public bool AutoScrollGrid { get; init; }
+    public Color ColorAO { get; init; }
+    public Color ColorLS { get; init; }
+    public Color ColorTC { get; init; }
+    public Color ColorSO { get; init; }
 }

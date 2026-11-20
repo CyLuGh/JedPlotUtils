@@ -41,6 +41,12 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial bool SwitchChartAndGrid { get; set; }
 
+    [Reactive]
+    public partial bool AutoConnect { get; set; }
+
+    [Reactive]
+    public partial bool AutoScrollGrid { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
@@ -83,6 +89,8 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         HasThousandsSeparators = settings.HasThousandsSeparators;
         ShowStatusBar = settings.ShowStatusBar;
         SwitchChartAndGrid = settings.SwitchGridAndChart;
+        AutoConnect = settings.AutoConnect;
+        AutoScrollGrid = settings.AutoScrollGrid;
     }
 
     private RxCommand CreateCommandCancel() =>
