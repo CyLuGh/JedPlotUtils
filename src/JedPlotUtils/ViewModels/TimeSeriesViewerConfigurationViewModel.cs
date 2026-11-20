@@ -38,6 +38,9 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial bool ShowStatusBar { get; set; }
 
+    [Reactive]
+    public partial bool SwitchChartAndGrid { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
@@ -79,6 +82,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         Decimals = settings.Decimals;
         HasThousandsSeparators = settings.HasThousandsSeparators;
         ShowStatusBar = settings.ShowStatusBar;
+        SwitchChartAndGrid = settings.SwitchGridAndChart;
     }
 
     private RxCommand CreateCommandCancel() =>
@@ -110,7 +114,8 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     DateFormat = DateFormat,
                     Decimals = Decimals,
                     HasThousandsSeparators = HasThousandsSeparators,
-                    ShowStatusBar = ShowStatusBar
+                    ShowStatusBar = ShowStatusBar,
+                    SwitchGridAndChart = SwitchChartAndGrid,
                 };
 
                 if (save)

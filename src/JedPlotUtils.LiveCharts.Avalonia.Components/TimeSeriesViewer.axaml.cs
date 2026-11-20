@@ -192,18 +192,21 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
         /* Display Mode */
         viewModel
-            .AdaptDisplayModeInteraction.RegisterHandler(ctx =>
+            .AdaptLayoutInteraction.RegisterHandler(ctx =>
             {
+                var (mode, switchPositions) = ctx.Input;
 #if DEBUG
                 Console.WriteLine($"Calling AdaptDisplayModeInteraction with {ctx.Input}");
 #endif
                 SetHierarchyGridConstraints(
                     view.HierarchyGrid,
-                    ctx.Input,
-                    viewModel.HierarchyGridViewModel
+                    mode,
+                    viewModel.HierarchyGridViewModel,
+                    switchPositions
                 );
-                SetGridSplitterConstraints(view.Splitter, ctx.Input);
-                SetGridDimensions(view.GridMainDisplay, ctx.Input);
+                SetChartConstraints(view.CartesianChart, mode, switchPositions);
+                SetGridSplitterConstraints(view.Splitter, mode);
+                SetGridDefinitions(view.GridMainDisplay, mode);
                 viewModel.HasFirstRender = true;
                 ctx.SetOutput(RxVoid.Default);
             })
@@ -661,22 +664,48 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         }
     }
 
+    private static void SetChartConstraints(
+        CartesianChart chart,
+        DisplayMode displayMode,
+        bool switchPositions
+    )
+    {
+        switch (displayMode)
+        {
+            case DisplayMode.BothVertical:
+                Grid.SetColumn(chart, 0);
+                Grid.SetRow(chart, !switchPositions ? 0 : 2);
+                break;
+
+            case DisplayMode.BothHorizontal:
+                Grid.SetColumn(chart, !switchPositions ? 0 : 2);
+                Grid.SetRow(chart, 0);
+                break;
+
+            default:
+                Grid.SetColumn(chart, 0);
+                Grid.SetRow(chart, 0);
+                break;
+        }
+    }
+
     private static void SetHierarchyGridConstraints(
         HierarchyGrid.Avalonia.Grid hierarchyGrid,
         DisplayMode displayMode,
-        HierarchyGrid.Definitions.HierarchyGridViewModel hierarchyGridViewModel
+        HierarchyGrid.Definitions.HierarchyGridViewModel hierarchyGridViewModel,
+        bool switchPositions
     )
     {
         switch (displayMode)
         {
             case DisplayMode.BothVertical:
                 Grid.SetColumn(hierarchyGrid, 0);
-                Grid.SetRow(hierarchyGrid, 2);
+                Grid.SetRow(hierarchyGrid, !switchPositions ? 2 : 0);
                 hierarchyGridViewModel.IsTransposed = false;
                 break;
 
             case DisplayMode.BothHorizontal:
-                Grid.SetColumn(hierarchyGrid, 2);
+                Grid.SetColumn(hierarchyGrid, !switchPositions ? 2 : 0);
                 Grid.SetRow(hierarchyGrid, 0);
                 hierarchyGridViewModel.IsTransposed = true;
                 break;
@@ -684,12 +713,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             default:
                 Grid.SetColumn(hierarchyGrid, 0);
                 Grid.SetRow(hierarchyGrid, 0);
-                hierarchyGridViewModel.IsTransposed = false;
+                hierarchyGridViewModel.IsTransposed = true;
                 break;
         }
     }
 
-    private static void SetGridDimensions(Grid grid, DisplayMode displayMode)
+    private static void SetGridDefinitions(Grid grid, DisplayMode displayMode)
     {
         switch (displayMode)
         {

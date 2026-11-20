@@ -41,12 +41,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         new() { StatusMessage = "No data" };
 
     [Reactive]
-    public partial IPalette Palette { get; set; } = Palettes.Available[0];
-
-    [Reactive]
-    public partial SelectionMode SeriesSelectionMode { get; set; } = SelectionMode.Single;
-
-    [Reactive]
     public partial LanguageExt.HashSet<Identifier> Selection { get; set; }
 
     /// <summary>
@@ -85,17 +79,27 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         RxVoid
     > HighlightChartPointInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
-    [Reactive]
-    public partial DisplayMode DisplayMode { get; set; }
-    public ReactiveCommand<DisplayMode, RxVoid> AdaptDisplayModeCommand { get; }
-    public Interaction<DisplayMode, RxVoid> AdaptDisplayModeInteraction { get; } =
+    [ObservableAsProperty]
+    public partial DisplayMode DisplayMode { get; }
+
+    [ObservableAsProperty]
+    public partial Option<Func<DateOnly, string>> DateFormatter { get; }
+
+    [ObservableAsProperty]
+    public partial string NumberFormat { get; }
+
+    [ObservableAsProperty]
+    public partial IPalette Palette { get; }
+
+    [ObservableAsProperty]
+    public partial SelectionMode SeriesSelectionMode { get; }
+
+    [ObservableAsProperty]
+    public partial bool SwitchPositions { get; }
+
+    public ReactiveCommand<(DisplayMode, bool), RxVoid> AdaptLayoutCommand { get; }
+    public Interaction<(DisplayMode, bool), RxVoid> AdaptLayoutInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
-
-    [Reactive]
-    public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
-
-    [Reactive]
-    public partial string NumberFormat { get; set; }
 
     public ReactiveCommand<Func<DateOnly, string>, Unit> AdaptXAxisCommand { get; }
     public Interaction<Func<DateOnly, string>, Unit> AdaptXAxisInteraction { get; } =
@@ -181,7 +185,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         );
 
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        NumberFormat = "F0";
         Configuration = TimeSeriesViewerSettings.Default;
 
         CancelCommand = ReactiveCommand.Create(() => { });
@@ -192,7 +195,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearSeriesCommand = ReactiveCommand.CreateFromTask(async () => await Clear());
         ClearResultsCommand = ReactiveCommand.Create(() => { });
 
-        AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
+        AdaptLayoutCommand = CreateCommandAdaptLayoutCommand();
         HoverCellGridCommand = CreateCommandHoverGridCommand();
         HighlightChartPointCommand = CreateHighlightPointCommand();
         BuildHierarchyGridDefinitions = CreateCommandBuildHierarchyGridDefinitions();
@@ -250,6 +253,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 scheduler: RxSchedulers.MainThreadScheduler
             );
 
+        var settingsChange = this.WhenAnyValue(x => x.Configuration)
+            .Throttle(TimeSpan.FromMilliseconds(200))
+            .Publish()
+            .RefCount();
+
         this.WhenActivated(disposables =>
         {
             HierarchyGridViewModel
@@ -292,10 +300,61 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 })
                 .DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.Configuration)
-                .Throttle(TimeSpan.FromMilliseconds(200))
-                .ObserveOn(RxSchedulers.MainThreadScheduler)
-                .Subscribe(ApplySettings)
+            _seriesSelectionModeHelper = settingsChange
+                .Map(x => x.SeriesSelectionMode)
+                .ToProperty(
+                    this,
+                    x => x.SeriesSelectionMode,
+                    initialValue: SelectionMode.Single,
+                    scheduler: RxSchedulers.MainThreadScheduler
+                )
+                .DisposeWith(disposables);
+
+            _displayModeHelper = settingsChange
+                .Map(x => x.DisplayMode)
+                .ToProperty(this, x => x.DisplayMode, scheduler: RxSchedulers.MainThreadScheduler)
+                .DisposeWith(disposables);
+
+            _paletteHelper = settingsChange
+                .Map(x => x.Palette.ToPalette())
+                .ToProperty(
+                    this,
+                    x => x.Palette,
+                    initialValue: Palettes.Available[0],
+                    scheduler: RxSchedulers.MainThreadScheduler
+                )
+                .DisposeWith(disposables);
+
+            _dateFormatterHelper = settingsChange
+                .Map(settings =>
+                    !string.IsNullOrWhiteSpace(settings.DateFormat)
+                        ? Option<Func<DateOnly, string>>.Some(d => d.ToString(settings.DateFormat))
+                        : Option<Func<DateOnly, string>>.None
+                )
+                .ToProperty(this, x => x.DateFormatter, scheduler: RxSchedulers.MainThreadScheduler)
+                .DisposeWith(disposables);
+
+            _numberFormatHelper = settingsChange
+                .Map(settings =>
+                {
+                    char format = settings.HasThousandsSeparators ? 'N' : 'F';
+                    return $"{format}{settings.Decimals}";
+                })
+                .ToProperty(
+                    this,
+                    x => x.NumberFormat,
+                    initialValue: "F0",
+                    scheduler: RxSchedulers.MainThreadScheduler
+                )
+                .DisposeWith(disposables);
+
+            _switchPositionsHelper = settingsChange
+                .Map(settings => settings.SwitchGridAndChart)
+                .ToProperty(
+                    this,
+                    x => x.SwitchPositions,
+                    scheduler: RxSchedulers.MainThreadScheduler
+                )
                 .DisposeWith(disposables);
 
             HierarchyGridViewModel
@@ -353,8 +412,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
             this.WhenAnyValue(x => x.NumberFormat).Subscribe(UpdateFormat).DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.DisplayMode)
-                .Select(mode => AdaptDisplayModeCommand.Execute(mode))
+            this.WhenAnyValue(x => x.DisplayMode, x => x.SwitchPositions)
+                .Select(t =>
+                {
+                    var (mode, switchPos) = t;
+                    return AdaptLayoutCommand.Execute((mode, switchPos));
+                })
                 .SwitchTo()
                 .Subscribe()
                 .DisposeWith(disposables);
@@ -565,18 +628,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private void ApplySettings(TimeSeriesViewerSettings settings)
-    {
-        SeriesSelectionMode = settings.SeriesSelectionMode;
-        DisplayMode = settings.DisplayMode;
-        Palette = settings.Palette.ToPalette();
-        DateFormatter = !string.IsNullOrWhiteSpace(settings.DateFormat)
-            ? Option<Func<DateOnly, string>>.Some(d => d.ToString(settings.DateFormat))
-            : Option<Func<DateOnly, string>>.None;
-        char format = settings.HasThousandsSeparators ? 'N' : 'F';
-        NumberFormat = $"{format}{settings.Decimals}";
-    }
-
     private ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> CreateCommandToggleHighlights()
     {
         var cmd = ReactiveCommand.Create(
@@ -707,9 +758,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<DisplayMode, RxVoid> CreateCommandAdaptDisplayModeCommand()
+    private ReactiveCommand<(DisplayMode, bool), RxVoid> CreateCommandAdaptLayoutCommand()
     {
-        AdaptDisplayModeInteraction.RegisterHandler(ctx =>
+        AdaptLayoutInteraction.RegisterHandler(ctx =>
         {
 #if DEBUG
             Console.WriteLine($"Calling _DEFAULT_ AdaptDisplayModeInteraction with {ctx.Input}");
@@ -718,7 +769,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         });
 
         var cmd = ReactiveCommand.CreateFromTask(
-            (DisplayMode dm) => AdaptDisplayModeInteraction.Handle(dm)
+            ((DisplayMode, bool) t) => AdaptLayoutInteraction.Handle(t)
         );
 
         return cmd;

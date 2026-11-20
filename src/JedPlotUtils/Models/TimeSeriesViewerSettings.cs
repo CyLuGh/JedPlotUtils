@@ -15,6 +15,7 @@ public record TimeSeriesViewerSettings
             Decimals = 2,
             HasThousandsSeparators = false,
             ShowStatusBar = true,
+            SwitchGridAndChart = false,
         };
 
     public SelectionMode SeriesSelectionMode { get; init; }
@@ -25,4 +26,5 @@ public record TimeSeriesViewerSettings
     public byte Decimals { get; init; }
     public bool HasThousandsSeparators { get; init; }
     public bool ShowStatusBar { get; init; }
+    public bool SwitchGridAndChart { get; init; }
 }
