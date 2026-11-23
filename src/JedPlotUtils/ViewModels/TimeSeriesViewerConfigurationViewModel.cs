@@ -47,6 +47,18 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial bool AutoScrollGrid { get; set; }
 
+    [Reactive]
+    public partial Color ColorAO { get; set; }
+
+    [Reactive]
+    public partial Color ColorLS { get; set; }
+
+    [Reactive]
+    public partial Color ColorTC { get; set; }
+
+    [Reactive]
+    public partial Color ColorSO { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
@@ -73,7 +85,12 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         LoadCommand = CreateCommandLoad();
 
         DateFormat = string.Empty;
-        RestoreSettings(settings.Match(s => s, Load));
+        RestoreSettings(
+            settings.Match(
+                s => s,
+                () => Load().Match(s => s, () => TimeSeriesViewerSettings.Default)
+            )
+        );
     }
 
     private void RestoreSettings(TimeSeriesViewerSettings settings)
@@ -103,7 +120,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     {
         var cmd = ReactiveCommand.CreateRunInBackground(() =>
         {
-            RestoreSettings(Load());
+            RestoreSettings(Load().Match(s => s, () => TimeSeriesViewerSettings.Default));
         });
         return cmd;
     }
@@ -135,12 +152,12 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         return cmd;
     }
 
-    public static TimeSeriesViewerSettings Load()
+    public static Option<TimeSeriesViewerSettings> Load()
     {
         try
         {
             if (!File.Exists(SettingsPath))
-                return TimeSeriesViewerSettings.Default;
+                return Option<TimeSeriesViewerSettings>.None;
 
             var json = File.ReadAllText(SettingsPath);
             return JsonSerializer.Deserialize<TimeSeriesViewerSettings>(json)

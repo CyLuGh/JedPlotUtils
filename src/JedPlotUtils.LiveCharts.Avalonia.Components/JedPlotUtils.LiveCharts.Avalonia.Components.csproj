@@ -1,5 +1,4 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  
   <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" />
@@ -11,5 +10,4 @@
     <ProjectReference Include="..\JedPlotUtils.Avalonia.Components\JedPlotUtils.Avalonia.Components.csproj" />
     <ProjectReference Include="..\JedPlotUtils\JedPlotUtils.csproj" />
   </ItemGroup>
-
 </Project>

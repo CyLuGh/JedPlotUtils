@@ -19,6 +19,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using ReactiveUI;
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
 using Splat;
@@ -28,6 +29,12 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
+    [Reactive]
+    public partial bool IsInitialized { get; set; }
+
+    [Reactive]
+    public partial bool ShowStatusBar { get; set; }
+
     [Reactive]
     public partial bool IsDialogOpen { get; set; }
 
@@ -88,7 +95,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         new(RxSchedulers.MainThreadScheduler);
 
     [Reactive]
-    public partial TimeSeriesViewerSettings Configuration { get; set; }
+    public partial Option<TimeSeriesViewerSettings> Configuration { get; set; }
 
     [ObservableAsProperty]
     public partial Either<Error, CommunicationManager> WsManager { get; }
@@ -116,7 +123,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
     public ReactiveCommand<SeriesChartType, RxVoid> ChangeSeriesChartTypesCommand { get; }
 
-    public ReactiveCommand<TimeSeriesViewerSettings, RxVoid> ShowSettingsCommand { get; }
+    public ReactiveCommand<Option<TimeSeriesViewerSettings>, RxVoid> ShowSettingsCommand { get; }
     public Interaction<
         TimeSeriesViewerSettings,
         Option<TimeSeriesViewerSettings>
@@ -167,7 +174,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         );
 
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        Configuration = TimeSeriesViewerSettings.Default;
 
         CancelCommand = ReactiveCommand.Create(() => { });
 
@@ -210,9 +216,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         ShowDisaggregationInfo = CreateCommandShowDisaggregationInfo();
 
-        _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
-            .Select(o => o.IsRight)
-            .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
+        HandleConnectionObservableAsProperties();
 
         _selectedSeriesHelper = this.WhenAnyValue(x => x.Selection)
             .Select(sel => SeriesCache.Values.Where(x => sel.Contains(x.Identifier)).ToSeq())
@@ -277,16 +281,23 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .ObserveOn(RxSchedulers.MainThreadScheduler)
                 .Subscribe(settings =>
                 {
-                    if (settings.AutoConnect)
-                        Signal
-                            .Return(settings.WebServiceAddress)
-                            .InvokeCommand(GetConnectionCommand);
+                    settings.IfSome(s =>
+                    {
+                        if (s.AutoConnect)
+                            Signal.Return(s.WebServiceAddress).InvokeCommand(GetConnectionCommand);
+                    });
+
                     Configuration = settings;
                     HierarchyGridViewModel.Theme = new LightGridTheme();
                 })
                 .DisposeWith(disposables);
 
-            HandleSettingsObservableAsProperties(settingsChange, disposables);
+            HandleSettingsObservableAsProperties(
+                settingsChange
+                    .Map(o => o.Match(Signal.Return, Signal.Empty<TimeSeriesViewerSettings>))
+                    .SwitchTo(),
+                disposables
+            );
 
             HierarchyGridViewModel
                 .WhenAnyValue(x => x.Producers)
@@ -343,10 +354,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
             this.WhenAnyValue(x => x.NumberFormat).Subscribe(UpdateFormat).DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.DisplayMode, x => x.SwitchPositions)
+            this.WhenAnyValue(x => x.DisplayMode, x => x.SwitchPositions, x => x.IsInitialized)
+                .Where(t => t.Property1 != DisplayMode.None && t.Property3)
                 .Select(t =>
                 {
-                    var (mode, switchPos) = t;
+                    var (mode, switchPos, _) = t;
                     return AdaptLayoutCommand.Execute((mode, switchPos));
                 })
                 .SwitchTo()
@@ -494,15 +506,36 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<TimeSeriesViewerSettings, RxVoid> CreateCommandShowSettingsCommand()
+    private ReactiveCommand<
+        Option<TimeSeriesViewerSettings>,
+        RxVoid
+    > CreateCommandShowSettingsCommand()
     {
         /* Register default handler */
         ShowSettingsInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
         );
         var cmd = ReactiveCommand.CreateFromTask(
-            async (TimeSeriesViewerSettings settings) =>
+            async (Option<TimeSeriesViewerSettings> o) =>
             {
+                var settings = o.Match(
+                    s => s,
+                    () =>
+                        new()
+                        {
+                            SeriesSelectionMode = SeriesSelectionMode,
+                            WebServiceAddress = TimeSeriesViewerSettings.DefaultWebServiceAddress,
+                            DisplayMode = DisplayMode,
+                            Palette = Palette.Name,
+                            DateFormat = "yyyy-MM",
+                            Decimals = 2,
+                            HasThousandsSeparators = false,
+                            ShowStatusBar = this.ShowStatusBar,
+                            SwitchGridAndChart = this.SwitchPositions,
+                            AutoScrollGrid = this.AutoScrollGrid,
+                            AutoConnect = this.AutoConnect,
+                        }
+                );
                 var config = await ShowSettingsInteraction.Handle(settings);
                 config.IfSome(c =>
                 {
@@ -658,9 +691,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(
-                    Signal.Return,
-                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(Signal.Return, () =>
+                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -944,13 +976,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new(
-            "Settings",
-            _ =>
-            {
-                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-            }
-        );
+        yield return new("Settings", _ =>
+        {
+            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+        });
     }
 
     private IEnumerable<(

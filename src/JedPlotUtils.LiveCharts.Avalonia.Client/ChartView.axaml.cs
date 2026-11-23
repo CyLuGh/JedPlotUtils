@@ -18,7 +18,8 @@ public partial class ChartView : UserControl
         var tsvvm = new TimeSeriesViewerViewModel();
         RegisterNotifications(tsvvm);
 
-        ChartViewHost.ViewModel = tsvvm;
+        //ChartViewHost.ViewModel = tsvvm;
+        Viewer.ViewModel = tsvvm;
     }
 
     private void RegisterNotifications(TimeSeriesViewerViewModel tsvvm)

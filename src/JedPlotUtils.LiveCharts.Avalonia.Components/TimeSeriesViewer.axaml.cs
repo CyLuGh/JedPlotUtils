@@ -27,6 +27,15 @@ namespace JedPlotUtils.LiveCharts.Avalonia.Components;
 
 public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerViewModel>
 {
+    public static readonly AV.StyledProperty<bool> ShowStatusBarProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(nameof(ShowStatusBar));
+
+    public bool ShowStatusBar
+    {
+        get => GetValue(ShowStatusBarProperty);
+        set => SetValue(ShowStatusBarProperty, value);
+    }
+
     public TimeSeriesViewer()
     {
         InitializeComponent();
@@ -415,6 +424,8 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
             ctx.SetOutput(RxVoid.Default);
         });
+
+        viewModel.IsInitialized = true;
     }
 
     private void HandleDragDrop(

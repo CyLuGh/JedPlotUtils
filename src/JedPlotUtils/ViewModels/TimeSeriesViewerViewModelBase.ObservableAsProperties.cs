@@ -1,9 +1,11 @@
+using JDPlus.WS.Client;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using LanguageExt;
 using ReactiveUI;
 using ReactiveUI.Primitives;
 using ReactiveUI.Primitives.Disposables;
+using ReactiveUI.Primitives.Signals;
 
 namespace JedPlotUtils.ViewModels;
 
@@ -33,6 +35,22 @@ public partial class TimeSeriesViewerViewModelBase
     [ObservableAsProperty]
     public partial bool AutoScrollGrid { get; }
 
+    [ObservableAsProperty]
+    public partial string RemoteServerAddress { get; }
+
+    private void HandleConnectionObservableAsProperties()
+    {
+        _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
+            .Select(o => o.IsRight)
+            .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
+
+        _remoteServerAddressHelper = this.WhenAnyValue(x => x.WsManager)
+            .Map(o => o.Match(Signal.Return, _ => Signal.Empty<CommunicationManager>()))
+            .SwitchTo()
+            .Map(cm => cm.RemoteServerAddress)
+            .ToProperty(this, x => x.RemoteServerAddress);
+    }
+
     private void HandleSettingsObservableAsProperties(
         IObservable<TimeSeriesViewerSettings> settingsChange,
         MultipleDisposable disposables
@@ -50,7 +68,12 @@ public partial class TimeSeriesViewerViewModelBase
 
         _displayModeHelper = settingsChange
             .Map(x => x.DisplayMode)
-            .ToProperty(this, x => x.DisplayMode, scheduler: RxSchedulers.MainThreadScheduler)
+            .ToProperty(
+                this,
+                x => x.DisplayMode,
+                initialValue: DisplayMode.BothHorizontal,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
             .DisposeWith(disposables);
 
         _paletteHelper = settingsChange
@@ -88,7 +111,12 @@ public partial class TimeSeriesViewerViewModelBase
 
         _switchPositionsHelper = settingsChange
             .Map(settings => settings.SwitchGridAndChart)
-            .ToProperty(this, x => x.SwitchPositions, scheduler: RxSchedulers.MainThreadScheduler)
+            .ToProperty(
+                this,
+                x => x.SwitchPositions,
+                initialValue: false,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
             .DisposeWith(disposables);
 
         _autoConnectHelper = settingsChange
