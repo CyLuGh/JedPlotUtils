@@ -675,15 +675,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
            an element that is not yet drawn */
         var cmd = ReactiveCommand.Create((Option<(Identifier, DateOnly)> si) => DoHoverGrid(si));
 
-        var hoverObservable = this.WhenAnyValue(x => x.ThrottledHoveredPoint, x => x.AutoScrollGrid)
-            .Select(t =>
-            {
-                var (hover, autoScroll) = t;
-                // TODO: this causes problem with chart link
-                return autoScroll ? hover : Option<(Identifier, DateOnly)>.None;
-            })
-            .Publish()
-            .RefCount();
+        var hoverObservable = this.WhenAnyValue(x => x.ThrottledHoveredPoint).Publish().RefCount();
 
         hoverObservable
             .Merge(hoverObservable.CombineLatest(cmd.Where(x => x)).Select(t => t.First))
@@ -1004,7 +996,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             && pc.ConsumerDefinition.Tag?.Equals(period) == true
         );
 
-        if (cell.IsNone) /* Cell is not drawn */
+        if (cell.IsNone && AutoScrollGrid) /* Cell is not drawn */
         {
             var producerOffset = !HierarchyGridViewModel.DrawnCells.Exists(pc =>
                 pc.ProducerDefinition.Tag?.Equals(identifier) == true
