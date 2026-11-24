@@ -141,7 +141,7 @@ internal static class ChartUtils
         {
             Level.Primary => tsi.ChartType == SeriesChartType.Area ? 1d : 4d,
             Level.Secondary => 2d,
-            Level.Tertiary => 8d,
+            Level.Tertiary => 10d,
             Level.Quaternary => 0d,
             _ => 12d,
         };

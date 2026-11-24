@@ -61,6 +61,9 @@ public partial class TimeSeriesViewerViewModelBase
     [ObservableAsProperty]
     public partial OutliersHighlight OutliersHighlight { get; }
 
+    [ObservableAsProperty]
+    public partial LegendDisplay Legend { get; }
+
     private void HandleConnectionObservableAsProperties()
     {
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
@@ -204,6 +207,16 @@ public partial class TimeSeriesViewerViewModelBase
                 return new OutliersHighlight(ao, tc, ls, so);
             })
             .ToProperty(this, x => x.OutliersHighlight, scheduler: RxSchedulers.MainThreadScheduler)
+            .DisposeWith(disposables);
+
+        _legendHelper = settingsChange
+            .Map(x => x.Legend)
+            .ToProperty(
+                this,
+                x => x.Legend,
+                initialValue: LegendDisplay.Hidden,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
             .DisposeWith(disposables);
     }
 

@@ -195,11 +195,13 @@ public partial class TimeSeriesViewerViewModelBase
             canExecute
         );
 
-        _tramoOutputHelper = cmd.ToProperty(
-            this,
-            x => x.TramoOutput,
-            scheduler: RxSchedulers.MainThreadScheduler
-        );
+        _tramoOutputHelper = cmd
+        // .Merge(
+        //     ClearResultsCommand.Select(_ =>
+        //         HashMap<Identifier, Either<Error, TramoOutput>>.Empty
+        //     )
+        // )
+        .ToProperty(this, x => x.TramoOutput, scheduler: RxSchedulers.MainThreadScheduler);
 
         return cmd;
     }
@@ -288,6 +290,7 @@ public partial class TimeSeriesViewerViewModelBase
         >(async t =>
         {
             var (seriesCache, map, outliersHighlight) = t;
+            // TODO; should be done before
             await Clear(true).ConfigureAwait(false);
 
             foreach (var (id, output) in map)

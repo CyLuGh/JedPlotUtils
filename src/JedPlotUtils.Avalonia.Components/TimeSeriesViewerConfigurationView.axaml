@@ -90,6 +90,14 @@
             </StackPanel>
 
             <StackPanel Spacing="4">
+              <TextBlock VerticalAlignment="Center" Text="Chart legend" />
+              <ComboBox
+                ItemsSource="{Binding AvailableLegendDisplay}"
+                SelectedItem="{Binding Legend}"
+              />
+            </StackPanel>
+
+            <StackPanel Spacing="4">
               <TextBlock VerticalAlignment="Center" Text="Switch chart and grid positions" />
               <ToggleSwitch IsChecked="{Binding SwitchChartAndGrid}" />
             </StackPanel>

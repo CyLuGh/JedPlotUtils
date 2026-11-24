@@ -59,11 +59,16 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial Color ColorSO { get; set; }
 
+    [Reactive]
+    public partial LegendDisplay Legend { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
     public static DisplayMode[] AvailableDisplayMode =>
         [DisplayMode.Chart, DisplayMode.Grid, DisplayMode.BothHorizontal, DisplayMode.BothVertical];
+
+    public static LegendDisplay[] AvailableLegendDisplay => Enum.GetValues<LegendDisplay>();
 
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -151,6 +156,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     ColorLS = ColorLS,
                     ColorSO = ColorSO,
                     ColorTC = ColorTC,
+                    Legend = Legend,
                 };
 
                 if (save)

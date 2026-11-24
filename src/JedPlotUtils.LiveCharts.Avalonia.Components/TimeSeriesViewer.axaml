@@ -18,6 +18,7 @@
   <UserControl.Resources>
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter" />
     <converters:ColorConverter x:Key="ColorConverter" />
+    <converters:LegendConverter x:Key="LegendConverter" />
 
     <ControlTheme TargetType="Border" x:Key="PresentationBorder">
       <Setter Property="Margin" Value="10" />
@@ -277,6 +278,7 @@
           Series="{Binding Path=AllSeries}"
           XAxes="{Binding XAxes}"
           YAxes="{Binding YAxes}"
+          LegendPosition="{Binding Legend,Converter={StaticResource LegendConverter}}"
           x:Name="CartesianChart"
         >
           <lvc:CartesianChart.ContextMenu>

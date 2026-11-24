@@ -30,6 +30,9 @@ namespace JedPlotUtils.ViewModels;
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
     [Reactive]
+    public partial bool EnableDemetra { get; set; }
+
+    [Reactive]
     public partial bool IsInitialized { get; set; }
 
     [Reactive]
@@ -546,6 +549,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                             ColorTC = ColorTC,
                             ColorLS = ColorLS,
                             ColorSO = ColorSO,
+                            Legend = Legend,
                         }
                 );
                 var config = await ShowSettingsInteraction.Handle(settings);
