@@ -5,7 +5,7 @@ using LanguageExt;
 using LiveChartsCore.Defaults;
 using MoreLinq.Extensions;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components;
+namespace JedPlotUtils.LiveCharts;
 
 public static class TimeSeriesInfoExtensions
 {
@@ -22,7 +22,7 @@ public static class TimeSeriesInfoExtensions
                     x => new DateTimePoint(dt, x),
                     () => new DateTimePoint(dt, null)
                 );
-            })
+            }),
         ];
 
     public static ObservableCollection<DateTimePoint> GetPoints(this TimeSeriesInfo tsi)
@@ -67,7 +67,7 @@ public static class TimeSeriesInfoExtensions
             Frequency.QuadriMonthly => 4,
             Frequency.HalfYearly => 6,
             Frequency.Yearly => 12,
-            _ => throw new ArgumentOutOfRangeException(nameof(frequency), frequency, null)
+            _ => throw new ArgumentOutOfRangeException(nameof(frequency), frequency, null),
         };
 
     private static Frequency DetectFrequency(IEnumerable<DateOnly> dates)
@@ -95,7 +95,7 @@ public static class TimeSeriesInfoExtensions
             4 => Frequency.QuadriMonthly,
             6 => Frequency.HalfYearly,
             12 => Frequency.Yearly,
-            _ => Frequency.Undefined
+            _ => Frequency.Undefined,
         };
     }
 

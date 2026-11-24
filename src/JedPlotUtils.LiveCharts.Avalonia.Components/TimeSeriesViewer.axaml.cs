@@ -4,7 +4,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using JedPlotUtils.Avalonia.Components;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
 using LanguageExt;

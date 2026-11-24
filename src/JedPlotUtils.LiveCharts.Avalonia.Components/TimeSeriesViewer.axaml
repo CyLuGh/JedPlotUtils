@@ -11,8 +11,8 @@
   xmlns:lvc="using:LiveChartsCore.SkiaSharpView.Avalonia"
   xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
   xmlns:models="clr-namespace:JedPlotUtils.Models;assembly=JedPlotUtils"
-  xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.ViewModels;assembly=JedPlotUtils.LiveCharts"
   ShowStatusBar="{Binding ShowStatusBar}"
 >
   <UserControl.Resources>

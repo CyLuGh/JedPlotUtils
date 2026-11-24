@@ -58,6 +58,9 @@ public partial class TimeSeriesViewerViewModelBase
     [ObservableAsProperty]
     public partial Color ColorSO { get; }
 
+    [ObservableAsProperty]
+    public partial OutliersHighlight OutliersHighlight { get; }
+
     private void HandleConnectionObservableAsProperties()
     {
         _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
@@ -187,6 +190,20 @@ public partial class TimeSeriesViewerViewModelBase
                 initialValue: TimeSeriesViewerSettings.DefaultColorSO,
                 scheduler: RxSchedulers.MainThreadScheduler
             )
+            .DisposeWith(disposables);
+
+        _outliersHighlightHelper = this.WhenAnyValue(
+                x => x.ColorAO,
+                x => x.ColorTC,
+                x => x.ColorLS,
+                x => x.ColorSO
+            )
+            .Select(t =>
+            {
+                var (ao, tc, ls, so) = t;
+                return new OutliersHighlight(ao, tc, ls, so);
+            })
+            .ToProperty(this, x => x.OutliersHighlight, scheduler: RxSchedulers.MainThreadScheduler)
             .DisposeWith(disposables);
     }
 

@@ -171,11 +171,11 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
 
             var json = File.ReadAllText(SettingsPath);
             return JsonSerializer.Deserialize<TimeSeriesViewerSettings>(json)
-                ?? TimeSeriesViewerSettings.Default;
+                ?? Option<TimeSeriesViewerSettings>.None;
         }
         catch (Exception)
         {
-            return TimeSeriesViewerSettings.Default;
+            return Option<TimeSeriesViewerSettings>.None;
         }
     }
 

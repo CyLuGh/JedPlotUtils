@@ -163,6 +163,35 @@ public readonly record struct Color
     public static Color FromRgb(byte r, byte g, byte b) => new(r, g, b);
 
     public static Color FromArgb(byte a, byte r, byte g, byte b) => new(a, r, g, b);
+
+    public static Color GetBestForegroundColor(Color color) =>
+        GetBestForegroundColor(color.R, color.G, color.B);
+
+    public static Color GetBestForegroundColor(byte r, byte g, byte b)
+    {
+        double Linearize(byte c)
+        {
+            double v = c / 255.0;
+            return v <= 0.04045 ? v / 12.92 : Math.Pow((v + 0.055) / 1.055, 2.4);
+        }
+
+        double rl = Linearize(r);
+        double gl = Linearize(g);
+        double bl = Linearize(b);
+
+        double luminance = 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+
+        double contrastWithBlack = (luminance + 0.05) / 0.05;
+        double contrastWithWhite = 1.05 / (luminance + 0.05);
+
+        return contrastWithBlack > contrastWithWhite ? Colors.Black : Colors.White;
+    }
+}
+
+public static class Colors
+{
+    public static readonly Color Black = new(255, 0, 0, 0);
+    public static readonly Color White = new(255, 255, 255, 0);
 }
 
 public static class ThemeColorConverter

@@ -1,9 +1,9 @@
 ﻿using JedPlotUtils.Palette;
 using SkiaSharp;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components;
+namespace JedPlotUtils.LiveCharts;
 
-internal static class ColorExtensions
+public static class ColorExtensions
 {
     extension(Color color)
     {

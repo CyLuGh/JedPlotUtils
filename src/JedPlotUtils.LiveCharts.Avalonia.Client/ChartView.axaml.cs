@@ -1,9 +1,8 @@
 ﻿using Avalonia.Controls;
 using Huskui.Avalonia.Controls;
 using Huskui.Avalonia.Models;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using JedPlotUtils.Models;
-using JedPlotUtils.ViewModels;
 using ReactiveUI.Primitives;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Client;

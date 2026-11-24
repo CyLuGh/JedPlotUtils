@@ -1,21 +1,15 @@
 ﻿using System.Collections.ObjectModel;
 using System.Globalization;
 using JedPlotUtils.Models;
-using JedPlotUtils.Palette;
 using LanguageExt;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Painting;
-using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ReactiveUI;
 using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Disposables;
-using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
-using ReactiveUI.SourceGenerators;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+namespace JedPlotUtils.LiveCharts.ViewModels;
 
 public partial class TimeSeriesViewerViewModel
     : JedPlotUtils.ViewModels.TimeSeriesViewerViewModelBase
@@ -261,9 +255,8 @@ public partial class TimeSeriesViewerViewModel
         {
             this.WhenAnyValue(x => x.DateFormatter)
                 .Select(o =>
-                    o.Match(
-                        Signal.Return,
-                        () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                    o.Match(Signal.Return, () =>
+                        Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                     )
                 )
                 .SwitchTo()

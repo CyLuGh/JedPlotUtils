@@ -76,7 +76,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             Seq<TimeSeriesInfo>,
             HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>>,
             Func<DateOnly, string>,
-            Func<double, string>
+            Func<double, string>,
+            OutliersHighlight
         ),
         HierarchyDefinitions
     > BuildHierarchyGridDefinitions { get; }
@@ -129,7 +130,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         Option<TimeSeriesViewerSettings>
     > ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
-    public ReactiveCommand<TimeSeriesViewerSettings, string?> ShowConnectionSettingsCommand { get; }
+    public ReactiveCommand<
+        Option<TimeSeriesViewerSettings>,
+        string?
+    > ShowConnectionSettingsCommand { get; }
     public Interaction<
         TimeSeriesViewerSettings,
         Option<TimeSeriesViewerSettings>
@@ -486,7 +490,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     }
 
     private ReactiveCommand<
-        TimeSeriesViewerSettings,
+        Option<TimeSeriesViewerSettings>,
         string?
     > CreateCommandShowConnectionSettingsCommand()
     {
@@ -494,9 +498,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
         );
         var cmd = ReactiveCommand.CreateFromTask(
-            async (TimeSeriesViewerSettings settings) =>
+            async (Option<TimeSeriesViewerSettings> settings) =>
             {
-                var config = await ShowConnectionSettingsInteraction.Handle(settings);
+                var config = await ShowConnectionSettingsInteraction.Handle(
+                    settings.Match(s => s, () => TimeSeriesViewerSettings.Default)
+                );
                 config.IfSome(c =>
                 {
                     Configuration = c;
@@ -621,7 +627,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         string?,
         Either<Error, CommunicationManager>
     > CreateCommandGetConnection(
-        ReactiveCommand<TimeSeriesViewerSettings, string?> connectionSettingsCommand
+        ReactiveCommand<Option<TimeSeriesViewerSettings>, string?> connectionSettingsCommand
     )
     {
         var cmd = ReactiveCommand.CreateFromTask<string?, Either<Error, CommunicationManager>>(
@@ -697,9 +703,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(
-                    Signal.Return,
-                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(Signal.Return, () =>
+                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -766,7 +771,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             Seq<TimeSeriesInfo>,
             HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>>,
             Func<DateOnly, string>,
-            Func<double, string>
+            Func<double, string>,
+            OutliersHighlight
         ),
         HierarchyDefinitions
     > CreateCommandBuildHierarchyGridDefinitions()
@@ -777,16 +783,18 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     Seq<TimeSeriesInfo>,
                     HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>>,
                     Func<DateOnly, string>,
-                    Func<double, string>
+                    Func<double, string>,
+                    OutliersHighlight
                 ) t
             ) =>
             {
-                var (infos, tramoOutliers, dateFormatter, numberFormatter) = t;
+                var (infos, tramoOutliers, dateFormatter, numberFormatter, outliersHighlight) = t;
                 return DoBuildHierarchyGridDefinitions(
                     infos,
                     tramoOutliers,
                     dateFormatter,
-                    numberFormatter
+                    numberFormatter,
+                    outliersHighlight
                 );
             }
         );
@@ -803,7 +811,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                         !string.IsNullOrWhiteSpace(f)
                             ? d => d.ToString(f)
                             : d => d.ToString(CultureInfo.InvariantCulture)
-                    )
+                    ),
+                this.WhenAnyValue(x => x.OutliersHighlight)
             )
             .Throttle(TimeSpan.FromMilliseconds(50))
             .InvokeCommand(cmd);
@@ -817,12 +826,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         Seq<TimeSeriesInfo> infos,
         HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>> tramoOutliers,
         Func<DateOnly, string> formatter,
-        Func<double, string> numberFormatter
+        Func<double, string> numberFormatter,
+        OutliersHighlight outliersHighlight
     )
     {
         var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
-        // TODO: improve
-        var outliersHighlight = new OutliersHighlight("Bank".ToPalette());
 
         var producers = infos
             .Where(info => info.Level < Level.Tertiary)
@@ -983,13 +991,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new(
-            "Settings",
-            _ =>
-            {
-                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-            }
-        );
+        yield return new("Settings", _ =>
+        {
+            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+        });
     }
 
     private IEnumerable<(

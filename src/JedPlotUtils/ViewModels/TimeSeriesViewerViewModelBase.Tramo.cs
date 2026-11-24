@@ -261,25 +261,34 @@ public partial class TimeSeriesViewerViewModelBase
     }
 
     public ReactiveCommand<
-        (HashMap<Identifier, TimeSeriesInfo>, HashMap<Identifier, Either<Error, TramoOutput>>),
+        (
+            HashMap<Identifier, TimeSeriesInfo>,
+            HashMap<Identifier, Either<Error, TramoOutput>>,
+            OutliersHighlight
+        ),
         RxVoid
     > CreateTramoOutputSeriesCommand { get; }
 
     private ReactiveCommand<
-        (HashMap<Identifier, TimeSeriesInfo>, HashMap<Identifier, Either<Error, TramoOutput>>),
+        (
+            HashMap<Identifier, TimeSeriesInfo>,
+            HashMap<Identifier, Either<Error, TramoOutput>>,
+            OutliersHighlight
+        ),
         RxVoid
     > CreateCommandCreateTramoOutputSeriesCommand()
     {
         var cmd = ReactiveCommand.CreateFromTask<
-            (HashMap<Identifier, TimeSeriesInfo>, HashMap<Identifier, Either<Error, TramoOutput>>),
+            (
+                HashMap<Identifier, TimeSeriesInfo>,
+                HashMap<Identifier, Either<Error, TramoOutput>>,
+                OutliersHighlight
+            ),
             RxVoid
         >(async t =>
         {
-            var (seriesCache, map) = t;
+            var (seriesCache, map, outliersHighlight) = t;
             await Clear(true).ConfigureAwait(false);
-
-            // TODO: improve
-            var outliersHighlight = new OutliersHighlight("Bank".ToPalette());
 
             foreach (var (id, output) in map)
             {
@@ -309,7 +318,10 @@ public partial class TimeSeriesViewerViewModelBase
         });
 
         this.WhenAnyValue(x => x.SeriesCache)
-            .CombineLatest(this.WhenAnyValue(x => x.TramoOutput).Where(x => !x.IsEmpty))
+            .CombineLatest(
+                this.WhenAnyValue(x => x.TramoOutput).Where(x => !x.IsEmpty),
+                this.WhenAnyValue(x => x.OutliersHighlight)
+            )
             .InvokeCommand(cmd);
         return cmd;
     }

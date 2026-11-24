@@ -4,7 +4,6 @@ using Avalonia.Data.Converters;
 using JedPlotUtils.Palette;
 using LiveChartsCore.SkiaSharpView;
 using LiveChartsCore.SkiaSharpView.Painting;
-using SkiaSharp;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Components.Converters;
 
@@ -14,12 +13,11 @@ public class ColorConverter : IValueConverter
     {
         return value switch
         {
-            IPalette p
-                => new DrawMarginFrame()
-                {
-                    Fill = new SolidColorPaint(p.BackgroundColor.Convert())
-                },
-            _ => BindingOperations.DoNothing
+            IPalette p => new DrawMarginFrame()
+            {
+                Fill = new SolidColorPaint(p.BackgroundColor.Convert()),
+            },
+            _ => BindingOperations.DoNothing,
         };
     }
 

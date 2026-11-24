@@ -4,7 +4,7 @@ using LiveChartsCore.SkiaSharpView.Painting;
 using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using SkiaSharp;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components;
+namespace JedPlotUtils.LiveCharts;
 
 internal readonly record struct DrawingInfo(
     float Thickness,

@@ -8,6 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JedPlotUtils.Avalonia.Components\JedPlotUtils.Avalonia.Components.csproj" />
-    <ProjectReference Include="..\JedPlotUtils\JedPlotUtils.csproj" />
+    <ProjectReference Include="..\JedPlotUtils.LiveCharts\JedPlotUtils.LiveCharts.csproj" />
   </ItemGroup>
 </Project>
