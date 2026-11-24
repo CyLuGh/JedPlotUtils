@@ -234,8 +234,11 @@ public partial class TimeSeriesViewerViewModelBase
             .DisposeWith(disposables);
 
         _statusBarHeightHelper = this.WhenAnyValue(x => x.ShowStatusBar)
-            .CombineLatest(this.WhenAnyValue(x => x.IsWorking))
-            .Select(t => t.First || t.Second)
+            .CombineLatest(
+                this.WhenAnyValue(x => x.IsWorking),
+                this.WhenAnyValue(x => x.TempShowStatusBar)
+            )
+            .Select(t => t.First || t.Second || t.Third)
             .Throttle(TimeSpan.FromMilliseconds(20))
             .DistinctUntilChanged()
             .Select(b => b ? DefaultStatusBarHeight : 0d)
@@ -248,8 +251,11 @@ public partial class TimeSeriesViewerViewModelBase
             .DisposeWith(disposables);
 
         _statusBarOpacityHelper = this.WhenAnyValue(x => x.ShowStatusBar)
-            .CombineLatest(this.WhenAnyValue(x => x.IsWorking))
-            .Select(t => t.First || t.Second)
+            .CombineLatest(
+                this.WhenAnyValue(x => x.IsWorking),
+                this.WhenAnyValue(x => x.TempShowStatusBar)
+            )
+            .Select(t => t.First || t.Second || t.Third)
             .Throttle(TimeSpan.FromMilliseconds(20))
             .DistinctUntilChanged()
             .Select(b => b ? 1d : 0d)

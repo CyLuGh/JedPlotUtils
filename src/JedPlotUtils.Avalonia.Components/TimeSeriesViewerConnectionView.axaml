@@ -28,10 +28,12 @@
           Command="{Binding CancelCommand}"
           Content="Cancel"
           IsCancel="True"
+          HotKey="Escape"
           Theme="{DynamicResource GhostButtonTheme}"
         />
         <Button
           Classes="Primary"
+          HotKey="Enter"
           Command="{Binding SaveCommand}"
           CommandParameter="{Binding PersistSettings}"
         >

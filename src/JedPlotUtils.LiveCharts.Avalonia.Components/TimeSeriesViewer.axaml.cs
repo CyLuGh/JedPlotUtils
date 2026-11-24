@@ -88,6 +88,33 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
 
+        Signal
+            .FromEventPattern<KeyEventArgs>(
+                handler => view.KeyDown += handler,
+                handler => view.KeyDown -= handler
+            )
+            .SubscribePrimitives(t =>
+            {
+                var args = t.EventArgs;
+                if (args.Key is Key.LeftAlt or Key.RightAlt)
+                {
+                    viewModel.TempShowStatusBar = true;
+                    args.Handled = true;
+                }
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<KeyEventArgs>(
+                handler => view.KeyUp += handler,
+                handler => view.KeyUp -= handler
+            )
+            .SubscribePrimitives(t =>
+            {
+                viewModel.TempShowStatusBar = false;
+            })
+            .DisposeWith(disposables);
+
         viewModel.ClearInfoInteraction.RegisterHandler(ctx =>
         {
             view.InfoContent.Content = null;
@@ -264,10 +291,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 using var data = await clipboard.TryGetDataAsync().ConfigureAwait(false);
 
-                var bytes = await data?.TryGetValueAsync(
-                    DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
-                )!
-                    ?? [];
+                var bytes =
+                    await data?.TryGetValueAsync(
+                        DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                    )! ?? [];
 
                 if (bytes.Length > 0)
                 {

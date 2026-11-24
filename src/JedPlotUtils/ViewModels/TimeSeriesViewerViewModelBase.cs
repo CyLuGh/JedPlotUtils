@@ -39,6 +39,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public partial bool ShowStatusBar { get; set; }
 
     [Reactive]
+    public partial bool TempShowStatusBar { get; set; }
+
+    [Reactive]
     public partial bool IsDialogOpen { get; set; }
 
     [Reactive]
@@ -707,8 +710,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(Signal.Return, () =>
-                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(
+                    Signal.Return,
+                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -995,10 +999,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new("Settings", _ =>
-        {
-            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-        });
+        yield return new(
+            "Settings",
+            _ =>
+            {
+                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+            }
+        );
     }
 
     private IEnumerable<(
