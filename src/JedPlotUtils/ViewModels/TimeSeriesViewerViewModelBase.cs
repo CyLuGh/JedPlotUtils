@@ -275,6 +275,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
                 .DisposeWith(disposables);
 
+            HandleStatusBarVisibility(disposables);
+
             Signal
                 .Return(TimeSeriesViewerConfigurationViewModel.Load())
                 .DistinctUntilChanged() // Make sure we only update the settings when they change
@@ -534,6 +536,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                             SwitchGridAndChart = this.SwitchPositions,
                             AutoScrollGrid = this.AutoScrollGrid,
                             AutoConnect = this.AutoConnect,
+                            ColorAO = ColorAO,
+                            ColorTC = ColorTC,
+                            ColorLS = ColorLS,
+                            ColorSO = ColorSO,
                         }
                 );
                 var config = await ShowSettingsInteraction.Handle(settings);
@@ -691,8 +697,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(Signal.Return, () =>
-                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(
+                    Signal.Return,
+                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -976,10 +983,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new("Settings", _ =>
-        {
-            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-        });
+        yield return new(
+            "Settings",
+            _ =>
+            {
+                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+            }
+        );
     }
 
     private IEnumerable<(

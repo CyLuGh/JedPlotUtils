@@ -5,6 +5,10 @@ namespace JedPlotUtils.Models;
 public record TimeSeriesViewerSettings
 {
     public static readonly string DefaultWebServiceAddress = "http://localhost:4566";
+    public static readonly Color DefaultColorAO = Color.FromRgb(255, 0, 0);
+    public static readonly Color DefaultColorLS = Color.FromRgb(255, 0, 0);
+    public static readonly Color DefaultColorTC = Color.FromRgb(255, 0, 0);
+    public static readonly Color DefaultColorSO = Color.FromRgb(255, 0, 0);
 
     public static TimeSeriesViewerSettings Default =>
         new()
@@ -20,6 +24,10 @@ public record TimeSeriesViewerSettings
             SwitchGridAndChart = false,
             AutoScrollGrid = true,
             AutoConnect = false,
+            ColorAO = DefaultColorAO,
+            ColorLS = DefaultColorLS,
+            ColorTC = DefaultColorTC,
+            ColorSO = DefaultColorSO,
         };
 
     public SelectionMode SeriesSelectionMode { get; init; }

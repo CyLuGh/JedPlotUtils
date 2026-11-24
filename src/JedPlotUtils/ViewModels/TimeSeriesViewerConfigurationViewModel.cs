@@ -108,6 +108,10 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         SwitchChartAndGrid = settings.SwitchGridAndChart;
         AutoConnect = settings.AutoConnect;
         AutoScrollGrid = settings.AutoScrollGrid;
+        ColorAO = settings.ColorAO;
+        ColorLS = settings.ColorLS;
+        ColorSO = settings.ColorSO;
+        ColorTC = settings.ColorTC;
     }
 
     private RxCommand CreateCommandCancel() =>
@@ -141,6 +145,12 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     HasThousandsSeparators = HasThousandsSeparators,
                     ShowStatusBar = ShowStatusBar,
                     SwitchGridAndChart = SwitchChartAndGrid,
+                    AutoConnect = AutoConnect,
+                    AutoScrollGrid = AutoScrollGrid,
+                    ColorAO = ColorAO,
+                    ColorLS = ColorLS,
+                    ColorSO = ColorSO,
+                    ColorTC = ColorTC,
                 };
 
                 if (save)

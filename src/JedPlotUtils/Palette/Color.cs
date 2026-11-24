@@ -159,6 +159,10 @@ public readonly record struct Color
             return new Color(255, 0, 0, 0);
         }
     }
+
+    public static Color FromRgb(byte r, byte g, byte b) => new(r, g, b);
+
+    public static Color FromArgb(byte a, byte r, byte g, byte b) => new(a, r, g, b);
 }
 
 public static class ThemeColorConverter

@@ -1,0 +1,439 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:viewModels="clr-namespace:JedPlotUtils.ScottPlot.Avalonia.Components.ViewModels"
+             xmlns:converters="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components.Converters;assembly=JedPlotUtils.LiveCharts.Avalonia.Components"
+             xmlns:hgrid="using:HierarchyGrid.Avalonia"
+             xmlns:scottplot="clr-namespace:ScottPlot.Avalonia;assembly=ScottPlot.Avalonia"
+             xmlns:models="clr-namespace:JedPlotUtils.Models;assembly=JedPlotUtils"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+             x:Class="JedPlotUtils.ScottPlot.Avalonia.Components.TimeSeriesViewer"
+             x:DataType="viewModels:TimeSeriesViewerViewModel">
+    <UserControl.Resources>
+    <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter" />
+    <converters:ColorConverter x:Key="ColorConverter" />
+
+    <ControlTheme TargetType="Border" x:Key="PresentationBorder">
+      <Setter Property="Margin" Value="10" />
+      <Setter Property="Padding" Value="5" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Bottom" />
+      <Setter Property="Width" Value="44" />
+      <Setter Property="Height" Value="44" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="BorderBrush" Value="#40FFFFFF" />
+      <Setter Property="Background">
+        <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
+          <GradientStop Color="#FEDADADA" Offset="0" />
+          <GradientStop Color="#DDDADADA" Offset="1" />
+        </LinearGradientBrush>
+      </Setter>
+      <Setter Property="Transitions">
+        <Transitions>
+          <DoubleTransition Duration="0:0:0.2" Property="Width" />
+          <DoubleTransition Duration="0:0:0.2" Property="Height" />
+        </Transitions>
+      </Setter>
+
+      <Setter Property="BoxShadow" Value="0 4 20 0 #30000000" />
+
+      <Style Selector="^.expanded">
+        <Setter Property="Width" Value="550" />
+        <Setter Property="Height" Value="550" />
+      </Style>
+    </ControlTheme>
+  </UserControl.Resources>
+
+  <Panel>
+    <DockPanel>
+      <DockPanel
+        DockPanel.Dock="Bottom"
+        Height="{Binding StatusBarHeight, FallbackValue=70}"
+        Margin="10,0"
+        Opacity="{Binding StatusBarOpacity, FallbackValue=1}"
+        VerticalAlignment="Bottom"
+        x:Name="StatusBar"
+      >
+        <DockPanel.Transitions>
+          <Transitions>
+            <DoubleTransition Duration="0:0:0.2" Property="Height" />
+            <DoubleTransition Duration="0:0:0.2" Property="Opacity" />
+          </Transitions>
+        </DockPanel.Transitions>
+        <StackPanel
+          Margin="3"
+          Orientation="Horizontal"
+          Spacing="5"
+          VerticalAlignment="Center"
+          x:Name="ConnectionPanel"
+        >
+          <StackPanel IsVisible="{Binding IsConnecting}" Orientation="Horizontal" Spacing="10">
+            <Border BoxShadow="0 1 8 0 Orange" CornerRadius="7" Height="14" Width="14">
+              <Ellipse Fill="Orange" Stroke="#60000000" StrokeThickness="1" />
+              <Border.Styles>
+                <Style Selector="Border">
+                  <Setter Property="Opacity" Value="0.3" />
+
+                  <Style.Animations>
+                    <Animation Duration="0:0:1.2" IterationCount="Infinite">
+                      <KeyFrame Cue="0%">
+                        <Setter Property="Opacity" Value="0.2" />
+                      </KeyFrame>
+
+                      <KeyFrame Cue="50%">
+                        <Setter Property="Opacity" Value="1.0" />
+                      </KeyFrame>
+
+                      <KeyFrame Cue="100%">
+                        <Setter Property="Opacity" Value="0.2" />
+                      </KeyFrame>
+                    </Animation>
+                  </Style.Animations>
+                </Style>
+              </Border.Styles>
+            </Border>
+            <TextBlock Text="Connecting..." VerticalAlignment="Center" />
+          </StackPanel>
+
+          <Panel IsVisible="{Binding !IsConnecting}" VerticalAlignment="Center">
+            <Button
+              Command="{Binding ShowConnectionSettingsCommand}"
+              CommandParameter="{Binding Configuration}"
+              IsVisible="{Binding !HasConnection}"
+              Theme="{DynamicResource GhostButtonTheme}"
+              VerticalAlignment="Center"
+            >
+              <StackPanel
+                IsVisible="{Binding !HasConnection}"
+                Orientation="Horizontal"
+                Spacing="10"
+              >
+                <Border BoxShadow="0 1 8 0 DarkRed" CornerRadius="7" Height="14" Width="14">
+                  <Ellipse Fill="DarkRed" Stroke="#60000000" StrokeThickness="1" />
+                </Border>
+                <TextBlock VerticalAlignment="Center">
+                  <Run Text="Disconnected" />
+                </TextBlock>
+              </StackPanel>
+            </Button>
+
+            <StackPanel IsVisible="{Binding HasConnection}" Orientation="Horizontal" Spacing="10">
+              <Border BoxShadow="0 1 8 0 LimeGreen" CornerRadius="7" Height="14" Width="14">
+                <Ellipse Fill="LimeGreen" Stroke="#60000000" StrokeThickness="1" />
+              </Border>
+              <TextBlock VerticalAlignment="Center">
+                <Run Text="Connected to" />
+                <Run Text="{Binding RemoteServerAddress}" />
+              </TextBlock>
+            </StackPanel>
+          </Panel>
+        </StackPanel>
+
+        <Menu DockPanel.Dock="Right" IsVisible="{Binding !IsWorking}" VerticalAlignment="Center">
+          <MenuItem Header="Series">
+            <MenuItem Header="Series">
+              <MenuItem
+                Command="{Binding RenameSeriesCommand}"
+                CommandParameter="{Binding SelectedSeries}"
+                Header="Rename series"
+              />
+              <MenuItem Header="Change series type">
+                <MenuItem
+                  Command="{Binding ChangeSeriesChartTypesCommand}"
+                  CommandParameter="{x:Static models:SeriesChartType.Line}"
+                  Header="Line"
+                />
+                <MenuItem
+                  Command="{Binding ChangeSeriesChartTypesCommand}"
+                  CommandParameter="{x:Static models:SeriesChartType.StepLine}"
+                  Header="Step"
+                />
+                <MenuItem
+                  Command="{Binding ChangeSeriesChartTypesCommand}"
+                  CommandParameter="{x:Static models:SeriesChartType.Area}"
+                  Header="Area"
+                />
+                <MenuItem
+                  Command="{Binding ChangeSeriesChartTypesCommand}"
+                  CommandParameter="{x:Static models:SeriesChartType.Column}"
+                  Header="Column"
+                />
+              </MenuItem>
+              <MenuItem
+                Command="{Binding RemoveSelectionCommand}"
+                CommandParameter="{Binding Selection}"
+                Header="Remove selected series"
+              />
+              <MenuItem
+                Command="{Binding RemoveUnselectedCommand}"
+                CommandParameter="{Binding Selection}"
+                Header="Keep only selected series"
+              />
+              <MenuItem Command="{Binding ClearSeriesCommand}" Header="Clear series" />
+            </MenuItem>
+            <MenuItem
+              Command="{Binding RenameSeriesCommand}"
+              CommandParameter="{Binding SelectedSeries}"
+              Header="Rename series"
+            />
+            <MenuItem Header="Change series type">
+              <MenuItem
+                Command="{Binding ChangeSeriesChartTypesCommand}"
+                CommandParameter="{x:Static models:SeriesChartType.Line}"
+                Header="Line"
+              />
+              <MenuItem
+                Command="{Binding ChangeSeriesChartTypesCommand}"
+                CommandParameter="{x:Static models:SeriesChartType.StepLine}"
+                Header="Step"
+              />
+              <MenuItem
+                Command="{Binding ChangeSeriesChartTypesCommand}"
+                CommandParameter="{x:Static models:SeriesChartType.Area}"
+                Header="Area"
+              />
+              <MenuItem
+                Command="{Binding ChangeSeriesChartTypesCommand}"
+                CommandParameter="{x:Static models:SeriesChartType.Column}"
+                Header="Column"
+              />
+            </MenuItem>
+            <MenuItem
+              Command="{Binding RemoveSelectionCommand}"
+              CommandParameter="{Binding Selection}"
+              Header="Remove selected series"
+            />
+            <MenuItem
+              Command="{Binding RemoveUnselectedCommand}"
+              CommandParameter="{Binding Selection}"
+              Header="Keep only selected series"
+            />
+            <MenuItem Command="{Binding ClearSeriesCommand}" Header="Clear series" />
+          </MenuItem>
+          <MenuItem Header="JD+" IsVisible="{Binding HasConnection}">
+            <MenuItem
+              Command="{Binding DisaggregateCommand}"
+              CommandParameter="{Binding SelectedSeries}"
+              Header="Disaggregate"
+            />
+            <MenuItem Header="Tramo">
+              <MenuItem
+                Command="{Binding TramoForecastCommand}"
+                CommandParameter="{Binding SelectedSeries}"
+                Header="Forecasts"
+              />
+              <MenuItem
+                Command="{Binding TramoFullProcessCommand}"
+                CommandParameter="{Binding SelectedSeries}"
+                Header="Full process"
+              />
+            </MenuItem>
+
+            <MenuItem
+              Command="{Binding ChangeFrequencyCommand}"
+              CommandParameter="{Binding SelectedSeries}"
+              Header="Change frequency"
+            />
+            <MenuItem Command="{Binding ClearDerivedCommand}" Header="Clear derived series" />
+          </MenuItem>
+          <MenuItem
+            Command="{Binding ShowSettingsCommand}"
+            CommandParameter="{Binding Configuration}"
+            Header="Settings"
+          />
+        </Menu>
+
+        <DockPanel IsVisible="{Binding IsWorking}">
+          <Button
+            Command="{Binding CancelCommand}"
+            DockPanel.Dock="Right"
+            VerticalAlignment="Center"
+          >
+            <TextBlock Text="Cancel" />
+          </Button>
+          <ProgressBar Height="10" IsIndeterminate="True" Margin="30,10" />
+        </DockPanel>
+      </DockPanel>
+
+      <Grid
+        ColumnSpacing="3"
+        DockPanel.Dock="Top"
+        DragDrop.AllowDrop="True"
+        IsVisible="{Binding HasFirstRender}"
+        RowSpacing="3"
+        x:Name="GridMainDisplay"
+      >
+        <scottplot:AvaPlot />
+        <!-- <lvc:CartesianChart -->
+        <!--   DrawMarginFrame="{Binding Palette, Converter={StaticResource ColorConverter}}" -->
+        <!--   FindingStrategy="CompareAll" -->
+        <!--   IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Chart}" -->
+        <!--   Series="{Binding Path=AllSeries}" -->
+        <!--   XAxes="{Binding XAxes}" -->
+        <!--   YAxes="{Binding YAxes}" -->
+        <!--   x:Name="CartesianChart" -->
+        <!-- > -->
+        <!--   <lvc:CartesianChart.ContextMenu> -->
+        <!--     <ContextMenu> -->
+        <!--       <MenuItem Command="{Binding CopyToClipboardCommand}" Header="Copy" /> -->
+        <!--       <MenuItem Command="{Binding PasteFromClipboardCommand}" Header="Paste" /> -->
+        <!--       <MenuItem Header="Series"> -->
+        <!--         <MenuItem -->
+        <!--           Command="{Binding RenameSeriesCommand}" -->
+        <!--           CommandParameter="{Binding SelectedSeries}" -->
+        <!--           Header="Rename series" -->
+        <!--         /> -->
+        <!--         <MenuItem Header="Change series type"> -->
+        <!--           <MenuItem -->
+        <!--             Command="{Binding ChangeSeriesChartTypesCommand}" -->
+        <!--             CommandParameter="{x:Static models:SeriesChartType.Line}" -->
+        <!--             Header="Line" -->
+        <!--           /> -->
+        <!--           <MenuItem -->
+        <!--             Command="{Binding ChangeSeriesChartTypesCommand}" -->
+        <!--             CommandParameter="{x:Static models:SeriesChartType.StepLine}" -->
+        <!--             Header="Step" -->
+        <!--           /> -->
+        <!--           <MenuItem -->
+        <!--             Command="{Binding ChangeSeriesChartTypesCommand}" -->
+        <!--             CommandParameter="{x:Static models:SeriesChartType.Area}" -->
+        <!--             Header="Area" -->
+        <!--           /> -->
+        <!--           <MenuItem -->
+        <!--             Command="{Binding ChangeSeriesChartTypesCommand}" -->
+        <!--             CommandParameter="{x:Static models:SeriesChartType.Column}" -->
+        <!--             Header="Column" -->
+        <!--           /> -->
+        <!--         </MenuItem> -->
+        <!--         <MenuItem -->
+        <!--           Command="{Binding RemoveSelectionCommand}" -->
+        <!--           CommandParameter="{Binding Selection}" -->
+        <!--           Header="Remove selected series" -->
+        <!--         /> -->
+        <!--         <MenuItem -->
+        <!--           Command="{Binding RemoveUnselectedCommand}" -->
+        <!--           CommandParameter="{Binding Selection}" -->
+        <!--           Header="Keep only selected series" -->
+        <!--         /> -->
+        <!--         <MenuItem Command="{Binding ClearSeriesCommand}" Header="Clear series" /> -->
+        <!--       </MenuItem> -->
+        <!--       <Separator IsVisible="{Binding HasConnection}" /> -->
+        <!--       <MenuItem Header="JD+" IsVisible="{Binding HasConnection}"> -->
+        <!--         <MenuItem -->
+        <!--           Command="{Binding DisaggregateCommand}" -->
+        <!--           CommandParameter="{Binding SelectedSeries}" -->
+        <!--           Header="Disaggregate" -->
+        <!--         /> -->
+        <!--         <MenuItem Header="Tramo"> -->
+        <!--           <MenuItem -->
+        <!--             Command="{Binding TramoForecastCommand}" -->
+        <!--             CommandParameter="{Binding SelectedSeries}" -->
+        <!--             Header="Forecasts" -->
+        <!--           /> -->
+        <!--           <MenuItem -->
+        <!--             Command="{Binding TramoFullProcessCommand}" -->
+        <!--             CommandParameter="{Binding SelectedSeries}" -->
+        <!--             Header="Full process" -->
+        <!--           /> -->
+        <!--         </MenuItem> -->
+        <!-- -->
+        <!--         <MenuItem -->
+        <!--           Command="{Binding ChangeFrequencyCommand}" -->
+        <!--           CommandParameter="{Binding SelectedSeries}" -->
+        <!--           Header="Change frequency" -->
+        <!--         /> -->
+        <!--         <MenuItem Command="{Binding ClearDerivedCommand}" Header="Clear derived series" /> -->
+        <!--       </MenuItem> -->
+        <!--       <Separator /> -->
+        <!--       <MenuItem -->
+        <!--         Command="{Binding ShowSettingsCommand}" -->
+        <!--         CommandParameter="{Binding Configuration}" -->
+        <!--         Header="Settings" -->
+        <!--       /> -->
+        <!--     </ContextMenu> -->
+        <!--   </lvc:CartesianChart.ContextMenu> -->
+        <!-- </lvc:CartesianChart> -->
+
+        <hgrid:Grid
+          IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"
+          StatusMessage="No data"
+          x:Name="HierarchyGrid"
+        />
+
+        <GridSplitter
+          IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Splitter}"
+          x:Name="Splitter"
+        />
+
+        <Border
+          Classes.expanded="{Binding #ToggleButtonInfo.IsChecked}"
+          IsVisible="{Binding HasDisaggregationResults}"
+          Theme="{StaticResource PresentationBorder}"
+        >
+          <Grid ColumnDefinitions="30,*" ColumnSpacing="10" RowDefinitions="*,30">
+            <ToggleButton
+              Grid.Column="0"
+              Grid.Row="1"
+              Height="32"
+              HorizontalAlignment="Left"
+              Opacity="1"
+              VerticalAlignment="Bottom"
+              Width="32"
+              x:Name="ToggleButtonInfo"
+            >
+              <Viewbox
+                Height="22"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Width="22"
+              >
+                <Canvas Height="20" Width="20">
+                  <Path
+                    Data="M10 3a7 7 0 100 14 7 7 0 000-14zm-9 7a9 9 0 1118 0 9 9 0 01-18 0zm8-4a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1zm.01 8a1 1 0 102 0V9a1 1 0 10-2 0v5z"
+                    Fill="Black"
+                  />
+                </Canvas>
+              </Viewbox>
+            </ToggleButton>
+
+            <ContentControl Grid.Column="1" Grid.Row="0" Grid.RowSpan="2" x:Name="InfoContent" />
+          </Grid>
+        </Border>
+      </Grid>
+    </DockPanel>
+
+    <Border
+      Background="#80000000"
+      IsHitTestVisible="{Binding IsDialogOpen}"
+      Opacity="{Binding DialogOpacity, FallbackValue=0}"
+      x:Name="DialogOverlay"
+    >
+      <Border.Transitions>
+        <Transitions>
+          <DoubleTransition Duration="0:0:0.2" Property="Opacity" />
+        </Transitions>
+      </Border.Transitions>
+      <Border
+        Background="White"
+        BoxShadow="0 8 16 0 #40000000"
+        CornerRadius="8"
+        Height="50"
+        HorizontalAlignment="Center"
+        Padding="24"
+        VerticalAlignment="Center"
+        Width="100"
+        x:Name="DialogBorder"
+      >
+        <Border.Transitions>
+          <Transitions>
+            <DoubleTransition Duration="0:0:0.2" Property="Width" />
+            <DoubleTransition Duration="0:0:0.2" Property="Height" />
+          </Transitions>
+        </Border.Transitions>
+        <ContentControl x:Name="DialogContent" />
+      </Border>
+    </Border>
+  </Panel>
+</UserControl>

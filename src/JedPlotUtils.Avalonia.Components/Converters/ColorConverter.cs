@@ -20,7 +20,7 @@ public class ColorConverter : IValueConverter
             case HsvColor hsvColor when targetType == typeof(Color):
             {
                 var rgb = hsvColor.ToRgb();
-                return new Color(rgb.A, rgb.R, rgb.G, rgb.B);
+                return Color.FromArgb(rgb.A, rgb.R, rgb.G, rgb.B);
             }
             default:
                 return BindingOperations.DoNothing;

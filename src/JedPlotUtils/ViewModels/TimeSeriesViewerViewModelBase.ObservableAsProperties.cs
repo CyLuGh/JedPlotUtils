@@ -11,6 +11,14 @@ namespace JedPlotUtils.ViewModels;
 
 public partial class TimeSeriesViewerViewModelBase
 {
+    public double DefaultStatusBarHeight { get; set; } = 35d;
+
+    [ObservableAsProperty]
+    public partial double StatusBarHeight { get; }
+
+    [ObservableAsProperty]
+    public partial double StatusBarOpacity { get; }
+
     [ObservableAsProperty]
     public partial DisplayMode DisplayMode { get; }
 
@@ -37,6 +45,18 @@ public partial class TimeSeriesViewerViewModelBase
 
     [ObservableAsProperty]
     public partial string RemoteServerAddress { get; }
+
+    [ObservableAsProperty]
+    public partial Color ColorAO { get; }
+
+    [ObservableAsProperty]
+    public partial Color ColorTC { get; }
+
+    [ObservableAsProperty]
+    public partial Color ColorLS { get; }
+
+    [ObservableAsProperty]
+    public partial Color ColorSO { get; }
 
     private void HandleConnectionObservableAsProperties()
     {
@@ -127,6 +147,88 @@ public partial class TimeSeriesViewerViewModelBase
         _autoScrollGridHelper = settingsChange
             .Map(x => x.AutoScrollGrid)
             .ToProperty(this, x => x.AutoScrollGrid, scheduler: RxSchedulers.MainThreadScheduler)
+            .DisposeWith(disposables);
+
+        _colorAOHelper = settingsChange
+            .Map(x => x.ColorAO)
+            .ToProperty(
+                this,
+                x => x.ColorAO,
+                initialValue: TimeSeriesViewerSettings.DefaultColorAO,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
+            .DisposeWith(disposables);
+
+        _colorTCHelper = settingsChange
+            .Map(x => x.ColorTC)
+            .ToProperty(
+                this,
+                x => x.ColorTC,
+                initialValue: TimeSeriesViewerSettings.DefaultColorTC,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
+            .DisposeWith(disposables);
+
+        _colorLSHelper = settingsChange
+            .Map(x => x.ColorLS)
+            .ToProperty(
+                this,
+                x => x.ColorLS,
+                initialValue: TimeSeriesViewerSettings.DefaultColorLS,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
+            .DisposeWith(disposables);
+
+        _colorSOHelper = settingsChange
+            .Map(x => x.ColorSO)
+            .ToProperty(
+                this,
+                x => x.ColorSO,
+                initialValue: TimeSeriesViewerSettings.DefaultColorSO,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
+            .DisposeWith(disposables);
+    }
+
+    private void HandleStatusBarVisibility(MultipleDisposable disposables)
+    {
+        this.WhenAnyValue(x => x.Configuration)
+            .Map(o => o.Match(Signal.Return, Signal.Empty<TimeSeriesViewerSettings>))
+            .SwitchTo()
+            .Select(c => c.ShowStatusBar)
+            .StartWith(false)
+            .SubscribePrimitives(b =>
+            {
+                ShowStatusBar = b;
+            })
+            .DisposeWith(disposables);
+
+        _statusBarHeightHelper = this.WhenAnyValue(x => x.ShowStatusBar)
+            .CombineLatest(this.WhenAnyValue(x => x.IsWorking))
+            .Select(t => t.First || t.Second)
+            .Throttle(TimeSpan.FromMilliseconds(20))
+            .DistinctUntilChanged()
+            .Select(b => b ? DefaultStatusBarHeight : 0d)
+            .ToProperty(
+                this,
+                x => x.StatusBarHeight,
+                initialValue: DefaultStatusBarHeight,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
+            .DisposeWith(disposables);
+
+        _statusBarOpacityHelper = this.WhenAnyValue(x => x.ShowStatusBar)
+            .CombineLatest(this.WhenAnyValue(x => x.IsWorking))
+            .Select(t => t.First || t.Second)
+            .Throttle(TimeSpan.FromMilliseconds(20))
+            .DistinctUntilChanged()
+            .Select(b => b ? 1d : 0d)
+            .ToProperty(
+                this,
+                x => x.StatusBarOpacity,
+                initialValue: 1d,
+                scheduler: RxSchedulers.MainThreadScheduler
+            )
             .DisposeWith(disposables);
     }
 }
