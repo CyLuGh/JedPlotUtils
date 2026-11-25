@@ -12,7 +12,6 @@
   xmlns:components="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components;assembly=JedPlotUtils.LiveCharts.Avalonia.Components"
 >
   <husk:Card Background="White" Margin="5" Padding="10">
-    <components:TimeSeriesViewer x:Name="Viewer" ShowStatusBar="False" />
-    <!-- <rxui:ViewModelViewHost x:Name="ChartViewHost" /> -->
+    <components:TimeSeriesViewer x:Name="Viewer" />
   </husk:Card>
 </UserControl>

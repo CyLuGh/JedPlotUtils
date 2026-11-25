@@ -28,12 +28,39 @@ namespace JedPlotUtils.LiveCharts.Avalonia.Components;
 public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerViewModel>
 {
     public static readonly AV.StyledProperty<bool> ShowStatusBarProperty =
-        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(nameof(ShowStatusBar));
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(ShowStatusBar),
+            defaultValue: true
+        );
 
     public bool ShowStatusBar
     {
         get => GetValue(ShowStatusBarProperty);
         set => SetValue(ShowStatusBarProperty, value);
+    }
+
+    public static readonly AV.StyledProperty<bool> EnableDemetraProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(EnableDemetra),
+            defaultValue: true
+        );
+
+    public bool EnableDemetra
+    {
+        get => GetValue(EnableDemetraProperty);
+        set => SetValue(EnableDemetraProperty, value);
+    }
+
+    public static readonly AV.StyledProperty<bool> RestrictedProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(Restricted),
+            defaultValue: false
+        );
+
+    public bool Restricted
+    {
+        get => GetValue(RestrictedProperty);
+        set => SetValue(RestrictedProperty, value);
     }
 
     public TimeSeriesViewer()
@@ -88,6 +115,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
 
+        viewModel.EnableDemetra = view.EnableDemetra;
+        viewModel.ShowStatusBar = view.ShowStatusBar;
+        viewModel.Restricted = view.Restricted;
+
         Signal
             .FromEventPattern<KeyEventArgs>(
                 handler => view.KeyDown += handler,
@@ -133,7 +164,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel
             .ShowSettingsInteraction.RegisterHandler(async ctx =>
             {
-                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                var (settings, enableDemetra, restricted) = ctx.Input;
+                var cvm = new TimeSeriesViewerConfigurationViewModel(
+                    settings,
+                    enableDemetra,
+                    restricted
+                );
                 await OpenDialogAnimation(
                     viewModel,
                     new TimeSeriesViewerConfigurationView() { ViewModel = cvm },
@@ -149,7 +185,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel
             .ShowConnectionSettingsInteraction.RegisterHandler(async ctx =>
             {
-                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                var (settings, enableDemetra, restricted) = ctx.Input;
+                var cvm = new TimeSeriesViewerConfigurationViewModel(
+                    settings,
+                    enableDemetra,
+                    restricted
+                );
                 await OpenDialogAnimation(
                     viewModel,
                     new TimeSeriesViewerConnectionView() { ViewModel = cvm },
@@ -291,10 +332,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 using var data = await clipboard.TryGetDataAsync().ConfigureAwait(false);
 
-                var bytes =
-                    await data?.TryGetValueAsync(
-                        DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
-                    )! ?? [];
+                var bytes = await data?.TryGetValueAsync(
+                    DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                )!
+                    ?? [];
 
                 if (bytes.Length > 0)
                 {

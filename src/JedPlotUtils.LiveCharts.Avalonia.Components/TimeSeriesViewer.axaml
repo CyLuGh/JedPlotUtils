@@ -13,7 +13,6 @@
   xmlns:models="clr-namespace:JedPlotUtils.Models;assembly=JedPlotUtils"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.ViewModels;assembly=JedPlotUtils.LiveCharts"
-  ShowStatusBar="{Binding ShowStatusBar}"
 >
   <UserControl.Resources>
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter" />
@@ -106,11 +105,17 @@
           <Panel IsVisible="{Binding !IsConnecting}" VerticalAlignment="Center">
             <Button
               Command="{Binding ShowConnectionSettingsCommand}"
+              HotKey="Ctrl+K"
               CommandParameter="{Binding Configuration}"
-              IsVisible="{Binding !HasConnection}"
               Theme="{DynamicResource GhostButtonTheme}"
               VerticalAlignment="Center"
             >
+              <Button.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.And}">
+                  <Binding Path="HasConnection" Converter="{x:Static BoolConverters.Not}"></Binding>
+                  <Binding Path="EnableDemetra" />
+                </MultiBinding>
+              </Button.IsVisible>
               <StackPanel
                 IsVisible="{Binding !HasConnection}"
                 Orientation="Horizontal"
@@ -247,6 +252,7 @@
           <MenuItem
             Command="{Binding ShowSettingsCommand}"
             CommandParameter="{Binding Configuration}"
+            HotKey="Ctrl+B"
             Header="Settings"
           />
         </Menu>

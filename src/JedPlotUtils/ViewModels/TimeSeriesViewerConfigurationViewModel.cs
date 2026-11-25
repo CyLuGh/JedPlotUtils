@@ -83,8 +83,18 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     public RxCommand CancelCommand { get; }
     public RxCommand LoadCommand { get; }
 
-    public TimeSeriesViewerConfigurationViewModel(Option<TimeSeriesViewerSettings> settings)
+    public bool EnableDemetra { get; }
+    public bool Restricted { get; }
+
+    public TimeSeriesViewerConfigurationViewModel(
+        Option<TimeSeriesViewerSettings> settings,
+        bool enableDemetra,
+        bool restricted
+    )
     {
+        EnableDemetra = enableDemetra;
+        Restricted = restricted;
+
         SaveCommand = CreateCommandSave();
         CancelCommand = CreateCommandCancel();
         LoadCommand = CreateCommandLoad();

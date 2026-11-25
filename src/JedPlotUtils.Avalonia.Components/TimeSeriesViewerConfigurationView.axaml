@@ -22,6 +22,7 @@
         Margin="10,0,0,5"
         Content="Persist settings"
         IsChecked="{Binding PersistSettings}"
+        IsVisible="{Binding !Restricted, Mode=OneTime}"
       />
       <StackPanel
         Margin="0,0,5,5"
@@ -110,7 +111,7 @@
         </TabItem>
         <TabItem Header="Behavior">
           <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
               <TextBlock VerticalAlignment="Center" Text="Auto connect to JD+" />
               <ToggleSwitch IsChecked="{Binding AutoConnect}" />
             </StackPanel>
@@ -167,19 +168,19 @@
 
             <Rectangle />
 
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
               <TextBlock Text="Outlier color: AO" />
               <ColorPicker HsvColor="{Binding ColorAO,Converter={StaticResource ColorConverter}}" />
             </StackPanel>
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
               <TextBlock Text="Outlier color: LS" />
               <ColorPicker HsvColor="{Binding ColorLS,Converter={StaticResource ColorConverter}}" />
             </StackPanel>
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
               <TextBlock Text="Outlier color: TC" />
               <ColorPicker HsvColor="{Binding ColorTC,Converter={StaticResource ColorConverter}}" />
             </StackPanel>
-            <StackPanel Spacing="4">
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
               <TextBlock Text="Outlier color: SO" />
               <ColorPicker HsvColor="{Binding ColorSO,Converter={StaticResource ColorConverter}}" />
             </StackPanel>

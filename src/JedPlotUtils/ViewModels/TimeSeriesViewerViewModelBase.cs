@@ -29,8 +29,18 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
+    /// <summary>
+    /// Whether component should expose options about JD+.
+    /// </summary>
     [Reactive]
     public partial bool EnableDemetra { get; set; }
+
+    /// <summary>
+    /// Whether component should offer all options. In restricted mode, some configuration
+    /// or persistence options should be turned off.
+    /// </summary>
+    [Reactive]
+    public partial bool Restricted { get; set; }
 
     [Reactive]
     public partial bool IsInitialized { get; set; }
@@ -130,18 +140,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
     public ReactiveCommand<SeriesChartType, RxVoid> ChangeSeriesChartTypesCommand { get; }
 
-    public ReactiveCommand<Option<TimeSeriesViewerSettings>, RxVoid> ShowSettingsCommand { get; }
-    public Interaction<
-        TimeSeriesViewerSettings,
-        Option<TimeSeriesViewerSettings>
-    > ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
-
     public ReactiveCommand<
         Option<TimeSeriesViewerSettings>,
         string?
     > ShowConnectionSettingsCommand { get; }
     public Interaction<
-        TimeSeriesViewerSettings,
+        (TimeSeriesViewerSettings, bool, bool),
         Option<TimeSeriesViewerSettings>
     > ShowConnectionSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
@@ -503,11 +507,19 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ShowConnectionSettingsInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
         );
+
+        var canExecute = this.WhenAnyValue(x => x.EnableDemetra)
+            .ObserveOn(RxSchedulers.MainThreadScheduler);
+
         var cmd = ReactiveCommand.CreateFromTask(
             async (Option<TimeSeriesViewerSettings> settings) =>
             {
                 var config = await ShowConnectionSettingsInteraction.Handle(
-                    settings.Match(s => s, () => TimeSeriesViewerSettings.Default)
+                    (
+                        settings.Match(s => s, () => TimeSeriesViewerSettings.Default),
+                        EnableDemetra,
+                        Restricted
+                    )
                 );
                 config.IfSome(c =>
                 {
@@ -515,10 +527,17 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 });
 
                 return config.Match(s => s.WebServiceAddress, () => string.Empty);
-            }
+            },
+            canExecute
         );
         return cmd;
     }
+
+    public ReactiveCommand<Option<TimeSeriesViewerSettings>, RxVoid> ShowSettingsCommand { get; }
+    public Interaction<
+        (TimeSeriesViewerSettings settings, bool enableDemetra, bool restricted),
+        Option<TimeSeriesViewerSettings>
+    > ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
     private ReactiveCommand<
         Option<TimeSeriesViewerSettings>,
@@ -555,7 +574,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                             Legend = Legend,
                         }
                 );
-                var config = await ShowSettingsInteraction.Handle(settings);
+                var config = await ShowSettingsInteraction.Handle(
+                    (settings, EnableDemetra, Restricted)
+                );
                 config.IfSome(c =>
                 {
                     Configuration = c;
@@ -650,7 +671,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
                 await cm.GetVersion(timeoutCts.Token);
                 return cm;
-            }
+            },
+            this.WhenAnyValue(x => x.EnableDemetra).ObserveOn(RxSchedulers.MainThreadScheduler)
         );
 
         connectionSettingsCommand
@@ -710,9 +732,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         this.WhenAnyValue(x => x.DateFormatter)
             .Select(o =>
-                o.Match(
-                    Signal.Return,
-                    () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                o.Match(Signal.Return, () =>
+                    Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                 )
             )
             .SwitchTo()
@@ -999,13 +1020,10 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     private IEnumerable<(string description, Action<ResultSet> action)> BuildStaticContext()
     {
-        yield return new(
-            "Settings",
-            _ =>
-            {
-                Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
-            }
-        );
+        yield return new("Settings", _ =>
+        {
+            Signal.Return(Configuration).InvokeCommand(ShowSettingsCommand);
+        });
     }
 
     private IEnumerable<(
