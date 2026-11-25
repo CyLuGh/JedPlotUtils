@@ -344,7 +344,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 }
 
                 /* Text format */
-                var text = await data.TryGetTextAsync().ConfigureAwait(false);
+                var text = await data?.TryGetTextAsync()! ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     var series = text.FromCsv();
