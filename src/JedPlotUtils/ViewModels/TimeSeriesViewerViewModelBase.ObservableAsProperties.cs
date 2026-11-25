@@ -77,6 +77,9 @@ public partial class TimeSeriesViewerViewModelBase
             .ToProperty(this, x => x.RemoteServerAddress);
     }
 
+    internal ReactiveCommand<DisplayMode, DisplayMode> ChangeDisplayModeCommand { get; } =
+        ReactiveCommand.Create<DisplayMode, DisplayMode>(dm => dm);
+
     private void HandleSettingsObservableAsProperties(
         IObservable<TimeSeriesViewerSettings> settingsChange,
         MultipleDisposable disposables
@@ -94,6 +97,7 @@ public partial class TimeSeriesViewerViewModelBase
 
         _displayModeHelper = settingsChange
             .Map(x => x.DisplayMode)
+            .Merge(ChangeDisplayModeCommand)
             .ToProperty(
                 this,
                 x => x.DisplayMode,

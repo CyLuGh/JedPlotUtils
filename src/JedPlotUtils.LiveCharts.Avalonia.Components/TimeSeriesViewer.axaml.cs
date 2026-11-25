@@ -63,6 +63,18 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         set => SetValue(RestrictedProperty, value);
     }
 
+    public static readonly AV.StyledProperty<JedPlotUtils.Models.DisplayMode> DisplayModeProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, JedPlotUtils.Models.DisplayMode>(
+            nameof(DisplayMode),
+            defaultValue: JedPlotUtils.Models.DisplayMode.BothHorizontal
+        );
+
+    public JedPlotUtils.Models.DisplayMode DisplayMode
+    {
+        get => GetValue(DisplayModeProperty);
+        set => SetValue(DisplayModeProperty, value);
+    }
+
     public TimeSeriesViewer()
     {
         InitializeComponent();
@@ -118,6 +130,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel.EnableDemetra = view.EnableDemetra;
         viewModel.ShowStatusBar = view.ShowStatusBar;
         viewModel.Restricted = view.Restricted;
+        Signal.Return(view.DisplayMode).InvokeCommand(viewModel, x => x.ChangeDisplayModeCommand);
 
         Signal
             .FromEventPattern<KeyEventArgs>(
@@ -356,7 +369,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 }
 
                 /* File format */
-                if (await data.TryGetFilesAsync().ConfigureAwait(false) is { } files)
+                if (await data?.TryGetFilesAsync()! is { } files)
                 {
                     // TODO: check csv, check xlsx, check OpenOffice
                     await ParseIStorageItems(files, viewModel);

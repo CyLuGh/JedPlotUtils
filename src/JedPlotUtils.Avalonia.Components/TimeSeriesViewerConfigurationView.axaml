@@ -62,7 +62,7 @@
       <Separator />
 
       <TabControl Margin="5">
-        <TabItem Header="Layout">
+        <TabItem Header="Layout" IsVisible="{Binding !Restricted,Mode=OneTime}">
           <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
             <StackPanel Spacing="4">
               <TextBlock Text="Selection mode" />
@@ -109,7 +109,7 @@
             </StackPanel>
           </UniformGrid>
         </TabItem>
-        <TabItem Header="Behavior">
+        <TabItem Header="Behavior" IsVisible="{Binding !Restricted,Mode=OneTime}">
           <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
             <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
               <TextBlock VerticalAlignment="Center" Text="Auto connect to JD+" />

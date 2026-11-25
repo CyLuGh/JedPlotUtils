@@ -561,7 +561,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                             DisplayMode = DisplayMode,
                             Palette = Palette.Name,
                             DateFormat = "yyyy-MM",
-                            Decimals = 2,
+                            Decimals = 0,
                             HasThousandsSeparators = false,
                             ShowStatusBar = this.ShowStatusBar,
                             SwitchGridAndChart = this.SwitchPositions,
@@ -1032,6 +1032,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         IObservable<bool> canExecute
     )> BuildContext()
     {
+        if (!EnableDemetra)
+            yield break;
+
         yield return new(
             "JD+|Disaggregate",
             _ =>

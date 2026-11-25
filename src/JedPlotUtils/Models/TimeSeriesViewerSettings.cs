@@ -18,7 +18,7 @@ public record TimeSeriesViewerSettings
             DisplayMode = DisplayMode.BothHorizontal,
             Palette = "Tango",
             DateFormat = "yyyy-MM",
-            Decimals = 2,
+            Decimals = 0,
             HasThousandsSeparators = false,
             ShowStatusBar = true,
             SwitchGridAndChart = false,
