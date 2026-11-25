@@ -1,7 +1,7 @@
 ﻿using System;
 using Avalonia;
 using JedPlotUtils.LiveCharts.Avalonia.Components;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using ReactiveUI.Avalonia;
 
 namespace LC_AvaloniaApplication

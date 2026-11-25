@@ -19,6 +19,7 @@ using LanguageExt;
 using LanguageExt.Common;
 using ReactiveUI;
 using ReactiveUI.Primitives;
+using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
 using ReactiveUI.SourceGenerators;
 using Splat;
@@ -28,6 +29,28 @@ namespace JedPlotUtils.ViewModels;
 
 public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 {
+    /// <summary>
+    /// Whether component should expose options about JD+.
+    /// </summary>
+    [Reactive]
+    public partial bool EnableDemetra { get; set; }
+
+    /// <summary>
+    /// Whether component should offer all options. In restricted mode, some configuration
+    /// or persistence options should be turned off.
+    /// </summary>
+    [Reactive]
+    public partial bool Restricted { get; set; }
+
+    [Reactive]
+    public partial bool IsInitialized { get; set; }
+
+    [Reactive]
+    public partial bool ShowStatusBar { get; set; }
+
+    [Reactive]
+    public partial bool TempShowStatusBar { get; set; }
+
     [Reactive]
     public partial bool IsDialogOpen { get; set; }
 
@@ -39,12 +62,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
     public HierarchyGridViewModel HierarchyGridViewModel { get; } =
         new() { StatusMessage = "No data" };
-
-    [Reactive]
-    public partial IPalette Palette { get; set; } = Palettes.Available[0];
-
-    [Reactive]
-    public partial SelectionMode SeriesSelectionMode { get; set; } = SelectionMode.Single;
 
     [Reactive]
     public partial LanguageExt.HashSet<Identifier> Selection { get; set; }
@@ -75,7 +92,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             Seq<TimeSeriesInfo>,
             HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>>,
             Func<DateOnly, string>,
-            Func<double, string>
+            Func<double, string>,
+            OutliersHighlight
         ),
         HierarchyDefinitions
     > BuildHierarchyGridDefinitions { get; }
@@ -85,24 +103,16 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         RxVoid
     > HighlightChartPointInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
-    [Reactive]
-    public partial DisplayMode DisplayMode { get; set; }
-    public ReactiveCommand<DisplayMode, RxVoid> AdaptDisplayModeCommand { get; }
-    public Interaction<DisplayMode, RxVoid> AdaptDisplayModeInteraction { get; } =
+    public ReactiveCommand<(DisplayMode, bool), RxVoid> AdaptLayoutCommand { get; }
+    public Interaction<(DisplayMode, bool), RxVoid> AdaptLayoutInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
-
-    [Reactive]
-    public partial Option<Func<DateOnly, string>> DateFormatter { get; set; }
-
-    [Reactive]
-    public partial string NumberFormat { get; set; }
 
     public ReactiveCommand<Func<DateOnly, string>, Unit> AdaptXAxisCommand { get; }
     public Interaction<Func<DateOnly, string>, Unit> AdaptXAxisInteraction { get; } =
         new(RxSchedulers.MainThreadScheduler);
 
     [Reactive]
-    public partial TimeSeriesViewerSettings Configuration { get; set; }
+    public partial Option<TimeSeriesViewerSettings> Configuration { get; set; }
 
     [ObservableAsProperty]
     public partial Either<Error, CommunicationManager> WsManager { get; }
@@ -130,15 +140,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     public ReactiveCommand<Seq<TimeSeriesInfo>, RxVoid> RenameSeriesCommand { get; }
     public ReactiveCommand<SeriesChartType, RxVoid> ChangeSeriesChartTypesCommand { get; }
 
-    public ReactiveCommand<TimeSeriesViewerSettings, RxVoid> ShowSettingsCommand { get; }
+    public ReactiveCommand<
+        Option<TimeSeriesViewerSettings>,
+        string?
+    > ShowConnectionSettingsCommand { get; }
     public Interaction<
-        TimeSeriesViewerSettings,
-        Option<TimeSeriesViewerSettings>
-    > ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
-
-    public ReactiveCommand<TimeSeriesViewerSettings, string?> ShowConnectionSettingsCommand { get; }
-    public Interaction<
-        TimeSeriesViewerSettings,
+        (TimeSeriesViewerSettings, bool, bool),
         Option<TimeSeriesViewerSettings>
     > ShowConnectionSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
 
@@ -181,8 +188,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         );
 
         ClearInfoInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        NumberFormat = "F0";
-        Configuration = TimeSeriesViewerSettings.Default;
 
         CancelCommand = ReactiveCommand.Create(() => { });
 
@@ -192,7 +197,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         ClearSeriesCommand = ReactiveCommand.CreateFromTask(async () => await Clear());
         ClearResultsCommand = ReactiveCommand.Create(() => { });
 
-        AdaptDisplayModeCommand = CreateCommandAdaptDisplayModeCommand();
+        AdaptLayoutCommand = CreateCommandAdaptLayoutCommand();
         HoverCellGridCommand = CreateCommandHoverGridCommand();
         HighlightChartPointCommand = CreateHighlightPointCommand();
         BuildHierarchyGridDefinitions = CreateCommandBuildHierarchyGridDefinitions();
@@ -225,9 +230,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
         ShowDisaggregationInfo = CreateCommandShowDisaggregationInfo();
 
-        _hasConnectionHelper = this.WhenAnyValue(x => x.WsManager)
-            .Select(o => o.IsRight)
-            .ToProperty(this, x => x.HasConnection, scheduler: RxSchedulers.MainThreadScheduler);
+        HandleConnectionObservableAsProperties();
 
         _selectedSeriesHelper = this.WhenAnyValue(x => x.Selection)
             .Select(sel => SeriesCache.Values.Where(x => sel.Contains(x.Identifier)).ToSeq())
@@ -249,6 +252,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 x => x.HasDisaggregationResults,
                 scheduler: RxSchedulers.MainThreadScheduler
             );
+
+        var settingsChange = this.WhenAnyValue(x => x.Configuration)
+            .Throttle(TimeSpan.FromMilliseconds(200))
+            .Publish()
+            .RefCount();
 
         this.WhenActivated(disposables =>
         {
@@ -276,9 +284,12 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 })
                 .DisposeWith(disposables);
 
+            // Reset selection when changing selection mode
             this.WhenAnyValue(x => x.SeriesSelectionMode)
                 .Subscribe(_ => Selection = LanguageExt.HashSet<Identifier>.Empty)
                 .DisposeWith(disposables);
+
+            HandleStatusBarVisibility(disposables);
 
             Signal
                 .Return(TimeSeriesViewerConfigurationViewModel.Load())
@@ -286,17 +297,23 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 .ObserveOn(RxSchedulers.MainThreadScheduler)
                 .Subscribe(settings =>
                 {
-                    Signal.Return(settings.WebServiceAddress).InvokeCommand(GetConnectionCommand);
+                    settings.IfSome(s =>
+                    {
+                        if (s.AutoConnect)
+                            Signal.Return(s.WebServiceAddress).InvokeCommand(GetConnectionCommand);
+                    });
+
                     Configuration = settings;
                     HierarchyGridViewModel.Theme = new LightGridTheme();
                 })
                 .DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.Configuration)
-                .Throttle(TimeSpan.FromMilliseconds(200))
-                .ObserveOn(RxSchedulers.MainThreadScheduler)
-                .Subscribe(ApplySettings)
-                .DisposeWith(disposables);
+            HandleSettingsObservableAsProperties(
+                settingsChange
+                    .Map(o => o.Match(Signal.Return, Signal.Empty<TimeSeriesViewerSettings>))
+                    .SwitchTo(),
+                disposables
+            );
 
             HierarchyGridViewModel
                 .WhenAnyValue(x => x.Producers)
@@ -353,8 +370,13 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
 
             this.WhenAnyValue(x => x.NumberFormat).Subscribe(UpdateFormat).DisposeWith(disposables);
 
-            this.WhenAnyValue(x => x.DisplayMode)
-                .Select(mode => AdaptDisplayModeCommand.Execute(mode))
+            this.WhenAnyValue(x => x.DisplayMode, x => x.SwitchPositions, x => x.IsInitialized)
+                .Where(t => t.Property1 != DisplayMode.None && t.Property3)
+                .Select(t =>
+                {
+                    var (mode, switchPos, _) = t;
+                    return AdaptLayoutCommand.Execute((mode, switchPos));
+                })
                 .SwitchTo()
                 .Subscribe()
                 .DisposeWith(disposables);
@@ -478,38 +500,83 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
     }
 
     private ReactiveCommand<
-        TimeSeriesViewerSettings,
+        Option<TimeSeriesViewerSettings>,
         string?
     > CreateCommandShowConnectionSettingsCommand()
     {
         ShowConnectionSettingsInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
         );
+
+        var canExecute = this.WhenAnyValue(x => x.EnableDemetra)
+            .ObserveOn(RxSchedulers.MainThreadScheduler);
+
         var cmd = ReactiveCommand.CreateFromTask(
-            async (TimeSeriesViewerSettings settings) =>
+            async (Option<TimeSeriesViewerSettings> settings) =>
             {
-                var config = await ShowConnectionSettingsInteraction.Handle(settings);
+                var config = await ShowConnectionSettingsInteraction.Handle(
+                    (
+                        settings.Match(s => s, () => TimeSeriesViewerSettings.Default),
+                        EnableDemetra,
+                        Restricted
+                    )
+                );
                 config.IfSome(c =>
                 {
                     Configuration = c;
                 });
 
                 return config.Match(s => s.WebServiceAddress, () => string.Empty);
-            }
+            },
+            canExecute
         );
         return cmd;
     }
 
-    private ReactiveCommand<TimeSeriesViewerSettings, RxVoid> CreateCommandShowSettingsCommand()
+    public ReactiveCommand<Option<TimeSeriesViewerSettings>, RxVoid> ShowSettingsCommand { get; }
+    public Interaction<
+        (TimeSeriesViewerSettings settings, bool enableDemetra, bool restricted),
+        Option<TimeSeriesViewerSettings>
+    > ShowSettingsInteraction { get; } = new(RxSchedulers.MainThreadScheduler);
+
+    private ReactiveCommand<
+        Option<TimeSeriesViewerSettings>,
+        RxVoid
+    > CreateCommandShowSettingsCommand()
     {
         /* Register default handler */
         ShowSettingsInteraction.RegisterHandler(ctx =>
             ctx.SetOutput(Option<TimeSeriesViewerSettings>.None)
         );
         var cmd = ReactiveCommand.CreateFromTask(
-            async (TimeSeriesViewerSettings settings) =>
+            async (Option<TimeSeriesViewerSettings> o) =>
             {
-                var config = await ShowSettingsInteraction.Handle(settings);
+                var settings = o.Match(
+                    s => s,
+                    () =>
+                        new()
+                        {
+                            SeriesSelectionMode = SeriesSelectionMode,
+                            WebServiceAddress = TimeSeriesViewerSettings.DefaultWebServiceAddress,
+                            DisplayMode = DisplayMode,
+                            Palette = Palette.Name,
+                            DateFormat = "yyyy-MM",
+                            Decimals = 0,
+                            HasThousandsSeparators = false,
+                            ShowStatusBar = this.ShowStatusBar,
+                            SwitchGridAndChart = this.SwitchPositions,
+                            AutoScrollGrid = this.AutoScrollGrid,
+                            AutoConnect = this.AutoConnect,
+                            ColorAO = ColorAO,
+                            ColorTC = ColorTC,
+                            ColorLS = ColorLS,
+                            ColorSO = ColorSO,
+                            Legend = Legend,
+                        }
+                );
+                var config = await ShowSettingsInteraction.Handle(
+                    (settings, EnableDemetra, Restricted)
+                );
                 config.IfSome(c =>
                 {
                     Configuration = c;
@@ -565,18 +632,6 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private void ApplySettings(TimeSeriesViewerSettings settings)
-    {
-        SeriesSelectionMode = settings.SeriesSelectionMode;
-        DisplayMode = settings.DisplayMode;
-        Palette = settings.Palette.ToPalette();
-        DateFormatter = !string.IsNullOrWhiteSpace(settings.DateFormat)
-            ? Option<Func<DateOnly, string>>.Some(d => d.ToString(settings.DateFormat))
-            : Option<Func<DateOnly, string>>.None;
-        char format = settings.HasThousandsSeparators ? 'N' : 'F';
-        NumberFormat = $"{format}{settings.Decimals}";
-    }
-
     private ReactiveCommand<LanguageExt.HashSet<Identifier>, RxVoid> CreateCommandToggleHighlights()
     {
         var cmd = ReactiveCommand.Create(
@@ -600,7 +655,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         string?,
         Either<Error, CommunicationManager>
     > CreateCommandGetConnection(
-        ReactiveCommand<TimeSeriesViewerSettings, string?> connectionSettingsCommand
+        ReactiveCommand<Option<TimeSeriesViewerSettings>, string?> connectionSettingsCommand
     )
     {
         var cmd = ReactiveCommand.CreateFromTask<string?, Either<Error, CommunicationManager>>(
@@ -616,7 +671,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                 timeoutCts.CancelAfter(TimeSpan.FromSeconds(10));
                 await cm.GetVersion(timeoutCts.Token);
                 return cm;
-            }
+            },
+            this.WhenAnyValue(x => x.EnableDemetra).ObserveOn(RxSchedulers.MainThreadScheduler)
         );
 
         connectionSettingsCommand
@@ -634,7 +690,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         cmd.ThrownExceptions.OfType<RpcException>()
             .Where(rpc => rpc.StatusCode == StatusCode.Unavailable)
             .Map(ex => new Message("Failed connection", "No server is listening."))
-            .InvokeCommand(Warn);
+            .InvokeCommand(Inform);
 
         _isConnectingHelper = cmd.IsExecuting.ToProperty(
             this,
@@ -707,9 +763,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         return cmd;
     }
 
-    private ReactiveCommand<DisplayMode, RxVoid> CreateCommandAdaptDisplayModeCommand()
+    private ReactiveCommand<(DisplayMode, bool), RxVoid> CreateCommandAdaptLayoutCommand()
     {
-        AdaptDisplayModeInteraction.RegisterHandler(ctx =>
+        AdaptLayoutInteraction.RegisterHandler(ctx =>
         {
 #if DEBUG
             Console.WriteLine($"Calling _DEFAULT_ AdaptDisplayModeInteraction with {ctx.Input}");
@@ -718,7 +774,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         });
 
         var cmd = ReactiveCommand.CreateFromTask(
-            (DisplayMode dm) => AdaptDisplayModeInteraction.Handle(dm)
+            ((DisplayMode, bool) t) => AdaptLayoutInteraction.Handle(t)
         );
 
         return cmd;
@@ -744,7 +800,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             Seq<TimeSeriesInfo>,
             HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>>,
             Func<DateOnly, string>,
-            Func<double, string>
+            Func<double, string>,
+            OutliersHighlight
         ),
         HierarchyDefinitions
     > CreateCommandBuildHierarchyGridDefinitions()
@@ -755,16 +812,18 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                     Seq<TimeSeriesInfo>,
                     HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>>,
                     Func<DateOnly, string>,
-                    Func<double, string>
+                    Func<double, string>,
+                    OutliersHighlight
                 ) t
             ) =>
             {
-                var (infos, tramoOutliers, dateFormatter, numberFormatter) = t;
+                var (infos, tramoOutliers, dateFormatter, numberFormatter, outliersHighlight) = t;
                 return DoBuildHierarchyGridDefinitions(
                     infos,
                     tramoOutliers,
                     dateFormatter,
-                    numberFormatter
+                    numberFormatter,
+                    outliersHighlight
                 );
             }
         );
@@ -781,7 +840,8 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
                         !string.IsNullOrWhiteSpace(f)
                             ? d => d.ToString(f)
                             : d => d.ToString(CultureInfo.InvariantCulture)
-                    )
+                    ),
+                this.WhenAnyValue(x => x.OutliersHighlight)
             )
             .Throttle(TimeSpan.FromMilliseconds(50))
             .InvokeCommand(cmd);
@@ -795,12 +855,11 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         Seq<TimeSeriesInfo> infos,
         HashMap<(Identifier, DateOnly), Either<Error, TramoOutput.OutlierReport>> tramoOutliers,
         Func<DateOnly, string> formatter,
-        Func<double, string> numberFormatter
+        Func<double, string> numberFormatter,
+        OutliersHighlight outliersHighlight
     )
     {
         var map = infos.Map(info => (info.Identifier, info.Data)).ToHashMap();
-        // TODO: improve
-        var outliersHighlight = new OutliersHighlight("Bank".ToPalette());
 
         var producers = infos
             .Where(info => info.Level < Level.Tertiary)
@@ -973,6 +1032,9 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
         IObservable<bool> canExecute
     )> BuildContext()
     {
+        if (!EnableDemetra)
+            yield break;
+
         yield return new(
             "JD+|Disaggregate",
             _ =>
@@ -1010,7 +1072,7 @@ public abstract partial class TimeSeriesViewerViewModelBase : BaseViewModel
             && pc.ConsumerDefinition.Tag?.Equals(period) == true
         );
 
-        if (cell.IsNone) /* Cell is not drawn */
+        if (cell.IsNone && AutoScrollGrid) /* Cell is not drawn */
         {
             var producerOffset = !HierarchyGridViewModel.DrawnCells.Exists(pc =>
                 pc.ProducerDefinition.Tag?.Equals(identifier) == true

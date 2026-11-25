@@ -4,7 +4,7 @@ using Avalonia.Input;
 using Avalonia.Layout;
 using Avalonia.Platform.Storage;
 using JedPlotUtils.Avalonia.Components;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.ViewModels;
 using LanguageExt;
@@ -27,6 +27,54 @@ namespace JedPlotUtils.LiveCharts.Avalonia.Components;
 
 public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerViewModel>
 {
+    public static readonly AV.StyledProperty<bool> ShowStatusBarProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(ShowStatusBar),
+            defaultValue: true
+        );
+
+    public bool ShowStatusBar
+    {
+        get => GetValue(ShowStatusBarProperty);
+        set => SetValue(ShowStatusBarProperty, value);
+    }
+
+    public static readonly AV.StyledProperty<bool> EnableDemetraProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(EnableDemetra),
+            defaultValue: true
+        );
+
+    public bool EnableDemetra
+    {
+        get => GetValue(EnableDemetraProperty);
+        set => SetValue(EnableDemetraProperty, value);
+    }
+
+    public static readonly AV.StyledProperty<bool> RestrictedProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(Restricted),
+            defaultValue: false
+        );
+
+    public bool Restricted
+    {
+        get => GetValue(RestrictedProperty);
+        set => SetValue(RestrictedProperty, value);
+    }
+
+    public static readonly AV.StyledProperty<JedPlotUtils.Models.DisplayMode> DisplayModeProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, JedPlotUtils.Models.DisplayMode>(
+            nameof(DisplayMode),
+            defaultValue: JedPlotUtils.Models.DisplayMode.BothHorizontal
+        );
+
+    public JedPlotUtils.Models.DisplayMode DisplayMode
+    {
+        get => GetValue(DisplayModeProperty);
+        set => SetValue(DisplayModeProperty, value);
+    }
+
     public TimeSeriesViewer()
     {
         InitializeComponent();
@@ -79,6 +127,38 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
 
+        viewModel.EnableDemetra = view.EnableDemetra;
+        viewModel.ShowStatusBar = view.ShowStatusBar;
+        viewModel.Restricted = view.Restricted;
+        Signal.Return(view.DisplayMode).InvokeCommand(viewModel, x => x.ChangeDisplayModeCommand);
+
+        Signal
+            .FromEventPattern<KeyEventArgs>(
+                handler => view.KeyDown += handler,
+                handler => view.KeyDown -= handler
+            )
+            .SubscribePrimitives(t =>
+            {
+                var args = t.EventArgs;
+                if (args.Key is Key.LeftAlt or Key.RightAlt)
+                {
+                    viewModel.TempShowStatusBar = true;
+                    args.Handled = true;
+                }
+            })
+            .DisposeWith(disposables);
+
+        Signal
+            .FromEventPattern<KeyEventArgs>(
+                handler => view.KeyUp += handler,
+                handler => view.KeyUp -= handler
+            )
+            .SubscribePrimitives(t =>
+            {
+                viewModel.TempShowStatusBar = false;
+            })
+            .DisposeWith(disposables);
+
         viewModel.ClearInfoInteraction.RegisterHandler(ctx =>
         {
             view.InfoContent.Content = null;
@@ -97,7 +177,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel
             .ShowSettingsInteraction.RegisterHandler(async ctx =>
             {
-                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                var (settings, enableDemetra, restricted) = ctx.Input;
+                var cvm = new TimeSeriesViewerConfigurationViewModel(
+                    settings,
+                    enableDemetra,
+                    restricted
+                );
                 await OpenDialogAnimation(
                     viewModel,
                     new TimeSeriesViewerConfigurationView() { ViewModel = cvm },
@@ -113,7 +198,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         viewModel
             .ShowConnectionSettingsInteraction.RegisterHandler(async ctx =>
             {
-                var cvm = new TimeSeriesViewerConfigurationViewModel(ctx.Input);
+                var (settings, enableDemetra, restricted) = ctx.Input;
+                var cvm = new TimeSeriesViewerConfigurationViewModel(
+                    settings,
+                    enableDemetra,
+                    restricted
+                );
                 await OpenDialogAnimation(
                     viewModel,
                     new TimeSeriesViewerConnectionView() { ViewModel = cvm },
@@ -192,18 +282,21 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
         /* Display Mode */
         viewModel
-            .AdaptDisplayModeInteraction.RegisterHandler(ctx =>
+            .AdaptLayoutInteraction.RegisterHandler(ctx =>
             {
+                var (mode, switchPositions) = ctx.Input;
 #if DEBUG
                 Console.WriteLine($"Calling AdaptDisplayModeInteraction with {ctx.Input}");
 #endif
                 SetHierarchyGridConstraints(
                     view.HierarchyGrid,
-                    ctx.Input,
-                    viewModel.HierarchyGridViewModel
+                    mode,
+                    viewModel.HierarchyGridViewModel,
+                    switchPositions
                 );
-                SetGridSplitterConstraints(view.Splitter, ctx.Input);
-                SetGridDimensions(view.GridMainDisplay, ctx.Input);
+                SetChartConstraints(view.CartesianChart, mode, switchPositions);
+                SetGridSplitterConstraints(view.Splitter, mode);
+                SetGridDefinitions(view.GridMainDisplay, mode);
                 viewModel.HasFirstRender = true;
                 ctx.SetOutput(RxVoid.Default);
             })
@@ -264,7 +357,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 }
 
                 /* Text format */
-                var text = await data.TryGetTextAsync().ConfigureAwait(false);
+                var text = await data?.TryGetTextAsync()! ?? string.Empty;
                 if (!string.IsNullOrWhiteSpace(text))
                 {
                     var series = text.FromCsv();
@@ -276,7 +369,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
                 }
 
                 /* File format */
-                if (await data.TryGetFilesAsync().ConfigureAwait(false) is { } files)
+                if (await data?.TryGetFilesAsync()! is { } files)
                 {
                     // TODO: check csv, check xlsx, check OpenOffice
                     await ParseIStorageItems(files, viewModel);
@@ -412,6 +505,8 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
             ctx.SetOutput(RxVoid.Default);
         });
+
+        viewModel.IsInitialized = true;
     }
 
     private void HandleDragDrop(
@@ -661,22 +756,48 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         }
     }
 
+    private static void SetChartConstraints(
+        CartesianChart chart,
+        DisplayMode displayMode,
+        bool switchPositions
+    )
+    {
+        switch (displayMode)
+        {
+            case DisplayMode.BothVertical:
+                Grid.SetColumn(chart, 0);
+                Grid.SetRow(chart, !switchPositions ? 0 : 2);
+                break;
+
+            case DisplayMode.BothHorizontal:
+                Grid.SetColumn(chart, !switchPositions ? 0 : 2);
+                Grid.SetRow(chart, 0);
+                break;
+
+            default:
+                Grid.SetColumn(chart, 0);
+                Grid.SetRow(chart, 0);
+                break;
+        }
+    }
+
     private static void SetHierarchyGridConstraints(
         HierarchyGrid.Avalonia.Grid hierarchyGrid,
         DisplayMode displayMode,
-        HierarchyGrid.Definitions.HierarchyGridViewModel hierarchyGridViewModel
+        HierarchyGrid.Definitions.HierarchyGridViewModel hierarchyGridViewModel,
+        bool switchPositions
     )
     {
         switch (displayMode)
         {
             case DisplayMode.BothVertical:
                 Grid.SetColumn(hierarchyGrid, 0);
-                Grid.SetRow(hierarchyGrid, 2);
+                Grid.SetRow(hierarchyGrid, !switchPositions ? 2 : 0);
                 hierarchyGridViewModel.IsTransposed = false;
                 break;
 
             case DisplayMode.BothHorizontal:
-                Grid.SetColumn(hierarchyGrid, 2);
+                Grid.SetColumn(hierarchyGrid, !switchPositions ? 2 : 0);
                 Grid.SetRow(hierarchyGrid, 0);
                 hierarchyGridViewModel.IsTransposed = true;
                 break;
@@ -684,12 +805,12 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             default:
                 Grid.SetColumn(hierarchyGrid, 0);
                 Grid.SetRow(hierarchyGrid, 0);
-                hierarchyGridViewModel.IsTransposed = false;
+                hierarchyGridViewModel.IsTransposed = true;
                 break;
         }
     }
 
-    private static void SetGridDimensions(Grid grid, DisplayMode displayMode)
+    private static void SetGridDefinitions(Grid grid, DisplayMode displayMode)
     {
         switch (displayMode)
         {

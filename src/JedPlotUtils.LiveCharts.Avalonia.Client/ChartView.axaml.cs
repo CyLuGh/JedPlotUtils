@@ -1,9 +1,8 @@
 ﻿using Avalonia.Controls;
 using Huskui.Avalonia.Controls;
 using Huskui.Avalonia.Models;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using JedPlotUtils.Models;
-using JedPlotUtils.ViewModels;
 using ReactiveUI.Primitives;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Client;
@@ -18,7 +17,8 @@ public partial class ChartView : UserControl
         var tsvvm = new TimeSeriesViewerViewModel();
         RegisterNotifications(tsvvm);
 
-        ChartViewHost.ViewModel = tsvvm;
+        //ChartViewHost.ViewModel = tsvvm;
+        Viewer.ViewModel = tsvvm;
     }
 
     private void RegisterNotifications(TimeSeriesViewerViewModel tsvvm)

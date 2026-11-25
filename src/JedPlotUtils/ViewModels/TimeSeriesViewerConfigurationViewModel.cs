@@ -38,11 +38,37 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     [Reactive]
     public partial bool ShowStatusBar { get; set; }
 
+    [Reactive]
+    public partial bool SwitchChartAndGrid { get; set; }
+
+    [Reactive]
+    public partial bool AutoConnect { get; set; }
+
+    [Reactive]
+    public partial bool AutoScrollGrid { get; set; }
+
+    [Reactive]
+    public partial Color ColorAO { get; set; }
+
+    [Reactive]
+    public partial Color ColorLS { get; set; }
+
+    [Reactive]
+    public partial Color ColorTC { get; set; }
+
+    [Reactive]
+    public partial Color ColorSO { get; set; }
+
+    [Reactive]
+    public partial LegendDisplay Legend { get; set; }
+
     public static SelectionMode[] AvailableSeriesSelectionMode =>
         [SelectionMode.Single, SelectionMode.Multiple, SelectionMode.None];
 
     public static DisplayMode[] AvailableDisplayMode =>
         [DisplayMode.Chart, DisplayMode.Grid, DisplayMode.BothHorizontal, DisplayMode.BothVertical];
+
+    public static LegendDisplay[] AvailableLegendDisplay => Enum.GetValues<LegendDisplay>();
 
     private static readonly string SettingsPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -57,14 +83,29 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     public RxCommand CancelCommand { get; }
     public RxCommand LoadCommand { get; }
 
-    public TimeSeriesViewerConfigurationViewModel(Option<TimeSeriesViewerSettings> settings)
+    public bool EnableDemetra { get; }
+    public bool Restricted { get; }
+
+    public TimeSeriesViewerConfigurationViewModel(
+        Option<TimeSeriesViewerSettings> settings,
+        bool enableDemetra,
+        bool restricted
+    )
     {
+        EnableDemetra = enableDemetra;
+        Restricted = restricted;
+
         SaveCommand = CreateCommandSave();
         CancelCommand = CreateCommandCancel();
         LoadCommand = CreateCommandLoad();
 
         DateFormat = string.Empty;
-        RestoreSettings(settings.Match(s => s, Load));
+        RestoreSettings(
+            settings.Match(
+                s => s,
+                () => Load().Match(s => s, () => TimeSeriesViewerSettings.Default)
+            )
+        );
     }
 
     private void RestoreSettings(TimeSeriesViewerSettings settings)
@@ -79,6 +120,13 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         Decimals = settings.Decimals;
         HasThousandsSeparators = settings.HasThousandsSeparators;
         ShowStatusBar = settings.ShowStatusBar;
+        SwitchChartAndGrid = settings.SwitchGridAndChart;
+        AutoConnect = settings.AutoConnect;
+        AutoScrollGrid = settings.AutoScrollGrid;
+        ColorAO = settings.ColorAO;
+        ColorLS = settings.ColorLS;
+        ColorSO = settings.ColorSO;
+        ColorTC = settings.ColorTC;
     }
 
     private RxCommand CreateCommandCancel() =>
@@ -91,7 +139,7 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
     {
         var cmd = ReactiveCommand.CreateRunInBackground(() =>
         {
-            RestoreSettings(Load());
+            RestoreSettings(Load().Match(s => s, () => TimeSeriesViewerSettings.Default));
         });
         return cmd;
     }
@@ -110,7 +158,15 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
                     DateFormat = DateFormat,
                     Decimals = Decimals,
                     HasThousandsSeparators = HasThousandsSeparators,
-                    ShowStatusBar = ShowStatusBar
+                    ShowStatusBar = ShowStatusBar,
+                    SwitchGridAndChart = SwitchChartAndGrid,
+                    AutoConnect = AutoConnect,
+                    AutoScrollGrid = AutoScrollGrid,
+                    ColorAO = ColorAO,
+                    ColorLS = ColorLS,
+                    ColorSO = ColorSO,
+                    ColorTC = ColorTC,
+                    Legend = Legend,
                 };
 
                 if (save)
@@ -122,20 +178,20 @@ public partial class TimeSeriesViewerConfigurationViewModel : BaseViewModel
         return cmd;
     }
 
-    public static TimeSeriesViewerSettings Load()
+    public static Option<TimeSeriesViewerSettings> Load()
     {
         try
         {
             if (!File.Exists(SettingsPath))
-                return TimeSeriesViewerSettings.Default;
+                return Option<TimeSeriesViewerSettings>.None;
 
             var json = File.ReadAllText(SettingsPath);
             return JsonSerializer.Deserialize<TimeSeriesViewerSettings>(json)
-                ?? TimeSeriesViewerSettings.Default;
+                ?? Option<TimeSeriesViewerSettings>.None;
         }
         catch (Exception)
         {
-            return TimeSeriesViewerSettings.Default;
+            return Option<TimeSeriesViewerSettings>.None;
         }
     }
 

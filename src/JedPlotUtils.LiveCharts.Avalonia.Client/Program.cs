@@ -3,7 +3,7 @@ using Avalonia;
 using Avalonia.Media;
 using Avalonia.Media.Fonts;
 using JedPlotUtils.LiveCharts.Avalonia.Components;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using ReactiveUI.Avalonia;
 
 namespace JedPlotUtils.LiveCharts.Avalonia.Client;

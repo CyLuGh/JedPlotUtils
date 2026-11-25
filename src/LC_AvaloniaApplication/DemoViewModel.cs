@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+using JedPlotUtils.LiveCharts.ViewModels;
 using JedPlotUtils.Models;
 using JedPlotUtils.Palette;
 using JedPlotUtils.ViewModels;
@@ -45,22 +45,17 @@ public partial class DemoViewModel : BaseViewModel
         TimeSeriesViewModel = new TimeSeriesViewerViewModel();
         _random = new Random(0);
 
-        AddSeries = ReactiveCommand.Create(
-            () =>
-                TimeSeriesViewModel.Add(
-                    GenerateTimeSeriesInfo("A", new DateOnly(2000, 1, 1), 24, d => d.AddMonths(3))
-                )
+        AddSeries = ReactiveCommand.Create(() =>
+            TimeSeriesViewModel.Add(
+                GenerateTimeSeriesInfo("A", new DateOnly(2000, 1, 1), 24, d => d.AddMonths(3))
+            )
         );
-        AddSeriesWithAuxiliaryData = ReactiveCommand.Create(
-            () =>
-                TimeSeriesViewModel.Add(
-                    GenerateTimeSeriesInfoWithAuxiliaryData(
-                        "A",
-                        new DateOnly(2000, 1, 1),
-                        24,
-                        d => d.AddMonths(1)
-                    )
+        AddSeriesWithAuxiliaryData = ReactiveCommand.Create(() =>
+            TimeSeriesViewModel.Add(
+                GenerateTimeSeriesInfoWithAuxiliaryData("A", new DateOnly(2000, 1, 1), 24, d =>
+                    d.AddMonths(1)
                 )
+            )
         );
         ClearSeries = ReactiveCommand.Create(() =>
         {
@@ -70,8 +65,8 @@ public partial class DemoViewModel : BaseViewModel
         });
 
         AddChartWindowInteraction.RegisterHandler(ctx => ctx.SetOutput(RxVoid.Default));
-        AddChartWindow = ReactiveCommand.CreateFromTask(
-            () => AddChartWindowInteraction.Handle(RxVoid.Default)
+        AddChartWindow = ReactiveCommand.CreateFromTask(() =>
+            AddChartWindowInteraction.Handle(RxVoid.Default)
         );
     }
 

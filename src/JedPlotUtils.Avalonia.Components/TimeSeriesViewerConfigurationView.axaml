@@ -1,143 +1,192 @@
 <UserControl
-    d:DesignHeight="400"
-    d:DesignWidth="650"
-    mc:Ignorable="d"
-    x:Class="JedPlotUtils.Avalonia.Components.TimeSeriesViewerConfigurationView"
-    x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
-    xmlns="https://github.com/avaloniaui"
-    xmlns:converters="clr-namespace:JedPlotUtils.Avalonia.Components.Converters"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
-    xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
-    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <UserControl.Resources>
-        <converters:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
-    </UserControl.Resources>
-    <DockPanel VerticalSpacing="16">
-        <UniformGrid DockPanel.Dock="Bottom" Rows="1">
-            <CheckBox
-                Content="Persist settings"
-                IsChecked="{Binding PersistSettings}"
-                Margin="10,0,0,5" />
-            <StackPanel
-                HorizontalAlignment="Right"
-                Margin="0,0,5,5"
-                Orientation="Horizontal"
-                Spacing="5"
-                VerticalAlignment="Bottom">
-                <Button
-                    Command="{Binding CancelCommand}"
-                    Content="Cancel"
-                    IsCancel="True"
-                    Theme="{DynamicResource GhostButtonTheme}" />
-                <Button
-                    Classes="Primary"
-                    Command="{Binding SaveCommand}"
-                    CommandParameter="{Binding PersistSettings}">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                        <!-- <Viewbox> -->
-                        <!--   <Canvas Width="24" Height="24"> -->
-                        <!--  <Path Data="M4 6C4 4.89543 4.89543 4 6 4H14.1716C14.702 4 15.2107 4.21071 15.5858 4.58579L19.4142 8.41421C19.7893 8.78929 20 9.29799 20 9.82843V18C20 19.1046 19.1046 20 18 20H6C4.89543 20 4 19.1046 4 18V6Z"  -->
-                        <!--  Fill="Black"  -->
-                        <!--  Opacity=".15"/>  -->
-                        <!--  <Path Data="M15 20V15H9V20M18 20H6C4.89543 20 4 19.1046 4 18V6C4 4.89543 4.89543 4 6 4H14.1716C14.702 4 15.2107 4.21071 15.5858 4.58579L19.4142 8.41421C19.7893 8.78929 20 9.29799 20 9.82843V18C20 19.1046 19.1046 20 18 20Z"  -->
-                        <!--  Stroke="Black"  -->
-                        <!--  StrokeThickness="1.5"  -->
-                        <!--  StrokeLineCap="Round"  -->
-                        <!--           StrokeJoin="Round"></Path> -->
-                        <!--   </Canvas> -->
-                        <!-- </Viewbox> -->
-                        <TextBlock Text="Apply settings" />
-                    </StackPanel>
-                </Button>
+  x:Class="JedPlotUtils.Avalonia.Components.TimeSeriesViewerConfigurationView"
+  xmlns="https://github.com/avaloniaui"
+  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+  xmlns:converters="clr-namespace:JedPlotUtils.Avalonia.Components.Converters"
+  xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+  xmlns:palette="clr-namespace:JedPlotUtils.Palette;assembly=JedPlotUtils"
+  xmlns:viewModels="clr-namespace:JedPlotUtils.ViewModels;assembly=JedPlotUtils"
+  d:DesignHeight="400"
+  d:DesignWidth="650"
+  x:DataType="viewModels:TimeSeriesViewerConfigurationViewModel"
+  mc:Ignorable="d"
+>
+  <UserControl.Resources>
+    <converters:EnumDescriptionConverter x:Key="EnumDescriptionConverter" />
+    <converters:ColorConverter x:Key="ColorConverter" />
+  </UserControl.Resources>
+  <DockPanel VerticalSpacing="16">
+    <UniformGrid DockPanel.Dock="Bottom" Rows="1">
+      <CheckBox
+        Margin="10,0,0,5"
+        Content="Persist settings"
+        IsChecked="{Binding PersistSettings}"
+        IsVisible="{Binding !Restricted, Mode=OneTime}"
+      />
+      <StackPanel
+        Margin="0,0,5,5"
+        HorizontalAlignment="Right"
+        VerticalAlignment="Bottom"
+        Orientation="Horizontal"
+        Spacing="5"
+      >
+        <Button
+          Command="{Binding CancelCommand}"
+          Content="Cancel"
+          IsCancel="True"
+          Theme="{DynamicResource GhostButtonTheme}"
+        />
+        <Button
+          x:Name="ApplyButton"
+          Classes="Primary"
+          Command="{Binding SaveCommand}"
+          CommandParameter="{Binding PersistSettings}"
+        >
+          <StackPanel Orientation="Horizontal" Spacing="5">
+            <TextBlock Text="Apply settings" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+    </UniformGrid>
+
+    <StackPanel Spacing="4">
+      <TextBlock
+        Margin="20,0"
+        VerticalAlignment="Center"
+        FontSize="18"
+        FontWeight="Bold"
+        Text="Settings"
+      />
+
+      <Separator />
+
+      <TabControl Margin="5">
+        <TabItem Header="Layout" IsVisible="{Binding !Restricted,Mode=OneTime}">
+          <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Selection mode" />
+              <ComboBox
+                Width="300"
+                HorizontalAlignment="Left"
+                ItemsSource="{Binding AvailableSeriesSelectionMode}"
+                SelectedItem="{Binding SeriesSelectionMode}"
+              />
             </StackPanel>
-        </UniformGrid>
 
-        <StackPanel Spacing="4">
-            <TextBlock
-                FontSize="18"
-                FontWeight="Bold"
-                Margin="20,0"
-                Text="Settings"
-                VerticalAlignment="Center" />
+            <StackPanel Spacing="4">
+              <TextBlock Text="Display mode" />
+              <ComboBox
+                Width="300"
+                HorizontalAlignment="Left"
+                ItemsSource="{Binding AvailableDisplayMode}"
+                SelectedItem="{Binding DisplayMode}"
+              >
+                <ComboBox.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
 
-            <Separator />
+            <StackPanel Spacing="4">
+              <TextBlock VerticalAlignment="Center" Text="Chart legend" />
+              <ComboBox
+                ItemsSource="{Binding AvailableLegendDisplay}"
+                SelectedItem="{Binding Legend}"
+              />
+            </StackPanel>
 
-            <UniformGrid
-                ColumnSpacing="10"
-                Columns="2"
-                Margin="10"
-                RowSpacing="10">
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Selection mode" />
-                    <ComboBox
-                        HorizontalAlignment="Left"
-                        ItemsSource="{Binding AvailableSeriesSelectionMode}"
-                        SelectedItem="{Binding SeriesSelectionMode}"
-                        Width="300" />
-                </StackPanel>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Date format" />
-                    <TextBox
-                        HorizontalAlignment="Left"
-                        Text="{Binding DateFormat}"
-                        Width="300" />
-                </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock VerticalAlignment="Center" Text="Switch chart and grid positions" />
+              <ToggleSwitch IsChecked="{Binding SwitchChartAndGrid}" />
+            </StackPanel>
 
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Display mode" />
-                    <ComboBox
-                        HorizontalAlignment="Left"
-                        ItemsSource="{Binding AvailableDisplayMode}"
-                        SelectedItem="{Binding DisplayMode}"
-                        Width="300">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Converter={StaticResource EnumDescriptionConverter}}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock VerticalAlignment="Center" Text="Show status bar" />
+              <ToggleSwitch IsChecked="{Binding ShowStatusBar}" />
+            </StackPanel>
+          </UniformGrid>
+        </TabItem>
+        <TabItem Header="Behavior" IsVisible="{Binding !Restricted,Mode=OneTime}">
+          <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
+              <TextBlock VerticalAlignment="Center" Text="Auto connect to JD+" />
+              <ToggleSwitch IsChecked="{Binding AutoConnect}" />
+            </StackPanel>
 
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Decimals" />
-                    <NumericUpDown
-                        FormatString="N0"
-                        HorizontalAlignment="Left"
-                        Maximum="10"
-                        Minimum="0"
-                        ParsingNumberStyle="Integer"
-                        Value="{Binding Decimals}"
-                        Width="300" />
-                </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock VerticalAlignment="Center" Text="Auto scroll grid on chart hover" />
+              <ToggleSwitch IsChecked="{Binding AutoScrollGrid}" />
+            </StackPanel>
+          </UniformGrid>
+        </TabItem>
+        <TabItem Header="Format">
+          <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Date format" />
+              <TextBox Width="300" HorizontalAlignment="Left" Text="{Binding DateFormat}" />
+            </StackPanel>
 
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Palette" />
-                    <ComboBox
-                        HorizontalAlignment="Left"
-                        ItemsSource="{x:Static palette:Palettes.Available}"
-                        SelectedItem="{Binding Palette}"
-                        Width="300">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate DataType="palette:IPalette">
-                                <TextBlock Text="{Binding Name}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Thousands separators" VerticalAlignment="Center" />
-                    <ToggleSwitch IsChecked="{Binding HasThousandsSeparators}" />
-                </StackPanel>
+            <StackPanel Spacing="4">
+              <TextBlock Text="Decimals" />
+              <NumericUpDown
+                Width="300"
+                HorizontalAlignment="Left"
+                FormatString="N0"
+                Maximum="10"
+                Minimum="0"
+                ParsingNumberStyle="Integer"
+                Value="{Binding Decimals}"
+              />
+            </StackPanel>
 
+            <StackPanel Spacing="4">
+              <TextBlock VerticalAlignment="Center" Text="Thousands separators" />
+              <ToggleSwitch IsChecked="{Binding HasThousandsSeparators}" />
+            </StackPanel>
+          </UniformGrid>
+        </TabItem>
+        <TabItem Header="Render">
+          <UniformGrid Margin="5" ColumnSpacing="10" Columns="2" RowSpacing="10">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Palette" />
+              <ComboBox
+                Width="300"
+                HorizontalAlignment="Left"
+                ItemsSource="{x:Static palette:Palettes.Available}"
+                SelectedItem="{Binding Palette}"
+              >
+                <ComboBox.ItemTemplate>
+                  <DataTemplate DataType="palette:IPalette">
+                    <TextBlock Text="{Binding Name}" />
+                  </DataTemplate>
+                </ComboBox.ItemTemplate>
+              </ComboBox>
+            </StackPanel>
 
+            <Rectangle />
 
-                <StackPanel Spacing="4">
-                    <TextBlock Text="Show status bar" VerticalAlignment="Center" />
-                    <ToggleSwitch IsChecked="{Binding ShowStatusBar}" />
-                </StackPanel>
-            </UniformGrid>
-        </StackPanel>
-    </DockPanel>
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
+              <TextBlock Text="Outlier color: AO" />
+              <ColorPicker HsvColor="{Binding ColorAO,Converter={StaticResource ColorConverter}}" />
+            </StackPanel>
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
+              <TextBlock Text="Outlier color: LS" />
+              <ColorPicker HsvColor="{Binding ColorLS,Converter={StaticResource ColorConverter}}" />
+            </StackPanel>
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
+              <TextBlock Text="Outlier color: TC" />
+              <ColorPicker HsvColor="{Binding ColorTC,Converter={StaticResource ColorConverter}}" />
+            </StackPanel>
+            <StackPanel Spacing="4" IsVisible="{Binding EnableDemetra,Mode=OneTime}">
+              <TextBlock Text="Outlier color: SO" />
+              <ColorPicker HsvColor="{Binding ColorSO,Converter={StaticResource ColorConverter}}" />
+            </StackPanel>
+          </UniformGrid>
+        </TabItem>
+      </TabControl>
+    </StackPanel>
+  </DockPanel>
 </UserControl>
