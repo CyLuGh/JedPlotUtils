@@ -16,12 +16,15 @@ public static class TimeSeriesInfoExtensions
     {
         public FrozenSet<DateOnly> GetDatesFrozenSet() =>
             infos.Map(i => i.Data.Keys).Flatten().Distinct().ToFrozenSet();
-        
+
         public Seq<DateOnly> GetDatesSeq() =>
             infos.Map(i => i.Data.Keys).Flatten().Distinct().Order().ToSeq();
 
         public string ToJson(bool indented = false) =>
-            JsonSerializer.Serialize(infos, new JsonSerializerOptions() { WriteIndented = indented });
+            JsonSerializer.Serialize(
+                infos,
+                new JsonSerializerOptions() { WriteIndented = indented }
+            );
 
         public string ToCsv(string separator = ",", IFormatProvider? formatProvider = null)
         {
@@ -32,8 +35,20 @@ public static class TimeSeriesInfoExtensions
             sb.AppendLine("Period" + separator + string.Join(separator, seq.Map(tsi => tsi.Label)));
             foreach (var period in seq.GetDatesFrozenSet().Items.OrderBy(x => x))
             {
-                sb.AppendLine(period.ToString("yyyy-MM-dd") + separator + string.Join(separator,
-                    seq.Map(tsi => tsi.Data.Find(period, d => d.ToString(formatProvider), () => string.Empty))));
+                sb.AppendLine(
+                    period.ToString("yyyy-MM-dd")
+                        + separator
+                        + string.Join(
+                            separator,
+                            seq.Map(tsi =>
+                                tsi.Data.Find(
+                                    period,
+                                    d => d.ToString(formatProvider),
+                                    () => string.Empty
+                                )
+                            )
+                        )
+                );
             }
 
             return sb.ToString();
@@ -48,8 +63,8 @@ public static class TimeSeriesInfoExtensions
             writer.Formatting = Formatting.Indented;
 
             WriteXmlHeader(writer);
-            WriteHeadersRow(writer,seq);
-            WriteDataRows(writer,seq);
+            WriteHeadersRow(writer, seq);
+            WriteDataRows(writer, seq);
             WriteXmlFooter(writer);
 
             return sw.ToString();
@@ -60,19 +75,17 @@ public static class TimeSeriesInfoExtensions
             var seq = infos.ToSeq();
 
             string[] headers = ["Period", .. seq.Map(x => x.Label)];
-            var rows = seq
-                .GetDatesFrozenSet()
-                .Items
-                .OrderBy(x => x)
-                .Select(date => (object?[])
-                    [
-                        date,
-                        ..seq.Map(ts =>
-                        ts.Data.Find(
-                        date).MatchUnsafe(
-                        d => (object)d,
-                            () => null))
-                    ])
+            var rows = seq.GetDatesFrozenSet()
+                .Items.OrderBy(x => x)
+                .Select(date =>
+                    (object?[])
+                        [
+                            date,
+                            .. seq.Map(ts =>
+                                ts.Data.Find(date).MatchUnsafe(d => (object)d, () => null)
+                            ),
+                        ]
+                )
                 .ToArray();
 
             return (headers, rows);
@@ -105,7 +118,7 @@ public static class TimeSeriesInfoExtensions
         CultureInfo.GetCultureInfo("en-GB"),
         CultureInfo.GetCultureInfo("fr-FR"),
         CultureInfo.GetCultureInfo("nl-BE"),
-        CultureInfo.GetCultureInfo("de-DE")
+        CultureInfo.GetCultureInfo("de-DE"),
     ];
 
     private static void WriteDataRows(XmlWriter writer, Seq<TimeSeriesInfo> series)
@@ -113,11 +126,11 @@ public static class TimeSeriesInfoExtensions
         foreach (var period in series.GetDatesFrozenSet().Items.OrderBy(x => x))
         {
             writer.WriteStartElement("Row");
-            
+
             writer.WriteStartElement("Cell");
             writer.WriteStartElement("Data");
             writer.WriteAttributeString("ss:Type", "DateTime");
-            writer.WriteString(period.ToString("yyyy-MM-dd")+"T00:00:00.000");
+            writer.WriteString(period.ToString("yyyy-MM-dd") + "T00:00:00.000");
             writer.WriteEndElement(); //data
             writer.WriteEndElement(); //cell
 
@@ -126,7 +139,13 @@ public static class TimeSeriesInfoExtensions
                 writer.WriteStartElement("Cell");
                 writer.WriteStartElement("Data");
                 writer.WriteAttributeString("ss:Type", "Number");
-                writer.WriteString(ser.Data.Find(period, d=> d.ToString(CultureInfo.InvariantCulture), () => string.Empty));
+                writer.WriteString(
+                    ser.Data.Find(
+                        period,
+                        d => d.ToString(CultureInfo.InvariantCulture),
+                        () => string.Empty
+                    )
+                );
                 writer.WriteEndElement(); //data
                 writer.WriteEndElement(); //cell
             }
@@ -162,7 +181,7 @@ public static class TimeSeriesInfoExtensions
     private static void WriteXmlHeader(XmlWriter writer)
     {
         writer.WriteStartDocument(true);
-        writer.WriteProcessingInstruction("mso-application","progid=\"Excel.Sheet\"");
+        writer.WriteProcessingInstruction("mso-application", "progid=\"Excel.Sheet\"");
         writer.WriteStartElement("Workbook");
         writer.WriteAttributeString("xmlns", "urn:schemas-microsoft-com:office:spreadsheet");
         writer.WriteAttributeString("xmlns:o", "urn:schemas-microsoft-com:office:office");
@@ -183,9 +202,7 @@ public static class TimeSeriesInfoExtensions
         writer.Flush();
     }
 
-    private static CultureInfo GuessCulture(
-        IEnumerable<string[]> rows,
-        int firstNumericColumn = 1)
+    private static CultureInfo GuessCulture(IEnumerable<string[]> rows, int firstNumericColumn = 1)
     {
         return CandidateCultures
             .Select(culture => new
@@ -198,7 +215,10 @@ public static class TimeSeriesInfoExtensions
                                 value,
                                 NumberStyles.Float | NumberStyles.AllowThousands,
                                 culture,
-                                out _)))
+                                out _
+                            )
+                        )
+                ),
             })
             .OrderByDescending(x => x.Score)
             .First()
@@ -214,7 +234,7 @@ public static class TimeSeriesInfoExtensions
             "dd/MM/yyyy",
             "MM/dd/yyyy",
             "dd-MM-yyyy",
-            "MM-dd-yyyy"
+            "MM-dd-yyyy",
         ];
 
         return DateOnly.TryParseExact(
@@ -222,54 +242,22 @@ public static class TimeSeriesInfoExtensions
             formats,
             CultureInfo.InvariantCulture,
             DateTimeStyles.None,
-            out var date)
+            out var date
+        )
             ? date
             : null;
     }
 
     extension(string text)
     {
-        public TimeSeriesInfo[] ToTimeSeriesInfo() => JsonSerializer.Deserialize<TimeSeriesInfo[]>(text) ?? [];
+        public TimeSeriesInfo[] ToTimeSeriesInfo() =>
+            JsonSerializer.Deserialize<TimeSeriesInfo[]>(text) ?? [];
 
         public TimeSeriesInfo[] FromCsv()
         {
-            // First pass: detect delimiter and read raw strings
-            // using var delimiterReader = new StringReader(text);
-            //
-            // var detectConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
-            // {
-            //     DetectDelimiter = true,
-            //     DetectDelimiterValues = [",", ";", "\t", "|"],
-            //     HasHeaderRecord = true
-            // };
-            //
-            // using var detectCsv = new CsvReader(delimiterReader, detectConfig);
-            //
-            // detectCsv.Read();
-            // detectCsv.ReadHeader();
-            //
-            // var delimiter = detectCsv.Context.Parser?.Delimiter ?? ",";
-            //
-            // // Second pass: read all rows as strings
-            // using var reader = new StringReader(text);
-            //
-            // var config = new CsvConfiguration(CultureInfo.InvariantCulture)
-            // {
-            //     Delimiter = delimiter,
-            //     HasHeaderRecord = true
-            // };
-            //
-            // using var csv = new CsvReader(reader, config);
+            using var csv = CsvReader.FromText(text, new CsvReaderOptions() { HasHeader = true });
 
-            using var csv = CsvReader.FromText(text, new CsvReaderOptions()
-            {HasHeader = true
-            });
-
-            csv.Read();
-            
-            var header = Enumerable.Range(0, csv.Current.FieldCount)
-                .Select(csv.GetString)
-                .ToSeq();
+            var header = csv.Headers.ToSeq();
 
             if (header.Length < 2)
                 return [];
@@ -278,12 +266,7 @@ public static class TimeSeriesInfoExtensions
 
             while (csv.Read())
             {
-                rows.Add(
-                    Enumerable
-                        .Range(0, header.Length)
-                        .Select(csv.GetString )
-                        .ToArray()
-                );
+                rows.Add(Enumerable.Range(0, header.Length).Select(csv.GetString).ToArray());
             }
 
             if (rows.Count == 0)
@@ -293,11 +276,10 @@ public static class TimeSeriesInfoExtensions
             var culture = GuessCulture(rows);
 
             // Parse dates once
-            var parsedRows = rows
-                .Select(r => new
+            var parsedRows = rows.Select(r => new
                 {
                     Date = ParseDate(r[0]),
-                    Values = r.Skip(1).ToArray()
+                    Values = r.Skip(1).ToArray(),
                 })
                 .ToList();
 
@@ -307,21 +289,22 @@ public static class TimeSeriesInfoExtensions
                 {
                     var data = parsedRows
                         .Where(r =>
-                            r.Date.HasValue &&
-                            columnIndex - 1 < r.Values.Length &&
-                            !string.IsNullOrWhiteSpace(r.Values[columnIndex - 1]))
-                        .Select(r => (
-                            r.Date!.Value,
-                            double.Parse(
-                                r.Values[columnIndex - 1],
-                                NumberStyles.Float | NumberStyles.AllowThousands,
-                                culture)
-                        ));
+                            r.Date.HasValue
+                            && columnIndex - 1 < r.Values.Length
+                            && !string.IsNullOrWhiteSpace(r.Values[columnIndex - 1])
+                        )
+                        .Select(r =>
+                            (
+                                r.Date!.Value,
+                                double.Parse(
+                                    r.Values[columnIndex - 1],
+                                    NumberStyles.Float | NumberStyles.AllowThousands,
+                                    culture
+                                )
+                            )
+                        );
 
-                    return new TimeSeriesInfo(
-                        label: header[columnIndex],
-                        data: data
-                    );
+                    return new TimeSeriesInfo(label: header[columnIndex], data: data);
                 })
                 .ToArray();
 
@@ -331,6 +314,7 @@ public static class TimeSeriesInfoExtensions
 
     extension(byte[]? bytes)
     {
-        public TimeSeriesInfo[] ToTimeSeriesInfo() => bytes?.Length > 0 ? Encoding.UTF8.GetString(bytes).ToTimeSeriesInfo() : [];
+        public TimeSeriesInfo[] ToTimeSeriesInfo() =>
+            bytes?.Length > 0 ? Encoding.UTF8.GetString(bytes).ToTimeSeriesInfo() : [];
     }
 }

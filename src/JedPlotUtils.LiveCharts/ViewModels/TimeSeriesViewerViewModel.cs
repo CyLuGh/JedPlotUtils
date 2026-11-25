@@ -1,25 +1,19 @@
 ﻿using System.Collections.ObjectModel;
 using System.Globalization;
 using JedPlotUtils.Models;
-using JedPlotUtils.Palette;
 using LanguageExt;
 using LiveChartsCore;
 using LiveChartsCore.Defaults;
 using LiveChartsCore.SkiaSharpView;
-using LiveChartsCore.SkiaSharpView.Painting;
-using LiveChartsCore.SkiaSharpView.Painting.Effects;
 using ReactiveUI;
 using ReactiveUI.Primitives;
-using ReactiveUI.Primitives.Extensions;
 using ReactiveUI.Primitives.Signals;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components.ViewModels;
+namespace JedPlotUtils.LiveCharts.ViewModels;
 
 public partial class TimeSeriesViewerViewModel
     : JedPlotUtils.ViewModels.TimeSeriesViewerViewModelBase
 {
-    public double DefaultStatusBarHeight { get; set; } = 35d;
-
     [ObservableAsProperty]
     public partial Seq<LineSeries<DateTimePoint>> LineSeries { get; }
 
@@ -43,12 +37,6 @@ public partial class TimeSeriesViewerViewModel
 
     [ObservableAsProperty(ReadOnly = false)]
     public partial Seq<Axis> YAxes { get; }
-
-    [ObservableAsProperty]
-    public partial double StatusBarHeight { get; }
-
-    [ObservableAsProperty]
-    public partial double StatusBarOpacity { get; }
 
     public ReactiveCommand<Func<DateOnly, string>, Seq<DateTimeAxis>> CreateXAxisCommand { get; }
     public ReactiveCommand<Func<double, string>, Seq<Axis>> CreateYAxisCommand { get; }
@@ -267,9 +255,8 @@ public partial class TimeSeriesViewerViewModel
         {
             this.WhenAnyValue(x => x.DateFormatter)
                 .Select(o =>
-                    o.Match(
-                        Signal.Return,
-                        () => Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
+                    o.Match(Signal.Return, () =>
+                        Signal.Return<Func<DateOnly, string>>(d => d.ToString("yyyy-MM"))
                     )
                 )
                 .SwitchTo()
@@ -283,38 +270,6 @@ public partial class TimeSeriesViewerViewModel
                         : d => d.ToString(CultureInfo.InvariantCulture)
                 )
                 .InvokeCommand(CreateYAxisCommand)
-                .DisposeWith(disposables);
-
-            _statusBarHeightHelper = this.WhenAnyValue(x => x.Configuration)
-                .WhereIsNotNull()
-                .Select(c => c.ShowStatusBar)
-                .CombineLatest(this.WhenAnyValue(x => x.IsWorking))
-                .Select(t => t.First || t.Second)
-                .Throttle(TimeSpan.FromMilliseconds(20))
-                .DistinctUntilChanged()
-                .Select(b => b ? DefaultStatusBarHeight : 0d)
-                .ToProperty(
-                    this,
-                    x => x.StatusBarHeight,
-                    initialValue: DefaultStatusBarHeight,
-                    scheduler: RxSchedulers.MainThreadScheduler
-                )
-                .DisposeWith(disposables);
-
-            _statusBarOpacityHelper = this.WhenAnyValue(x => x.Configuration)
-                .WhereIsNotNull()
-                .Select(c => c.ShowStatusBar)
-                .CombineLatest(this.WhenAnyValue(x => x.IsWorking))
-                .Select(t => t.First || t.Second)
-                .Throttle(TimeSpan.FromMilliseconds(20))
-                .DistinctUntilChanged()
-                .Select(b => b ? 1d : 0d)
-                .ToProperty(
-                    this,
-                    x => x.StatusBarOpacity,
-                    initialValue: 1d,
-                    scheduler: RxSchedulers.MainThreadScheduler
-                )
                 .DisposeWith(disposables);
         });
     }

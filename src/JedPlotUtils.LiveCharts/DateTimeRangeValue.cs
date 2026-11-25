@@ -2,7 +2,7 @@
 using System.Runtime.CompilerServices;
 using LiveChartsCore.Kernel;
 
-namespace JedPlotUtils.LiveCharts.Avalonia.Components;
+namespace JedPlotUtils.LiveCharts;
 
 public class DateTimeRangeValue : IChartEntity, INotifyPropertyChanged
 {

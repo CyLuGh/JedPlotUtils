@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="LiveChartsCore.SkiaSharpView" />
+    <PackageReference Include="HierarchyGrid.Definitions" />
+    <PackageReference Include="ReactiveUI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JedPlotUtils\JedPlotUtils.csproj" />
+  </ItemGroup>
+</Project>
