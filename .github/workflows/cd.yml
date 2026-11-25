@@ -24,9 +24,9 @@ jobs:
           path: JedPlotUtils
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v6.0.0
+        uses: actions/setup-dotnet@v6.1.0
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
           
       # Get a short-lived NuGet API key
       - name: NuGet login (OIDC → temp API key)
@@ -51,7 +51,15 @@ jobs:
           dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
         working-directory: JedPlotUtils/src/JedPlotUtils.Avalonia.Components
         
-      - name: Build, pack and publish LiveCharts component
+      - name: Build, pack and publish LiveCharts base component
+        run: |
+          dotnet restore
+          dotnet build --configuration ${{ env.configuration }} --no-restore
+          dotnet pack --configuration ${{ env.configuration }} --no-build --no-restore
+          dotnet nuget push **/*JedPlotUtils.*.nupkg --api-key ${{ steps.login.outputs.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
+        working-directory: JedPlotUtils/src/JedPlotUtils.LiveCharts
+        
+      - name: Build, pack and publish LiveCharts Avalonia component
         run: |
           dotnet restore
           dotnet build --configuration ${{ env.configuration }} --no-restore
