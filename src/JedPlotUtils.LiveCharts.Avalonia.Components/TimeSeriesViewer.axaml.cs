@@ -75,6 +75,29 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         set => SetValue(DisplayModeProperty, value);
     }
 
+    public static readonly AV.StyledProperty<bool> HasThousandsSeparatorProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
+            nameof(HasThousandsSeparator),
+            defaultValue: true
+        );
+
+    public bool HasThousandsSeparator
+    {
+        get => GetValue(HasThousandsSeparatorProperty);
+        set => SetValue(HasThousandsSeparatorProperty, value);
+    }
+
+    public static readonly AV.StyledProperty<byte> DecimalsProperty = AV.AvaloniaProperty.Register<
+        TimeSeriesViewer,
+        byte
+    >(nameof(Decimals), defaultValue: 0);
+
+    public byte Decimals
+    {
+        get => GetValue(DecimalsProperty);
+        set => SetValue(DecimalsProperty, value);
+    }
+
     public TimeSeriesViewer()
     {
         InitializeComponent();
@@ -127,10 +150,7 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
     {
         view.HierarchyGrid.ViewModel = viewModel.HierarchyGridViewModel;
 
-        viewModel.EnableDemetra = view.EnableDemetra;
-        viewModel.ShowStatusBar = view.ShowStatusBar;
-        viewModel.Restricted = view.Restricted;
-        Signal.Return(view.DisplayMode).InvokeCommand(viewModel, x => x.ChangeDisplayModeCommand);
+        ApplyStyledProperties(view, viewModel);
 
         Signal
             .FromEventPattern<KeyEventArgs>(
@@ -507,6 +527,21 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         });
 
         viewModel.IsInitialized = true;
+    }
+
+    private static void ApplyStyledProperties(
+        TimeSeriesViewer view,
+        TimeSeriesViewerViewModel viewModel
+    )
+    {
+        viewModel.EnableDemetra = view.EnableDemetra;
+        viewModel.ShowStatusBar = view.ShowStatusBar;
+        viewModel.Restricted = view.Restricted;
+        Signal.Return(view.DisplayMode).InvokeCommand(viewModel, x => x.ChangeDisplayModeCommand);
+        Signal
+            .Return(view.HasThousandsSeparator)
+            .InvokeCommand(viewModel, x => x.ChangeThousandsSeparatorCommand);
+        Signal.Return(view.Decimals).InvokeCommand(viewModel, x => x.ChangeDecimalsCommand);
     }
 
     private void HandleDragDrop(

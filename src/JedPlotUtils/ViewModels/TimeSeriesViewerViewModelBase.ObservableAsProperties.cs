@@ -26,6 +26,12 @@ public partial class TimeSeriesViewerViewModelBase
     public partial Option<Func<DateOnly, string>> DateFormatter { get; }
 
     [ObservableAsProperty]
+    public partial bool HasThousandsSeparator { get; }
+
+    [ObservableAsProperty]
+    public partial byte Decimals { get; }
+
+    [ObservableAsProperty]
     public partial string NumberFormat { get; }
 
     [ObservableAsProperty]
@@ -79,6 +85,10 @@ public partial class TimeSeriesViewerViewModelBase
 
     internal ReactiveCommand<DisplayMode, DisplayMode> ChangeDisplayModeCommand { get; } =
         ReactiveCommand.Create<DisplayMode, DisplayMode>(dm => dm);
+    internal ReactiveCommand<bool, bool> ChangeThousandsSeparatorCommand { get; } =
+        ReactiveCommand.Create<bool, bool>(b => b);
+    internal ReactiveCommand<byte, byte> ChangeDecimalsCommand { get; } =
+        ReactiveCommand.Create<byte, byte>(x => x);
 
     private void HandleSettingsObservableAsProperties(
         IObservable<TimeSeriesViewerSettings> settingsChange,
@@ -125,11 +135,24 @@ public partial class TimeSeriesViewerViewModelBase
             .ToProperty(this, x => x.DateFormatter, scheduler: RxSchedulers.MainThreadScheduler)
             .DisposeWith(disposables);
 
-        _numberFormatHelper = settingsChange
-            .Map(settings =>
+        _hasThousandsSeparatorHelper = settingsChange
+            .Map(s => s.HasThousandsSeparators)
+            .Merge(ChangeThousandsSeparatorCommand)
+            .ToProperty(this, x => x.HasThousandsSeparator)
+            .DisposeWith(disposables);
+
+        _decimalsHelper = settingsChange
+            .Map(s => s.Decimals)
+            .Merge(ChangeDecimalsCommand)
+            .ToProperty(this, x => x.Decimals)
+            .DisposeWith(disposables);
+
+        _numberFormatHelper = this.WhenAnyValue(x => x.HasThousandsSeparator, x => x.Decimals)
+            .Map(t =>
             {
-                char format = settings.HasThousandsSeparators ? 'N' : 'F';
-                return $"{format}{settings.Decimals}";
+                var (hasSeparator, decimals) = t;
+                char format = hasSeparator ? 'N' : 'F';
+                return $"{format}{decimals}";
             })
             .ToProperty(
                 this,
