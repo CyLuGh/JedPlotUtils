@@ -90,6 +90,9 @@ public partial class TimeSeriesViewerViewModelBase
     internal ReactiveCommand<byte, byte> ChangeDecimalsCommand { get; } =
         ReactiveCommand.Create<byte, byte>(x => x);
 
+    internal ReactiveCommand<LegendDisplay, LegendDisplay> ChangeLegendDisplayCommand { get; } =
+        ReactiveCommand.Create<LegendDisplay, LegendDisplay>(x => x);
+
     private void HandleSettingsObservableAsProperties(
         IObservable<TimeSeriesViewerSettings> settingsChange,
         MultipleDisposable disposables
@@ -238,6 +241,7 @@ public partial class TimeSeriesViewerViewModelBase
 
         _legendHelper = settingsChange
             .Map(x => x.Legend)
+            .Merge(ChangeLegendDisplayCommand)
             .ToProperty(
                 this,
                 x => x.Legend,

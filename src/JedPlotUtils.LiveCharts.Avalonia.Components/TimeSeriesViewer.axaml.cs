@@ -98,6 +98,18 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
         set => SetValue(DecimalsProperty, value);
     }
 
+    public static readonly AV.StyledProperty<LegendDisplay> LegendDisplayProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, LegendDisplay>(
+            nameof(LegendDisplay),
+            defaultValue: LegendDisplay.Hidden
+        );
+
+    public LegendDisplay LegendDisplay
+    {
+        get => GetValue(LegendDisplayProperty);
+        set => SetValue(LegendDisplayProperty, value);
+    }
+
     public TimeSeriesViewer()
     {
         InitializeComponent();
@@ -542,6 +554,9 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
             .Return(view.HasThousandsSeparator)
             .InvokeCommand(viewModel, x => x.ChangeThousandsSeparatorCommand);
         Signal.Return(view.Decimals).InvokeCommand(viewModel, x => x.ChangeDecimalsCommand);
+        Signal
+            .Return(view.LegendDisplay)
+            .InvokeCommand(viewModel, x => x.ChangeLegendDisplayCommand);
     }
 
     private void HandleDragDrop(

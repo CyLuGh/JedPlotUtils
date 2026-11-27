@@ -86,6 +86,7 @@ public partial class TimeSeriesViewerViewModel
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
                                     ),
+                                IsVisibleAtLegend = tsi.Level < Level.Tertiary,
                             };
                         }
                     )
@@ -122,6 +123,7 @@ public partial class TimeSeriesViewerViewModel
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
                                     ),
+                                IsVisibleAtLegend = tsi.Level < Level.Tertiary,
                             };
                         }
                     )
@@ -163,6 +165,7 @@ public partial class TimeSeriesViewerViewModel
                                 GeometryFill = di.GeometryFill,
                                 AnimationsSpeed = TimeSpan.Zero,
                                 IsHoverable = tsi.Level < Level.Tertiary,
+                                IsVisibleAtLegend = tsi.Level < Level.Tertiary,
                             };
                         }
                     )
@@ -195,6 +198,7 @@ public partial class TimeSeriesViewerViewModel
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
                                     ),
+                                IsVisibleAtLegend = tsi.Level < Level.Tertiary,
                             };
                         }
                     )
@@ -228,6 +232,7 @@ public partial class TimeSeriesViewerViewModel
                                         f => point.Model?.Value?.ToString(f) ?? string.Empty,
                                         () => point.Model?.Value?.ToString("N2") ?? string.Empty
                                     ),
+                                IsVisibleAtLegend = tsi.Level < Level.Tertiary,
                             };
                         }
                     )
