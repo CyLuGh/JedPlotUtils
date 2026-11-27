@@ -10,14 +10,13 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <AssemblyVersion>1.1.2</AssemblyVersion>
-    <SatelliteResourceLanguages>en-US;en</SatelliteResourceLanguages>
-  </PropertyGroup>
-
-  <PropertyGroup>
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <Authors>Demortier Jeremy</Authors>
-    <Version>1.1.2</Version>
+    <Version>1.1.3</Version>
+    <FileVersion>$(Version)</FileVersion>
+    <InformationalVersion>$(Version)</InformationalVersion>
     <RepositoryUrl>https://github.com/CyLuGh/JedPlotUtils</RepositoryUrl>
+    <AssemblyVersion>$(Version)</AssemblyVersion>
+    <SatelliteResourceLanguages>en-US;en</SatelliteResourceLanguages>
   </PropertyGroup>
 </Project>

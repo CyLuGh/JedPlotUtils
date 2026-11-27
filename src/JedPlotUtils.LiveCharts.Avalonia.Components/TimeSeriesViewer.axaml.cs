@@ -27,6 +27,18 @@ namespace JedPlotUtils.LiveCharts.Avalonia.Components;
 
 public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerViewModel>
 {
+    public static readonly AV.StyledProperty<double> RowHeaderWidthProperty =
+        AV.AvaloniaProperty.Register<TimeSeriesViewer, double>(
+            nameof(RowHeaderWidth),
+            defaultValue: 100
+        );
+
+    public double RowHeaderWidth
+    {
+        get => GetValue(RowHeaderWidthProperty);
+        set => SetValue(RowHeaderWidthProperty, value);
+    }
+
     public static readonly AV.StyledProperty<bool> ShowStatusBarProperty =
         AV.AvaloniaProperty.Register<TimeSeriesViewer, bool>(
             nameof(ShowStatusBar),
@@ -377,10 +389,10 @@ public partial class TimeSeriesViewer : ReactiveUserControl<TimeSeriesViewerView
 
                 using var data = await clipboard.TryGetDataAsync().ConfigureAwait(false);
 
-                var bytes = await data?.TryGetValueAsync(
-                    DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
-                )!
-                    ?? [];
+                var bytes =
+                    await data?.TryGetValueAsync(
+                        DataFormat.CreateBytesApplicationFormat("jedplot.timeseries")
+                    )! ?? [];
 
                 if (bytes.Length > 0)
                 {

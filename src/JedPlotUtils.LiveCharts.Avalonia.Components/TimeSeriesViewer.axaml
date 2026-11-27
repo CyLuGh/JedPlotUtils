@@ -13,7 +13,7 @@
   xmlns:models="clr-namespace:JedPlotUtils.Models;assembly=JedPlotUtils"
   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
   xmlns:viewModels="clr-namespace:JedPlotUtils.LiveCharts.ViewModels;assembly=JedPlotUtils.LiveCharts"
->
+  xmlns:components="clr-namespace:JedPlotUtils.LiveCharts.Avalonia.Components">
   <UserControl.Resources>
     <converters:DisplayModeVisibilityConverter x:Key="DisplayModeVisibilityConverter" />
     <converters:ColorConverter x:Key="ColorConverter" />
@@ -371,6 +371,7 @@
         <hgrid:Grid
           IsVisible="{Binding DisplayMode, Converter={StaticResource DisplayModeVisibilityConverter}, ConverterParameter=Grid}"
           StatusMessage="No data"
+          DefaultHeaderWidth="{Binding RowHeaderWidth, RelativeSource={RelativeSource AncestorType=components:TimeSeriesViewer}}"
           x:Name="HierarchyGrid"
         />
 
